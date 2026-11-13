@@ -179,6 +179,12 @@ describe('PATCH /api/washer — ce que chaque offre ouvre (H6)', () => {
       expect(updates.map(u => u.silhouettes_vehicules)).toEqual([false, true])
     })
 
+    it('laisse régler la couleur des silhouettes et le choix de plusieurs prestations', async () => {
+      expect((await patch({ silhouettes_couleur: true })).res.status).toBe(200)
+      expect((await patch({ plusieurs_prestations: true })).res.status).toBe(200)
+      expect(updates.map(u => [u.silhouettes_couleur, u.plusieurs_prestations])).toEqual([[true, undefined], [undefined, true]])
+    })
+
     it('laisse ne plus demander le type de véhicule, puis le redemander, dès l’offre gratuite', async () => {
       expect((await patch({ demander_type_vehicule: false })).res.status).toBe(200)
       expect((await patch({ demander_type_vehicule: true })).res.status).toBe(200)

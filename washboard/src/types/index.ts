@@ -27,6 +27,10 @@ export type Washer = {
    *  Prestations, allumé par défaut pour tous, 2026-10-19). Seul `false` l'éteint : `undefined`
    *  tant que la colonne n'existe pas en base, `null` — les deux valent « affiché ». */
   silhouettes_vehicules?: boolean | null
+  /** La silhouette du véhicule est teintée de la couleur de la page ; sinon grisée (2026-11-13, défaut : grisée). Absent avant le SQL. */
+  silhouettes_couleur?: boolean | null
+  /** Le client peut cumuler plusieurs prestations dans une réservation (lib/plusieursPrestations.ts). Éteint par défaut ; absent avant le SQL. */
+  plusieurs_prestations?: boolean | null
   /** Le client choisit le type de véhicule (citadine, SUV…). `false` : un seul prix par
    *  prestation, voir `prestationsSelonLeType` (lib/prestation.ts). */
   demander_type_vehicule?: boolean | null

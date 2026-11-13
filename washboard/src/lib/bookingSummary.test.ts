@@ -27,6 +27,19 @@ describe('resumePrestation', () => {
     expect(resume).toBe('Complet, 2 SUV, lustrage')
   })
 
+  it('nomme ensemble les prestations cumulées, sans les répéter comme options', () => {
+    const resume = resumePrestation({
+      service_id: 's1',
+      vehicles_detail: [{ type: 'suv', count: 1, unit_price: 95, label: 'SUV' }, { type: 'suv', count: 1, unit_price: 95, label: 'SUV' }],
+      selected_addons: [
+        { id: 'prestation:p2', label: 'Jantes', price: 40, category: 'prestation' },
+        { id: 'prestation:p2', label: 'Jantes', price: 40, category: 'prestation' },
+        { id: 'a1', label: 'Lustrage', price: 25, category: 'extra' },
+      ],
+    }, SERVICES)
+    expect(resume).toBe('Complet + Jantes, 2 SUV, lustrage')
+  })
+
   it('déduplique une option cochée sur plusieurs véhicules', () => {
     const resume = resumePrestation({
       service_id: 's1',

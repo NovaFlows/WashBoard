@@ -13,6 +13,7 @@ import { hasPriceOverrides, minVehiclePrice, finalDisplayPrice } from '@/lib/pri
 import { FUSEAU } from '@/lib/dateUtils'
 import { nombreDeVehicules, TYPE_UNIQUE } from '@/lib/prestation'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
+import { estPrestationSupplementaire } from '@/lib/plusieursPrestations'
 
 export type FormeResumee = Partial<BookingFormData>
 
@@ -23,7 +24,9 @@ export function resumePrestation(form: FormeResumee, services: Service[]): strin
   const service = services.find(s => s.id === form.service_id)
   if (!service) return ''
 
-  const bits: string[] = [service.name]
+  // Plusieurs prestations (lib/plusieursPrestations.ts) : « Complet + Jantes », leurs noms ensemble.
+  const supplementaires = [...new Set((form.selected_addons ?? []).filter(estPrestationSupplementaire).map(a => a.label))]
+  const bits: string[] = [[service.name, ...supplementaires].join(' + ')]
 
   const vehicules = form.vehicles_detail ?? []
   if (vehicules.length > 0) {
@@ -39,7 +42,7 @@ export function resumePrestation(form: FormeResumee, services: Service[]): strin
     bits.push(`${form.vehicle_count} ${form.vehicle_type ?? ''}`.trim())
   }
 
-  const addons = form.selected_addons ?? []
+  const addons = (form.selected_addons ?? []).filter(a => !estPrestationSupplementaire(a))
   // Dédupliqué : une option cochée sur deux véhicules ne doit apparaître
   // qu'une fois dans le résumé, qui ne dit pas « combien » mais « quoi ».
   const addonNames = [...new Set(addons.map(a => a.label.toLowerCase()))]

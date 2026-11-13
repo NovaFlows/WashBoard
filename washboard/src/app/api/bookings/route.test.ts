@@ -15,6 +15,8 @@ type Reponse = { data?: unknown; error?: unknown; count?: number }
 
 let plan: {
   tables: Record<string, Reponse>
+  /** Réponse d'une lecture par liste d'identifiants (`.in`), quand elle diffère de celle de la table. */
+  tablesIn?: Record<string, Reponse>
   countJour: number
   /** Réservations déjà prises ce mois-ci (quota de l'offre). */
   countMois: number
@@ -33,12 +35,13 @@ function nouveauBuilder(table: string) {
   // rendez-vous annulé ne consomme pas le quota du laveur, alors que le
   // plafond anti-spam du jour compte tout.
   let mensuel = false
+  let parListe = false
   const b: Record<string, unknown> = {}
   const self = () => b
   Object.assign(b, {
     select: (_cols?: string, opts?: { head?: boolean }) => { head = !!opts?.head; return b },
     update: (valeurs: Record<string, unknown>) => { majAppels.push({ table, valeurs }); return b },
-    eq: self, gte: self, gt: self, lte: self, in: self, order: self, limit: self, or: self, ilike: self,
+    eq: self, gte: self, gt: self, lte: self, in: () => { parListe = true; return b }, order: self, limit: self, or: self, ilike: self,
     upsert: () => Promise.resolve({ error: null }),
     neq: () => { mensuel = true; return b },
     single:      () => Promise.resolve(plan.tables[table] ?? { data: null, error: null }),
@@ -49,7 +52,7 @@ function nouveauBuilder(table: string) {
           ? (mensuel
               ? { count: plan.countMois, error: plan.erreurCountMois }
               : { count: plan.countJour, error: null })
-          : (plan.tables[table] ?? { data: [], error: null }),
+          : ((parListe ? plan.tablesIn?.[table] : undefined) ?? plan.tables[table] ?? { data: [], error: null }),
       ).then(ok, ko),
   })
   return b
@@ -1069,5 +1072,76 @@ describe('POST /api/bookings — centre auto', () => {
     const { res } = await poster({})
     expect(res.status).toBe(201)
     expect(rpcAppels[0].args.p_booking).not.toHaveProperty('lieu')
+  })
+})
+
+describe('POST /api/bookings — plusieurs prestations', () => {
+  const AUTRE = '33333333-3333-4333-8333-333333333333'
+  const supplementaire = (id = AUTRE) => ({ id: `prestation:${id}`, label: 'Truqué', price: 0.01, category: 'prestation', duration_minutes: 1 })
+  const JANTES = { id: AUTRE, name: 'Jantes', price: 40, vehicle_price_overrides: { SUV: 55 }, duration_minutes: 30, vehicle_types: ['citadine', 'SUV'], washer_id: WASHER, en_veille: false }
+  const vehicule = (type = 'citadine') => ({ type, count: 1, unit_price: 60, addons: [supplementaire()] })
+
+  beforeEach(() => {
+    plan.tablesIn = { services: { data: [JANTES], error: null } }
+    avecWasher({ plusieurs_prestations: true })
+  })
+
+  it('compte la prestation supplémentaire au prix du catalogue et bloque sa durée', async () => {
+    const { res } = await poster({ vehicles_detail: [vehicule('SUV')] })
+    expect(res.status).toBe(201)
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.booked_price).toBe(60 + 55) // le prix « truqué » du navigateur est ignoré
+    const detail = reserv.vehicles_detail as { addons: { label: string; price: number; duration_minutes: number }[] }[]
+    expect(detail[0].addons[0]).toMatchObject({ label: 'Jantes', price: 55, duration_minutes: 30 })
+  })
+
+  it('refuse quand le laveur n’a pas allumé le réglage', async () => {
+    avecWasher({ plusieurs_prestations: false })
+    const { res, body } = await poster({ vehicles_detail: [vehicule()] })
+    expect(res.status).toBe(400)
+    expect(body.error).toMatch(/plusieurs prestations/)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('refuse tant que la colonne n’existe pas en base', async () => {
+    plan.tables.washers = { data: null, error: { code: '42703', message: 'column washers.plusieurs_prestations does not exist' } }
+    const { res } = await poster({ vehicles_detail: [vehicule()] })
+    // Sans laveur lisible, la route répond déjà autre chose qu'un succès : jamais de prestation gratuite.
+    expect(res.status).not.toBe(201)
+  })
+
+  it('refuse une prestation d’un autre laveur', async () => {
+    plan.tablesIn = { services: { data: [{ ...JANTES, washer_id: '44444444-4444-4444-8444-444444444444' }], error: null } }
+    const { res } = await poster({ vehicles_detail: [vehicule()] })
+    expect(res.status).toBe(400)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('refuse une prestation non proposée pour le type du véhicule', async () => {
+    plan.tablesIn = { services: { data: [{ ...JANTES, vehicle_types: ['SUV'] }], error: null } }
+    const { res } = await poster({ vehicles_detail: [vehicule('citadine')] })
+    expect(res.status).toBe(400)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('refuse des prestations dont les heures de début ne se recoupent pas', async () => {
+    plan.tablesIn = { services: { data: [{ ...JANTES, heures_debut: ['13:00'] }, { id: SERVICE, heures_debut: ['10:00'] }], error: null } }
+    const { res, body } = await poster({ vehicles_detail: [vehicule()] })
+    expect(res.status).toBe(409)
+    expect(body.error).toMatch(/pas se faire ensemble/)
+    expect(rpcAppels).toHaveLength(0)
+  })
+
+  it('accepte des prestations dont les heures se recoupent à l’heure demandée', async () => {
+    plan.tablesIn = { services: { data: [{ ...JANTES, heures_debut: ['10:00', '13:00'] }, { id: SERVICE, heures_debut: ['10:00'] }], error: null } }
+    const { res } = await poster({ vehicles_detail: [vehicule()] })
+    expect(res.status).toBe(201)
+  })
+
+  it('une réservation ordinaire ne lit rien de plus', async () => {
+    plan.tablesIn = { services: { data: null, error: { message: 'ne doit pas être lu' } } }
+    avecWasher({ plusieurs_prestations: false })
+    const { res } = await poster()
+    expect(res.status).toBe(201)
   })
 })

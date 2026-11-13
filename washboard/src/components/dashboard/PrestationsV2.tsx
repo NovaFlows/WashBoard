@@ -85,6 +85,12 @@ type Props = {
   /** `washers.demander_type_vehicule` : le client choisit citadine, SUV… Allumé par défaut ;
    *  éteint, un seul prix par prestation (demande de My Clean, 2026-11-06). */
   demanderTypeVehicule: boolean
+  /** `washers.plusieurs_prestations` : le client peut cumuler plusieurs prestations dans une
+   *  réservation (lib/plusieursPrestations.ts). Éteint par défaut (2026-11-13). */
+  plusieursPrestations?: boolean
+  /** `washers.silhouettes_couleur` : la silhouette du véhicule prend la couleur de la page
+   *  plutôt que d'être grisée. Éteint par défaut (2026-11-13). */
+  silhouettesCouleur?: boolean
   /** Le laveur propose à la fois le déplacement et le centre auto : une prestation peut alors n'être faite qu'à l'un des deux. */
   lieuxMixtes?: boolean
   /** Centres du laveur avec identifiant (plusieurs centres : choix des centres d'une prestation). */
@@ -273,7 +279,7 @@ function LignePrestation({ service, categorie, typeDemande, onOuvrir, ouverte, o
 
 export default function PrestationsV2({
   services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
-  zone: zoneServeur, adresseDeBase, silhouettesVehicules, demanderTypeVehicule, lieuxMixtes = false, centresProposes = [], plafond, offre, liste,
+  zone: zoneServeur, adresseDeBase, silhouettesVehicules, demanderTypeVehicule, plusieursPrestations = false, silhouettesCouleur = false, lieuxMixtes = false, centresProposes = [], plafond, offre, liste,
 }: Props) {
   const router = useRouter()
   const grandEcran = useGrandEcran()
@@ -309,6 +315,34 @@ export default function PrestationsV2({
     setSilhouettesEnCours(false)
     if (r.ok) setSilhouettes(!silhouettes)
     else setSilhouettesErreur(r.message)
+  }
+
+  const [couleur, setCouleur] = useState(silhouettesCouleur)
+  const [couleurEnCours, setCouleurEnCours] = useState(false)
+  const [couleurErreur, setCouleurErreur] = useState<string | null>(null)
+
+  async function basculerCouleur() {
+    if (couleurEnCours) return
+    setCouleurEnCours(true)
+    setCouleurErreur(null)
+    const r = await enregistrerProfil({ silhouettes_couleur: !couleur })
+    setCouleurEnCours(false)
+    if (r.ok) setCouleur(!couleur)
+    else setCouleurErreur(r.message)
+  }
+
+  const [plusieurs, setPlusieurs] = useState(plusieursPrestations)
+  const [plusieursEnCours, setPlusieursEnCours] = useState(false)
+  const [plusieursErreur, setPlusieursErreur] = useState<string | null>(null)
+
+  async function basculerPlusieurs() {
+    if (plusieursEnCours) return
+    setPlusieursEnCours(true)
+    setPlusieursErreur(null)
+    const r = await enregistrerProfil({ plusieurs_prestations: !plusieurs })
+    setPlusieursEnCours(false)
+    if (r.ok) setPlusieurs(!plusieurs)
+    else setPlusieursErreur(r.message)
   }
 
   const [typeDemande, setTypeDemande] = useState(demanderTypeVehicule)
@@ -661,6 +695,52 @@ export default function PrestationsV2({
             </CarteListe>
             {silhouettesErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{silhouettesErreur}</Constat></div>}
           </section>}
+
+          {/* Couleur de la silhouette (2026-11-13) : grisée par défaut, teintée de la couleur de la page sinon. */}
+          {typeDemande && silhouettes && <section aria-label="Couleur de la silhouette" className="mt-[22px]">
+            <CarteListe>
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1 py-3">
+                  <p className={`text-[15.5px] ${nom}`}>Silhouette en couleur</p>
+                  <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                    {couleur
+                      ? 'La silhouette du véhicule prend la couleur de votre page de réservation.'
+                      : 'La silhouette du véhicule est grisée.'}
+                  </p>
+                </div>
+                <Interrupteur
+                  actif={couleur}
+                  enCours={couleurEnCours}
+                  libelle="Afficher la silhouette du véhicule en couleur"
+                  onClick={basculerCouleur}
+                />
+              </div>
+            </CarteListe>
+            {couleurErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{couleurErreur}</Constat></div>}
+          </section>}
+
+          {/* Plusieurs prestations par réservation (2026-11-13), demande de Paint Étrier 77 : éteint par défaut. */}
+          <section aria-label="Plusieurs prestations" className="mt-[22px]">
+            <CarteListe>
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1 py-3">
+                  <p className={`text-[15.5px] ${nom}`}>Plusieurs prestations par réservation</p>
+                  <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                    {plusieurs
+                      ? 'Vos clients peuvent cocher plusieurs prestations pour un même véhicule : prix et durée s’additionnent.'
+                      : 'Vos clients choisissent une seule prestation par réservation.'}
+                  </p>
+                </div>
+                <Interrupteur
+                  actif={plusieurs}
+                  enCours={plusieursEnCours}
+                  libelle="Permettre de choisir plusieurs prestations dans une réservation"
+                  onClick={basculerPlusieurs}
+                />
+              </div>
+            </CarteListe>
+            {plusieursErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{plusieursErreur}</Constat></div>}
+          </section>
         </>
       )}
 

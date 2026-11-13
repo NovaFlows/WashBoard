@@ -13,6 +13,7 @@ import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } fr
 import { evenementPixel } from '@/lib/metaPixel'
 import StepPrestation from './StepPrestation'
 import { estAuCentre } from '@/lib/lieuAdapte'
+import { limitesCombinees, prestationsChoisies } from '@/lib/plusieursPrestations'
 import BookingAction from './BookingAction'
 import './booking.css'
 import StepSlot from './StepSlot'
@@ -98,6 +99,10 @@ export type WasherPublic = {
   reservation_jour_meme?: boolean
   /** Le véhicule choisi apparaît en 3D (réglage du laveur, affiché par défaut). */
   silhouettes_vehicules?: boolean
+  /** La silhouette du véhicule prend la couleur de la page (sinon grisée). */
+  silhouettes_couleur?: boolean
+  /** Le client peut cumuler plusieurs prestations (lib/plusieursPrestations.ts). */
+  plusieurs_prestations?: boolean
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
    *  compte, pour qu'il voie son outil avant de s'inscrire. Elle se parcourt
    *  entièrement mais ne prend aucune réservation — publier un lien réservable
@@ -163,6 +168,11 @@ export default function BookingForm({ washer, services, categories, availabiliti
   useEffect(() => { if (section >= 2) chargerDispos() }, [section, chargerDispos])
 
   const selectedService = services.find(s => s.id === form.service_id)
+  // Lieu, centres et heures : ceux de TOUTES les prestations choisies (la principale et celles
+  // ajoutées en option de chaque véhicule), pas seulement de la première.
+  const limitesPrestations = limitesCombinees(
+    prestationsChoisies(form.service_id, form.vehicles_detail).flatMap(id => services.find(s => s.id === id) ?? []),
+  )
 
   // Numéro d'étape « logique », pour l'analytics et le Pixel uniquement — la
   // numérotation ne change pas avec la refonte visuelle, voir FUNNEL_STEP_NAMES.
@@ -332,7 +342,8 @@ export default function BookingForm({ washer, services, categories, availabiliti
             onModifier={() => reouvrir(1)}
           >
             <StepPrestation services={services} categories={categories} category={categorie} onCategory={setCategorie} form={form} onChange={updatePrestation} promotion={promotion}
-              vehicule3D={washer.silhouettes_vehicules !== false} auCentre={estAuCentre(washer.centre_auto, form.lieu)} />
+              vehicule3D={washer.silhouettes_vehicules !== false} auCentre={estAuCentre(washer.centre_auto, form.lieu)}
+              plusieurs={washer.plusieurs_prestations === true} couleurSilhouette={washer.silhouettes_couleur ? accent : null} />
             <BookingAction target={section === 1 ? actionTarget : null} accent={accent} disabled={!form.service_id || !form.vehicle_count}
               onClick={() => { setPrestationComplete(true); reouvrir(2) }}>
               {form.service_id ? 'Choisir le créneau' : 'Choisissez une prestation'}
@@ -393,9 +404,9 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 key={slotVersion}
                 initialAddress={form.address}
                 centre={washer.centre_auto ?? null}
-                lieuPrestation={selectedService?.lieu_restreint}
-                heuresPrestation={selectedService?.heures_debut}
-                centresPrestation={selectedService?.centres_ids}
+                lieuPrestation={limitesPrestations?.lieu ?? selectedService?.lieu_restreint}
+                heuresPrestation={limitesPrestations?.heures ?? selectedService?.heures_debut}
+                centresPrestation={limitesPrestations?.centres ?? selectedService?.centres_ids}
                 initialLieu={form.lieu}
                 active={section === 2}
                 actionTarget={section === 2 ? actionTarget : null}

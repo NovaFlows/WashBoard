@@ -24,9 +24,12 @@ type Props = {
  acompte?: AcomptePublic | null
  fideliteProposee?: boolean
  centreAuto?: CentreAutoPublic | null
+ /** Réglages du laveur lus à part (colonnes optionnelles) : plusieurs prestations par réservation, silhouette en couleur. */
+ plusieursPrestations?: boolean
+ silhouettesCouleur?: boolean
 }
 /** Présentation classique : les lectures et contrôles restent dans la route publique. */
-export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null, fideliteProposee = false, centreAuto = null}: Props) {
+export default function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null, fideliteProposee = false, centreAuto = null, plusieursPrestations = false, silhouettesCouleur = false}: Props) {
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
   const accent        = (personnalisee ? washer.brand_color : null) ?? '#2563eb'
@@ -154,6 +157,8 @@ export default function LegacyBookingPage({washer, services, categories, availab
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
             reservation_jour_meme: washer.reservation_jour_meme ?? false,
             silhouettes_vehicules: washer.silhouettes_vehicules !== false,
+            silhouettes_couleur: silhouettesCouleur,
+            plusieurs_prestations: plusieursPrestations,
             is_preview: washer.is_preview ?? false,
             facturation_prete: facturationPrete,
             // Réserver en tant qu'entreprise demande le suivi qui va avec —

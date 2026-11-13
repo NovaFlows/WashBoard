@@ -17,6 +17,7 @@ import { centreAutoPublic, centresDe, centreRestreint, centreParAdresse, identif
 import { effectiveTeamSize, capaciteCreneau } from '@/lib/slots'
 import { lireBlocages } from '@/lib/blocagesServeur'
 import { heureAutorisee, heuresDebutValides } from '@/lib/heuresPrestation'
+import { estPrestationSupplementaire, idsPrestationsSupplementaires, limitesCombinees, normaliserPrestationsSupplementaires, type PrestationCatalogue } from '@/lib/plusieursPrestations'
 import { verdictDate, creneauDansOuverture, estAujourdhuiParis } from '@/lib/bookingWindow'
 import { verdictZone } from '@/lib/zone'
 import { getMapsApiKey } from '@/lib/googleMaps'
@@ -166,7 +167,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // reste accepté pour ne pas casser les clients existants, mais le montant
     // enregistré est recalculé plus bas depuis le catalogue.
     booked_price: _prixClientIgnore, is_professional, company_name, siret, billing_address,
-    vehicles_detail, selected_addons, travel_fee,
+    vehicles_detail: vehiculesRecus, selected_addons: optionsRecues, travel_fee,
     // Écrite APRÈS la création, pas dans la RPC : la définition de
     // `create_booking_atomic` ne vit qu'en base, pas dans ce dépôt. Lui passer
     // une clé qu'elle ne connaît pas, c'est parier sur une implémentation
@@ -244,6 +245,53 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     return Response.json({ error: 'Prestation introuvable' }, { status: 404 })
   }
 
+  // ── Plusieurs prestations (lib/plusieursPrestations.ts) ───────────────────
+  //
+  // Les prestations supplémentaires arrivent comme des options de chaque véhicule. Le nom, le
+  // prix et la durée envoyés par le navigateur sont jetés : on relit chaque prestation en base.
+  // Réglage du laveur et colonne lus à part : une colonne pas encore créée refuse simplement les
+  // prestations multiples, elle ne fait pas échouer les réservations ordinaires.
+  const idsSupp = idsPrestationsSupplementaires([...(vehiculesRecus ?? []).flatMap(v => v.addons ?? []), ...(optionsRecues ?? [])])
+  let vehicles_detail = vehiculesRecus
+  let selected_addons = optionsRecues
+  if (idsSupp.length > 0) {
+    const [{ data: reglage, error: errReglage }, { data: lignes, error: errLignes }] = await Promise.all([
+      supabase.from('washers').select('plusieurs_prestations').eq('id', bookingData.washer_id).maybeSingle(),
+      supabase.from('services').select('id, name, price, vehicle_price_overrides, duration_minutes, vehicle_types, washer_id, en_veille').in('id', idsSupp),
+    ])
+    if (errReglage && !migrationEnAttente(errReglage)) logger.error('bookings.plusieurs_prestations.read_failed', { washerId: bookingData.washer_id }, errReglage)
+    if (errLignes) {
+      logger.error('bookings.plusieurs_prestations.services_read_failed', { washerId: bookingData.washer_id }, errLignes)
+      return Response.json({ error: 'Impossible de vérifier les prestations choisies. Réessayez.' }, { status: 503 })
+    }
+    const catalogue = new Map<string, PrestationCatalogue>((lignes ?? []).map(l => [l.id as string, l as unknown as PrestationCatalogue]))
+    const verdict = normaliserPrestationsSupplementaires({
+      vehicules: vehiculesRecus, communes: optionsRecues, catalogue,
+      washerId: bookingData.washer_id, principaleId: bookingData.service_id,
+      autorise: !errReglage && reglage?.plusieurs_prestations === true,
+      typeParDefaut: vehicle_type,
+    })
+    if (!verdict.ok) return Response.json({ error: verdict.message }, { status: 400 })
+    vehicles_detail = verdict.vehicules
+    selected_addons = verdict.communes
+  }
+
+  // Une colonne de limite (`lieu_restreint`, `centres_ids`, `heures_debut`) de la prestation, ou de
+  // TOUTES les prestations choisies : la réservation doit respecter chacune. Lue à part, comme avant :
+  // sans la colonne, aucune restriction.
+  const lireLimite = async (colonne: string): Promise<{ error: { code?: string; message?: string } | null; valeurs: unknown[] }> => {
+    if (idsSupp.length === 0) {
+      const { data, error } = await supabase.from('services').select(colonne).eq('id', bookingData.service_id).maybeSingle()
+      return { error, valeurs: [(data as Record<string, unknown> | null)?.[colonne]] }
+    }
+    const { data, error } = await supabase.from('services').select(colonne).in('id', [bookingData.service_id, ...idsSupp])
+    return { error, valeurs: ((data ?? []) as unknown as Record<string, unknown>[]).map(l => l[colonne]) }
+  }
+  const prestationsIncompatibles = () => Response.json(
+    { error: 'Ces prestations ne peuvent pas se faire ensemble (lieu, centre ou heures différents). Choisissez-en moins ou rechargez la page.' },
+    { status: 409 },
+  )
+
   // ── Page « proposition » : aucune réservation, pour personne ──────────────
   //
   // Ces pages sont construites AVANT que le laveur ait un compte, pour qu'il
@@ -300,10 +348,11 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   // Prestation limitée à un lieu (`services.lieu_restreint`), lue à part : sans la colonne,
   // aucune restriction et les réservations continuent. Le laveur qui saisit lui-même garde la main.
   if (!isOwner) {
-    const { data: ficheRestriction, error: errRestriction } = await supabase
-      .from('services').select('lieu_restreint').eq('id', bookingData.service_id).maybeSingle()
+    const { error: errRestriction, valeurs: valeursLieu } = await lireLimite('lieu_restreint')
     if (errRestriction && !migrationEnAttente(errRestriction)) logger.error('bookings.lieu_restreint.read_failed', { washerId: bookingData.washer_id }, errRestriction)
-    const restreint = errRestriction ? null : lieuRestreintValide((ficheRestriction as { lieu_restreint?: unknown } | null)?.lieu_restreint)
+    const limitesLieu = errRestriction ? null : limitesCombinees(valeursLieu.map(v => ({ lieu_restreint: lieuRestreintValide(v) })))
+    if (!errRestriction && !limitesLieu) return prestationsIncompatibles()
+    const restreint = limitesLieu?.lieu ?? null
     if (!lieuxPossibles(centre, restreint).includes(lieu)) {
       logger.warn('bookings.rejected.lieu_prestation', { washerId: bookingData.washer_id, lieu, restreint })
       return Response.json(
@@ -319,10 +368,11 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // lu à part : sans la colonne, tous les centres). Le laveur qui saisit lui-même garde la main.
     let centreService = centre
     if (!isOwner && centresDe(centre).length > 1) {
-      const { data: ficheCentres, error: errCentres } = await supabase
-        .from('services').select('centres_ids').eq('id', bookingData.service_id).maybeSingle()
+      const { error: errCentres, valeurs: valeursCentres } = await lireLimite('centres_ids')
       if (errCentres && !migrationEnAttente(errCentres)) logger.error('bookings.centres_ids.read_failed', { washerId: bookingData.washer_id }, errCentres)
-      const ids = errCentres ? null : identifiantsCentresValides((ficheCentres as { centres_ids?: unknown } | null)?.centres_ids)
+      const limitesCentres = errCentres ? null : limitesCombinees(valeursCentres.map(v => ({ centres_ids: identifiantsCentresValides(v) })))
+      if (!errCentres && !limitesCentres) return prestationsIncompatibles()
+      const ids = limitesCentres?.centres ?? null
       centreService = centreRestreint(centre, ids) ?? centre
     }
     bookingData.address = libelleCentre(centreParAdresse(centreService, bookingData.address))
@@ -514,10 +564,11 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
 
     // Heures de début limitées pour cette prestation (`services.heures_debut`), lues à part :
     // sans la colonne, aucune restriction et les réservations continuent.
-    const { data: ficheHeures, error: errHeures } = await supabase
-      .from('services').select('heures_debut').eq('id', bookingData.service_id).maybeSingle()
+    const { error: errHeures, valeurs: valeursHeures } = await lireLimite('heures_debut')
     if (errHeures && !migrationEnAttente(errHeures)) logger.error('bookings.heures_debut.read_failed', { washerId: bookingData.washer_id }, errHeures)
-    const heuresPermises = errHeures ? null : heuresDebutValides((ficheHeures as { heures_debut?: unknown } | null)?.heures_debut)
+    const limitesHeures = errHeures ? null : limitesCombinees(valeursHeures.map(v => ({ heures_debut: heuresDebutValides(v) })))
+    if (!errHeures && !limitesHeures) return prestationsIncompatibles()
+    const heuresPermises = limitesHeures?.heures ?? null
     if (!heureAutorisee(heureStr, heuresPermises)) {
       logger.warn('bookings.rejected.heure_prestation', { washerId: bookingData.washer_id, heure: heureStr })
       return Response.json(
@@ -589,8 +640,9 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     ((service?.addons ?? []) as { id?: string; label?: string; price?: number }[])
       .map(a => [String(a.id ?? a.label ?? ''), Number(a.price ?? 0)]),
   )
-  const prixAuCatalogue = (a: { id?: string; label?: string }) =>
-    cataloguePrix.get(String(a.id ?? a.label ?? '')) ?? 0
+  // Une prestation supplémentaire a déjà été retarifée en base (normaliserPrestationsSupplementaires).
+  const prixAuCatalogue = (a: { id?: string; label?: string; price?: number }) =>
+    estPrestationSupplementaire(a) ? Number(a.price ?? 0) : cataloguePrix.get(String(a.id ?? a.label ?? '')) ?? 0
 
   // Quand les options sont rattachées aux véhicules, c'est cette liste qui fait
   // foi : s'appuyer sur la liste commune laisserait passer une réservation où

@@ -8,6 +8,7 @@ import { hex } from '@/lib/colorUtils'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { sansChoixDeType } from '@/lib/prestation'
+import { appliquerPrestations, basculerPrestation, MAX_PRESTATIONS, prestationsCompatibles, typesCommuns } from '@/lib/plusieursPrestations'
 import MentionLieuAdapte from './MentionLieuAdapte'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
@@ -28,6 +29,10 @@ type Props = {
   vehicule3D?: boolean
   /** Rendez-vous au local du laveur : la mention « lieu adapté » n'a plus lieu d'être. */
   auCentre?: boolean
+  /** Le laveur laisse cumuler plusieurs prestations (lib/plusieursPrestations.ts). */
+  plusieurs?: boolean
+  /** Couleur de la silhouette du véhicule ; `null` = grisée (par défaut). */
+  couleurSilhouette?: string | null
 }
 
 // Images pour les types « voiture » historiques (résolus par id de type).
@@ -44,9 +49,11 @@ const VEHICLE_IMAGES: Record<string, string> = {
 
 const UNCATEGORIZED = '__none__'
 
-export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb', vehicule3D = true, auCentre = false }: Props) {
+export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb', vehicule3D = true, auCentre = false, plusieurs = false, couleurSilhouette = null }: Props) {
   const [isPro,     setIsPro]     = useState(false)
-  const [serviceId, setServiceId] = useState(selected.service_id ?? '')
+  // Les prestations cochées : la première est celle de la réservation (une seule hors option « plusieurs »).
+  const [serviceIds, setServiceIds] = useState<string[]>(() => selected.service_id ? [selected.service_id] : [])
+  const serviceId = serviceIds[0] ?? ''
   // Panier : un compteur par type (permet de mélanger les types)
   const [basket,    setBasket]    = useState<Record<string, number>>({})
   // Modèle (texte libre) par véhicule : un tableau par type, aligné sur le compteur
@@ -77,6 +84,11 @@ export default function StepService({ services, categories, selected, factureApr
   }, [services, categories, activeTab])
 
   const selectedService = services.find(s => s.id === serviceId)
+  const selectedServices = serviceIds.map(id => services.find(s => s.id === id)).filter((s): s is Service => !!s)
+  // Types que TOUTES les prestations cochées proposent (une seule : les siens).
+  const typesDispo = plusieurs ? typesCommuns(selectedServices) : selectedService?.vehicle_types ?? []
+  /** Prix d'un véhicule de ce type : la somme des prestations cochées. */
+  const prixUnite = (type: string) => selectedServices.reduce((sum, s) => sum + vehiclePrice(s, type), 0)
 
   // Sur téléphone, la liste des prestations remplit l'écran : le choix du
   // véhicule se trouve dessous, hors de vue. Rien n'indique qu'il faut faire
@@ -111,7 +123,7 @@ export default function StepService({ services, categories, selected, factureApr
 
   const basketCount = Object.values(basket).reduce((sum, c) => sum + c, 0)
   const basketTotal = selectedService
-    ? Object.entries(basket).reduce((sum, [type, count]) => sum + vehiclePrice(selectedService, type) * count, 0)
+    ? Object.entries(basket).reduce((sum, [type, count]) => sum + prixUnite(type) * count, 0)
     : 0
 
   // Types standards (véhicules) = slugs lisibles ; types custom dashboard = UUIDs
@@ -131,7 +143,7 @@ export default function StepService({ services, categories, selected, factureApr
 
   function selectTab(id: string) {
     setActiveTab(id)
-    setServiceId('')
+    setServiceIds([])
     setBasket({})
     setModels({})
     setDernier(null)
@@ -170,7 +182,7 @@ export default function StepService({ services, categories, selected, factureApr
     // modèle (« Clio grise », « 208 noire »). C'est ce qui permet, à l'étape
     // suivante, de cocher le nettoyage de vomi sur une seule des deux — avant,
     // une option choisie s'appliquait d'office à toutes les voitures.
-    const vehicles_detail: VehicleItem[] = Object.entries(basket)
+    const exemplaires: VehicleItem[] = Object.entries(basket)
       .filter(([, c]) => c > 0)
       .flatMap(([type, count]) =>
         Array.from({ length: count }, (_, i) => ({
@@ -181,6 +193,9 @@ export default function StepService({ services, categories, selected, factureApr
           models: [(models[type]?.[i] ?? '').trim()],
         })),
       )
+    // Les prestations supplémentaires voyagent comme options de chaque véhicule ; le prix de
+    // départ reste celui de la première (lib/plusieursPrestations.ts).
+    const vehicles_detail = appliquerPrestations(selectedServices, exemplaires).vehicules
     onNext({
       service_id:      serviceId,
       vehicle_type:    vehicles_detail[0].type,
@@ -257,23 +272,38 @@ export default function StepService({ services, categories, selected, factureApr
         </div>
       )}
 
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Choisissez votre prestation</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Sélectionnez le type de lavage souhaité</p>
+      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">{plusieurs ? 'Choisissez vos prestations' : 'Choisissez votre prestation'}</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{plusieurs ? 'Vous pouvez en choisir plusieurs : prix et durée s’additionnent.' : 'Sélectionnez le type de lavage souhaité'}</p>
 
       <div className="flex flex-col gap-3 mb-6">
         {visibleServices.length === 0 && (
           <p className="text-sm text-slate-400 dark:text-slate-500 py-6 text-center">Aucune prestation dans cette catégorie.</p>
         )}
         {visibleServices.map((service) => {
-          const isSelected = serviceId === service.id
+          const isSelected = serviceIds.includes(service.id)
+          // Plusieurs prestations : grisée si elle ne peut pas se cumuler avec celles déjà cochées
+          // (lieu, centres, heures, ou aucun type de véhicule en commun), ou si le maximum est atteint.
+          const incompatible = plusieurs && !isSelected && selectedServices.length > 0
+            && (!prestationsCompatibles([...selectedServices, service]) || typesCommuns([...selectedServices, service]).length === 0)
+          const pleine = plusieurs && !isSelected && serviceIds.length >= MAX_PRESTATIONS
           return (
             <button
               key={service.id}
               data-testid="service-card"
               data-service-id={service.id}
               data-selected={isSelected}
-              onClick={() => { setServiceId(service.id); setBasket({}); setModels({}) }}
-              className="w-full text-left px-4 py-4 rounded-2xl border-2 transition-all"
+              disabled={incompatible || pleine}
+              aria-pressed={plusieurs ? isSelected : undefined}
+              onClick={() => {
+                if (!plusieurs) { setServiceIds([service.id]); setBasket({}); setModels({}); return }
+                // Les véhicules déjà ajoutés restent, tant que toutes les prestations les proposent.
+                const suivantes = basculerPrestation(serviceIds, service.id)
+                const communs = typesCommuns(suivantes.map(id => services.find(s => s.id === id)).filter((s): s is Service => !!s))
+                setServiceIds(suivantes)
+                setBasket(prev => Object.fromEntries(Object.entries(prev).filter(([t]) => communs.includes(t))))
+                setModels(prev => Object.fromEntries(Object.entries(prev).filter(([t]) => communs.includes(t))))
+              }}
+              className={`w-full text-left px-4 py-4 rounded-2xl border-2 transition-all ${incompatible || pleine ? 'opacity-50' : ''}`}
               style={isSelected
                 ? { borderColor: accent, backgroundColor: hex(accent, 0.06) }
                 : { borderColor: '#e2e8f0', backgroundColor: 'transparent' }
@@ -295,6 +325,7 @@ export default function StepService({ services, categories, selected, factureApr
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">{service.description}</p>
                   )}
                   <MentionLieuAdapte service={service} auCentre={auCentre} className="mt-1.5" />
+                  {incompatible && <p className="text-xs text-slate-400 mt-1.5">Ne se fait pas avec les prestations déjà choisies.</p>}
                 </div>
 
                 {/* Prix + radio */}
@@ -324,22 +355,22 @@ export default function StepService({ services, categories, selected, factureApr
       {selectedService && (
         <div className="mb-6 scroll-mt-4" ref={sectionTypes}>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Votre sélection</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">{sansChoixDeType(selectedService.vehicle_types)
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">{sansChoixDeType(typesDispo)
             ? 'Indiquez le nombre de véhicules.'
             : 'Ajoutez un ou plusieurs éléments, de types différents si besoin.'}</p>
-          {vehicule3D && selectedService.vehicle_types.some(t => silhouettePour(t, typeInfo(selectedService, t).name)) && (() => {
+          {vehicule3D && typesDispo.some(t => silhouettePour(t, typeInfo(selectedService, t).name)) && (() => {
             const enPanier = Object.keys(basket).filter(t => (basket[t] ?? 0) > 0)
             const affiche = dernier && enPanier.includes(dernier) ? dernier : enPanier[enPanier.length - 1] ?? null
             return affiche && (
               <ApparitionVehicule>
-                <SilhouetteVehicule3D key={affiche} type={affiche} nom={typeInfo(selectedService, affiche).name} />
+                <SilhouetteVehicule3D key={affiche} type={affiche} nom={typeInfo(selectedService, affiche).name} couleur={couleurSilhouette} />
               </ApparitionVehicule>
             )
           })()}
           <div className="space-y-2">
-            {selectedService.vehicle_types.map(type => {
+            {typesDispo.map(type => {
               const info  = typeInfo(selectedService, type)
-              const price = vehiclePrice(selectedService, type)
+              const price = prixUnite(type)
               const count = basket[type] ?? 0
               return (
                 <div
@@ -391,7 +422,7 @@ export default function StepService({ services, categories, selected, factureApr
             <div className="mt-3 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 space-y-1.5">
               {Object.entries(basket).map(([type, count]) => {
                 const info  = typeInfo(selectedService, type)
-                const price = vehiclePrice(selectedService, type)
+                const price = prixUnite(type)
                 return (
                   <div key={type} className="flex justify-between text-sm">
                     <span className="text-slate-500 dark:text-slate-400">{info.name} × {count}</span>

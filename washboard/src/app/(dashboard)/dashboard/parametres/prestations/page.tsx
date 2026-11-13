@@ -77,6 +77,16 @@ export default async function PrestationsPage() {
   const centresProposes = (centrePublic ? centresDe(centrePublic) : [])
     .flatMap(c => (c.id ? [{ id: c.id, nom: c.nom, adresse: c.adresse }] : []))
 
+  // Plusieurs prestations par réservation et silhouette en couleur (2026-11-13) : un réglage
+  // chacun, lus à part de la fiche ; sans la colonne, éteints (une prestation, silhouette grisée).
+  const [{ data: fichePlusieurs, error: errPlusieurs }, { data: ficheCouleur, error: errCouleur }] = await Promise.all([
+    supabase.from('washers').select('plusieurs_prestations').eq('id', washer.id).maybeSingle(),
+    supabase.from('washers').select('silhouettes_couleur').eq('id', washer.id).maybeSingle(),
+  ])
+  for (const e of [errPlusieurs, errCouleur]) {
+    if (e && !migrationEnAttente(e)) logger.error('prestations.reglages_page.read_failed', { washerId: washer.id }, e)
+  }
+
   // Une lecture en échec ne doit surtout pas se lire « aucune prestation » : cet
   // écran propose, à un compte vide, de créer sa première catégorie — un laveur
   // déjà configuré referait donc sa configuration en doublon. Les deux lectures
@@ -103,6 +113,8 @@ export default async function PrestationsPage() {
           adresseDeBase={washer.base_address ?? null}
           silhouettesVehicules={washer.silhouettes_vehicules !== false}
           demanderTypeVehicule={washer.demander_type_vehicule !== false}
+          plusieursPrestations={(fichePlusieurs as { plusieurs_prestations?: unknown } | null)?.plusieurs_prestations === true}
+          silhouettesCouleur={(ficheCouleur as { silhouettes_couleur?: unknown } | null)?.silhouettes_couleur === true}
           lieuxMixtes={lieuxMixtes}
           centresProposes={centresProposes}
           // Liste « Plus », pour la colonne de gauche sur grand écran : `servicesCount` et

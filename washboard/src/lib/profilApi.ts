@@ -15,6 +15,8 @@ export type ChampsProfil = Partial<{
   team_size: number
   reservation_jour_meme: boolean
   silhouettes_vehicules: boolean
+  silhouettes_couleur: boolean
+  plusieurs_prestations: boolean
   demander_type_vehicule: boolean
   travel_fee_tiers: { max_minutes?: number; max_km?: number; fee: number }[]
   travel_fee_mode: 'base' | 'previous'

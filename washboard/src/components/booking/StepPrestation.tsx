@@ -8,6 +8,7 @@ import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
 import { nombreDeVehicules, sansChoixDeType } from '@/lib/prestation'
+import { appliquerPrestations, basculerPrestation, MAX_PRESTATIONS, prestationsChoisies, prestationsCompatibles } from '@/lib/plusieursPrestations'
 import MentionLieuAdapte from './MentionLieuAdapte'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 
@@ -22,7 +23,7 @@ function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
   )
 }
 
-export default function StepPrestation({ services, categories, category, onCategory, form, onChange, promotion = null, vehicule3D = true, auCentre = false }: {
+export default function StepPrestation({ services, categories, category, onCategory, form, onChange, promotion = null, vehicule3D = true, auCentre = false, plusieurs = false, couleurSilhouette = null }: {
   services: Service[]
   categories: ServiceCategory[]
   /** Catégorie affichée — tenue par BookingForm, dont le « À partir de » en dépend. */
@@ -37,6 +38,10 @@ export default function StepPrestation({ services, categories, category, onCateg
   vehicule3D?: boolean
   /** Rendez-vous au local du laveur : la mention « lieu adapté » n'a plus lieu d'être. */
   auCentre?: boolean
+  /** Le laveur laisse cumuler plusieurs prestations (lib/plusieursPrestations.ts) : cases à cocher au lieu d'un choix unique. */
+  plusieurs?: boolean
+  /** Couleur de la silhouette du véhicule ; `null` = grisée (par défaut). */
+  couleurSilhouette?: string | null
 }) {
   const catalogue = services.filter(s => s.category_id === category)
   const types = [...new Set(catalogue.flatMap(s => s.vehicle_types))]
@@ -46,6 +51,10 @@ export default function StepPrestation({ services, categories, category, onCateg
   // voiture apparaît en 3D. Seule exception, un catalogue à un seul type : il n'y a rien à choisir.
   const vehicles = form.vehicles_detail?.length ? form.vehicles_detail : types.length === 1 ? [{ type: types[0], count: 1, unit_price: 0, label: label(types[0]), addons: [] }] : []
   const activeTypes = [...new Set(vehicles.map(v => v.type))]
+  // Les prestations cochées, dans l'ordre : la première est celle de la réservation, les autres
+  // voyagent comme options de chaque véhicule (lib/plusieursPrestations.ts).
+  const choisies = plusieurs ? prestationsChoisies(form.service_id, vehicles) : service ? [service.id] : []
+  const ordreActuel = choisies.map(id => services.find(s => s.id === id)).filter((s): s is Service => !!s)
   const [mixed, setMixed] = useState(activeTypes.length > 1)
   const [dernier, setDernier] = useState<string | null>(null)
   const visible = catalogue.filter(s => activeTypes.every(t => s.vehicle_types.includes(t)))
@@ -61,12 +70,13 @@ export default function StepPrestation({ services, categories, category, onCateg
   /** Avant le choix du véhicule : le prix de départ de la prestation, tous types confondus. */
   const prixDepart = (s: Service) => Math.min(...s.vehicle_types.filter(t => types.includes(t)).map(t => vehiclePrice(s, t)))
 
-  function change(nextVehicles: VehicleItem[], nextService = service) {
-    const compatible = nextService && nextVehicles.every(v => nextService.vehicle_types.includes(v.type)) ? nextService : undefined
-    const details = nextVehicles.map(v => ({ ...v, label: label(v.type), unit_price: compatible ? vehiclePrice(compatible, v.type) : 0,
-      addons: compatible ? (v.addons ?? []).filter(a => compatible.addons.some(x => x.id === a.id)) : [],
-    }))
-    onChange({ service_id: compatible?.id ?? '', vehicle_type: details[0]?.type ?? '', vehicle_count: details.length,
+  function change(nextVehicles: VehicleItem[], ordre: Service[] = ordreActuel) {
+    // Une prestation que le nouveau véhicule ne propose pas sort de la sélection.
+    const compatibles = ordre.filter(s => nextVehicles.every(v => s.vehicle_types.includes(v.type)))
+    const appliquees = appliquerPrestations(compatibles, nextVehicles, service?.id)
+    const principale = compatibles[0]
+    const details = appliquees.vehicules.map(v => ({ ...v, label: label(v.type), unit_price: principale ? vehiclePrice(principale, v.type) : 0 }))
+    onChange({ service_id: appliquees.service_id, vehicle_type: details[0]?.type ?? '', vehicle_count: details.length,
       vehicles_detail: details, selected_addons: details.flatMap(v => v.addons ?? []),
       booked_price: details.reduce((sum, v) => sum + v.unit_price, 0) + prixOptions(details, null),
     })
@@ -88,7 +98,7 @@ export default function StepPrestation({ services, categories, category, onCateg
       </button>)}
     </div>}
     {avecSilhouettes && typeAffiche && <ApparitionVehicule>
-      <SilhouetteVehicule3D key={typeAffiche} type={typeAffiche} nom={label(typeAffiche)} />
+      <SilhouetteVehicule3D key={typeAffiche} type={typeAffiche} nom={label(typeAffiche)} couleur={couleurSilhouette} />
     </ApparitionVehicule>}
     {/* Le laveur ne demande pas le type (lib/prestation.ts) : rien à choisir, seul le nombre reste. */}
     {!sansChoixDeType(types) && <div className="wb-booking-chips" aria-label="Type de véhicule">
@@ -108,7 +118,7 @@ export default function StepPrestation({ services, categories, category, onCateg
     </div>)}
     {vehicles.length > 1 && !mixed && types.length > 1 && <button type="button" className="text-xs underline mb-3" onClick={() => setMixed(true)}>Mes véhicules sont de types différents</button>}
     <div className="flex items-baseline justify-between gap-3 mt-6 mb-2">
-      <h3 className="font-semibold">La prestation</h3>
+      <h3 className="font-semibold">{plusieurs ? 'Les prestations' : 'La prestation'}</h3>
       <span className="text-xs text-zinc-500">{sansVehicule
         ? 'Prix selon votre véhicule'
         : sansChoixDeType(types) ? <>Prix pour {nombreDeVehicules(vehicles.length)}</>
@@ -116,9 +126,18 @@ export default function StepPrestation({ services, categories, category, onCateg
     </div>
     <div className="divide-y divide-zinc-200/70 dark:divide-zinc-700">
       {visible.map(s => <div key={s.id} className="py-4">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input type="radio" name="booking-service" className="wb-booking-radio" checked={service?.id === s.id} disabled={sansVehicule}
-            onChange={() => change(vehicles.map(v => ({ ...v, addons: [] })), s)} />
+        {(() => {
+          // Plusieurs prestations : une case par prestation, grisée si elle ne peut pas se cumuler
+          // avec celles déjà cochées (lieu, centres ou heures qui ne se recoupent pas) ou si le maximum est atteint.
+          const cochee = choisies.includes(s.id)
+          const incompatible = plusieurs && !cochee && ordreActuel.length > 0 && !prestationsCompatibles([...ordreActuel, s])
+          const pleine = plusieurs && !cochee && choisies.length >= MAX_PRESTATIONS
+          return <label className={`flex items-start gap-3 ${incompatible || pleine ? 'opacity-50' : 'cursor-pointer'}`}>
+          {plusieurs
+            ? <input type="checkbox" name="booking-service" className="wb-booking-checkbox mt-0.5" checked={cochee} disabled={sansVehicule || incompatible || pleine}
+              onChange={() => change(vehicles, basculerPrestation(choisies, s.id).map(id => services.find(x => x.id === id)).filter((x): x is Service => !!x))} />
+            : <input type="radio" name="booking-service" className="wb-booking-radio" checked={service?.id === s.id} disabled={sansVehicule}
+              onChange={() => change(vehicles, [s])} />}
           <span className="flex-1 min-w-0">
             <span className="flex justify-between gap-3 font-semibold text-sm"><span>{s.name}</span>{sansVehicule
               ? <span className="whitespace-nowrap font-normal text-zinc-500">dès {formatPrice(prixDepart(s))}</span>
@@ -126,8 +145,10 @@ export default function StepPrestation({ services, categories, category, onCateg
             {s.description && <span className="block text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">{s.description}</span>}
             <MentionLieuAdapte service={s} auCentre={auCentre} className="mt-1.5" />
             <span className="block text-xs text-zinc-500 mt-2">Environ {formatDureeFr(s.duration_minutes * Math.max(1, vehicles.length))} sur place</span>
+            {incompatible && <span className="block text-xs text-zinc-500 mt-1">Ne se fait pas avec les prestations déjà choisies.</span>}
           </span>
         </label>
+        })()}
         {service?.id === s.id && s.addons.length > 0 && <div className="ml-8 mt-5">
           <p className="text-xs text-zinc-500 mb-2">En plus, si besoin</p>
           {vehicles.map((v, i) => <div key={`${v.type}-${i}`}>

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Service, ServiceCategory, Availability, BookingFormData } from '@/types'
-import { dureeTotale } from '@/lib/pricing'
+import { dureeTotale, prixOptions } from '@/lib/pricing'
+import { limitesCombinees, prestationsChoisies } from '@/lib/plusieursPrestations'
 import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
 import StepService from './StepService'
@@ -85,6 +86,10 @@ export type WasherPublic = {
   reservation_jour_meme?: boolean
   /** Le véhicule choisi apparaît en 3D (réglage du laveur, affiché par défaut). */
   silhouettes_vehicules?: boolean
+  /** La silhouette du véhicule prend la couleur de la page (sinon grisée). */
+  silhouettes_couleur?: boolean
+  /** Le client peut cumuler plusieurs prestations (lib/plusieursPrestations.ts). */
+  plusieurs_prestations?: boolean
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
    *  compte, pour qu'il voie son outil avant de s'inscrire. Elle se parcourt
    *  entièrement mais ne prend aucune réservation — publier un lien réservable
@@ -153,6 +158,10 @@ export default function LegacyBookingForm({ washer, services, categories, availa
   useEffect(() => { if (step >= 2) chargerDispos() }, [step, chargerDispos])
 
   const selectedService = services.find(s => s.id === form.service_id)
+  // Lieu, centres et heures : ceux de TOUTES les prestations choisies, pas seulement de la première.
+  const limitesPrestations = limitesCombinees(
+    prestationsChoisies(form.service_id, form.vehicles_detail).flatMap(id => services.find(s => s.id === id) ?? []),
+  )
   const hasAddons = (selectedService?.addons ?? []).length > 0
 
   // Un événement par étape franchie, y compris à l'arrivée sur la page
@@ -345,14 +354,15 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             factureApresPrestation={washer.facturation_prete === true}
             clientsProAutorises={washer.clients_pro !== false}
             vehicule3D={washer.silhouettes_vehicules !== false}
+            plusieurs={washer.plusieurs_prestations === true}
+            couleurSilhouette={washer.silhouettes_couleur ? accent : null}
             auCentre={estAuCentre(centreAuto, form.lieu)}
             selected={{ service_id: form.service_id, vehicle_type: form.vehicle_type }}
             onNext={(data) => {
-              // Changer de prestation invalide les options de la précédente :
-              // les garder fausserait le prix et la durée, d'autant qu'on peut
-              // maintenant revenir ici d'un clic sur la barre d'étapes.
-              const changeDePrestation = data.service_id !== form.service_id
-              updateForm(changeDePrestation ? { ...data, selected_addons: [] } : data)
+              // Revenir ici d'un clic sur la barre d'étapes refait le panier : les options de
+              // l'ancienne prestation ne doivent pas fausser le prix ni la durée. Les options de l'étape suivante repartent de zéro ; seules restent, dans les
+              // véhicules, les prestations ajoutées (lib/plusieursPrestations.ts).
+              updateForm({ ...data, selected_addons: (data.vehicles_detail ?? []).flatMap(v => v.addons ?? []) })
               const svc = services.find(s => s.id === data.service_id)
               setStep((svc?.addons ?? []).length > 0 ? 2 : 3)
             }}
@@ -363,7 +373,9 @@ export default function LegacyBookingForm({ washer, services, categories, availa
           <StepOptions
             service={selectedService}
             vehicules={form.vehicles_detail ?? []}
-            basePrice={form.booked_price ?? selectedService.price}
+            // Prix des véhicules seuls : StepOptions y ajoute lui-même toutes les options, y compris
+            // les prestations ajoutées, déjà comprises dans `booked_price` à l'étape précédente.
+            basePrice={(form.booked_price ?? selectedService.price) - prixOptions(form.vehicles_detail, null)}
             baseDuration={selectedService.duration_minutes}
             onNext={(data) => { updateForm(data); setStep(3) }}
             onBack={() => setStep(1)}
@@ -431,9 +443,9 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             travelFeeMode={washer.travel_fee_mode ?? 'base'}
             reservationJourMeme={washer.reservation_jour_meme === true}
             centre={centreAuto}
-            lieuPrestation={services.find(s => s.id === form.service_id)?.lieu_restreint}
-            heuresPrestation={services.find(s => s.id === form.service_id)?.heures_debut}
-            centresPrestation={services.find(s => s.id === form.service_id)?.centres_ids}
+            lieuPrestation={limitesPrestations?.lieu ?? selectedService?.lieu_restreint}
+            heuresPrestation={limitesPrestations?.heures ?? selectedService?.heures_debut}
+            centresPrestation={limitesPrestations?.centres ?? selectedService?.centres_ids}
             onNext={(data) => { updateForm(data); setStep(4) }}
             onBack={() => setStep(hasAddons ? 2 : 1)}
             accent={accent}

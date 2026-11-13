@@ -162,7 +162,7 @@ export default async function BookingPage({ params }: Props) {
   // cette page, la majorité venait de l'appel externe vers le site du laveur
   // (voir plus bas).
   const maintenantIso = new Date().toISOString()
-  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }, { data: ficheFidelite }, { data: ficheCentre }] = await Promise.all([
+  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }, { data: ficheFidelite }, { data: ficheCentre }, { data: fichePlusieurs }, { data: ficheCouleur }] = await Promise.all([
     admin
       .from('services')
       .select('*')
@@ -219,7 +219,22 @@ export default async function BookingPage({ params }: Props) {
       .select('centre_auto')
       .eq('id', washer.id)
       .maybeSingle(),
+    // Plusieurs prestations par réservation et silhouette en couleur (2026-11-13) : un
+    // réglage chacun, lus à part, pour qu'une colonne pas encore créée ne fasse tomber ni
+    // l'autre ni la page (absent = éteint : une prestation, silhouette grisée).
+    admin
+      .from('washers')
+      .select('plusieurs_prestations')
+      .eq('id', washer.id)
+      .maybeSingle(),
+    admin
+      .from('washers')
+      .select('silhouettes_couleur')
+      .eq('id', washer.id)
+      .maybeSingle(),
   ])
+  const plusieursPrestations = (fichePlusieurs as { plusieurs_prestations?: unknown } | null)?.plusieurs_prestations === true
+  const silhouettesCouleur = (ficheCouleur as { silhouettes_couleur?: unknown } | null)?.silhouettes_couleur === true
   // Seuls les champs d'affichage partent vers le navigateur (pas l'id ni les dates de début).
   const promotion = promoEnCours ? versPublique(promoEnCours as Promotion) : null
   const reglagesAcompte = acompteActif((ficheAcompte as { acompte?: unknown } | null)?.acompte)
@@ -262,7 +277,8 @@ export default async function BookingPage({ params }: Props) {
   if (bookingPageMode(washer.booking_page_mode) === 'custom') {
     return <LegacyBookingPage washer={washer} services={prestationsReservables} categories={categories ?? []}
       availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId}
-      promotion={promotion} acompte={acompte} fideliteProposee={fideliteProposee} centreAuto={centreAuto} />
+      promotion={promotion} acompte={acompte} fideliteProposee={fideliteProposee} centreAuto={centreAuto}
+      plusieursPrestations={plusieursPrestations} silhouettesCouleur={silhouettesCouleur} />
   }
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
@@ -309,6 +325,8 @@ export default async function BookingPage({ params }: Props) {
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
             reservation_jour_meme: washer.reservation_jour_meme ?? false,
             silhouettes_vehicules: washer.silhouettes_vehicules !== false,
+            silhouettes_couleur: silhouettesCouleur,
+            plusieurs_prestations: plusieursPrestations,
             is_preview: washer.is_preview ?? false,
             facturation_prete: facturationPrete,
             // Réserver en tant qu'entreprise demande le suivi qui va avec —

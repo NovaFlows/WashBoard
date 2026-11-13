@@ -25,8 +25,8 @@ import type { PromotionPublique } from '@/lib/promotion'
 const FIN_PROMO_EXEMPLE = new Date(Date.now() + 2.5 * 86400000).toISOString()
 
 /** Banc d'essai local : aucun accès à Supabase. Les API sont interceptées par le test navigateur. */
-export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string; centre?: string; prest?: string }> }) {
-  const { mode, etape, promo, scenario, couleur, tampons, acompte, centre, prest } = await searchParams
+export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string; centre?: string; prest?: string; multi?: string; teinte?: string }> }) {
+  const { mode, etape, promo, scenario, couleur, tampons, acompte, centre, prest, multi, teinte } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
   // `?promo=1` : une promotion d'exemple, finie dans deux jours et demi.
   const promotion: PromotionPublique | null = promo === '1' ? {
@@ -86,6 +86,8 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     wero={{ telephone: '06 12 34 56 78', lien: 'https://share.weropay.eu/p/1/c/exemple' }}
     virement={{ titulaire: 'Éclat Mobile', iban: 'FR76 3000 6000 0112 3456 7890 189', reference: 'WB-54CF8F67' }} /></div>
   if (mode === 'custom') return <LegacyBookingPage washer={{ id: washerId, name: 'Brillance Mobile', slug: 'demo', phone: null, logo_url: null, welcome_message: 'Bienvenue chez Brillance Mobile', brand_color: '#7c3aed', background_theme: null, website_url: null, base_address: null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: [], reservation_jour_meme: false, plan: 'business', subscription_status: 'active' }} services={services} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))} plafondAtteint={false} facturationPrete={true} pixelId={null} promotion={promotion}
+    // ?multi=1 : le laveur laisse cumuler plusieurs prestations ; ?teinte=1 : silhouette en couleur.
+    plusieursPrestations={multi === '1'} silhouettesCouleur={teinte === '1'}
     acompte={acompte === '1' ? { type: 'pourcentage', valeur: 30, liens: { sumup: 'https://sumup.me/demo' }, delai_heures: 48, remboursable: true, remboursement_heures: 48, virementPropose: true, weroPropose: false } : null} />
   return <><div className="min-h-screen bg-[#f6f5f3] dark:bg-zinc-950">
     {promotion && <BandeauPromotion promo={promotion} />}
@@ -93,7 +95,7 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     <main className="relative max-w-lg mx-auto -mt-6 rounded-t-[28px] bg-[#f6f5f3] dark:bg-zinc-950 px-3.5 pt-3.5 pb-[calc(180px+env(safe-area-inset-bottom,0px))]">
       {/* ?centre=1 : centre auto et domicile (avec frais de déplacement) ; ?centre=2 : centre seulement. */}
       <BookingForm washer={{ id: washerId, name: 'Brillance Mobile', base_address: centre ? '12 rue Mercière, 69002 Lyon' : null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: centre ? [{ max_minutes: 30, fee: 10 }] : [], clients_pro: true, facturation_prete: true,
-        centre_auto: centrePublic }}
+        centre_auto: centrePublic, plusieurs_prestations: multi === '1', silhouettes_couleur: teinte === '1' }}
         services={prestations} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))}
         // ?scenario=plage-bloquee : « Autre activité » le dimanche 4 octobre 2026 de 9h à 12h.
         disponibilites={{ bookings: [], unavailabilities: scenario === 'plage-bloquee' ? [{ id: 'u-1', start_date: '2026-10-04', end_date: '2026-10-04', team_members_off: 1, start_time: '09:00:00', end_time: '12:00:00' }] : [] }} whatsappHref="https://wa.me/33000000000" promotion={promotion}
