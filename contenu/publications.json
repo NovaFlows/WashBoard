@@ -181,9 +181,15 @@
     {
       "date": "2026-11-13",
       "personne": "ryan",
-      "statut": "prevu",
+      "statut": "publie",
       "type": "reel",
-      "sujet": "Pourquoi on a créé WashBoard (Reel voix et stickers de Ryan : WhatsApp, Notes, factures le soir → tout au même endroit)"
+      "sujet": "Pourquoi on a créé WashBoard",
+      "theme_couverture": "clair",
+      "liens": {
+        "instagram": "https://www.instagram.com/washboard.fr/reel/DfsHyJnhOvT/",
+        "facebook": "partagé depuis Instagram",
+        "tiktok": "https://www.tiktok.com/@wash_board.fr/video/7707703346882301206"
+      }
     }
   ]
 }
