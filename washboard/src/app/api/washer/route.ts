@@ -14,6 +14,7 @@ import { TAUX_TVA, normaliserSiret, siretValide, normaliserNumeroTva, numeroTvaV
 import { widgetsValides } from '@/lib/dashboardWidgets'
 import { slugValide, slugLibre } from '@/lib/slug'
 import { BookingPageModeSchema } from '@/lib/bookingPageMode'
+import { RAPPEL_HEURES_MAX, normaliserHeures } from '@/lib/rappelsRdv'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -28,6 +29,7 @@ export async function PATCH(request: NextRequest) {
     meta_pixel_id,
     review_enabled, review_delay_hours, google_review_url, review_channel, sms_sender,
     followup_enabled, followup_delay_days, followup_message,
+    rappel_rdv_actif, rappel_rdv_heures,
     zone_config, dashboard_widgets,
     facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_taux_tva, facture_numero_tva,
     facture_statut, facture_forme_juridique, facture_capital, facture_immatriculation,
@@ -305,6 +307,16 @@ export async function PATCH(request: NextRequest) {
   if (followup_enabled !== undefined) updates.followup_enabled = Boolean(followup_enabled)
   if (followup_delay_days !== undefined) updates.followup_delay_days = Math.min(730, Math.max(1, Math.floor(Number(followup_delay_days)) || 90))
   if (followup_message !== undefined) updates.followup_message = followup_message?.trim().slice(0, 500) || null
+  // Rappels de rendez-vous par email (lib/rappelsRdv.ts) : libres pour tous les plans, un email ne coûte rien.
+  if (rappel_rdv_actif !== undefined) updates.rappel_rdv_actif = Boolean(rappel_rdv_actif)
+  if (rappel_rdv_heures !== undefined) {
+    const heures = normaliserHeures(rappel_rdv_heures)
+    // Allumés sans aucun délai, rien ne partirait : refusé plutôt que silencieusement inutile.
+    if (!Array.isArray(rappel_rdv_heures) || heures.length === 0) {
+      return NextResponse.json({ error: `Choisissez au moins un délai, entre 1 et ${RAPPEL_HEURES_MAX} heures avant le rendez-vous.` }, { status: 400 })
+    }
+    updates.rappel_rdv_heures = heures
+  }
 
   // ── Informations de facturation (portées sur les factures aux clients) ──
   // Numéro de la prochaine facture : permet à un laveur qui facturait déjà

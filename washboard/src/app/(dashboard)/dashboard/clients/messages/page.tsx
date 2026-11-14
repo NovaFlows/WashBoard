@@ -8,6 +8,7 @@ import { seuilsVerrouillage, masquerVerrouillees } from '@/lib/reservationsVerro
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { normaliserHeures, rappelsActifs } from '@/lib/rappelsRdv'
 import {
   DELAI_AVIS_DEFAUT_HEURES, DELAI_RELANCE_DEFAUT_JOURS, type RdvMessage,
 } from '@/lib/messagesAutomatiques'
@@ -87,6 +88,8 @@ export default async function MessagesAutomatiquesPage() {
           followup_enabled: !!washer.followup_enabled,
           followup_delay_days: washer.followup_delay_days ?? DELAI_RELANCE_DEFAUT_JOURS,
           followup_message: washer.followup_message ?? null,
+          rappel_rdv_actif: rappelsActifs(washer.rappel_rdv_actif),
+          rappel_rdv_heures: normaliserHeures(washer.rappel_rdv_heures),
         }}
         smsAutorise={hasFeature(washer, 'avis_sms')}
         avisAutorise={hasFeature(washer, 'avis_email')}

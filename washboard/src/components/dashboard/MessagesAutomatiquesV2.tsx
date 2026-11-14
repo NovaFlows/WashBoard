@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { ReglageAvisV2, ReglageRelanceV2 } from '@/components/dashboard/ReglageAutomatismeV2'
+import { ReglageAvisV2, ReglageRappelV2, ReglageRelanceV2 } from '@/components/dashboard/ReglageAutomatismeV2'
 import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
 import { ChampExpediteurSms } from '@/components/dashboard/FeuillesReglagesV2'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
@@ -19,6 +19,7 @@ import {
 import { cleClient } from '@/lib/clientProfile'
 import FeuilleMessageProgrammeV2, { type ResultatMessage } from '@/components/dashboard/FeuilleMessageProgrammeV2'
 import { requiredPlanLabel } from '@/lib/plan'
+import { normaliserHeures, rappelsActifs, resumeRappels } from '@/lib/rappelsRdv'
 
 // « Messages automatiques » — refonte 2026, planche `project/ARelancer.dc.html`.
 // Réservé à la PWA installée (voir MessagesAutomatiques.tsx, le garde-fou) ;
@@ -98,7 +99,7 @@ export type MessagesAutomatiquesProps = {
   lectureIncomplete: boolean
 }
 
-type FeuilleOuverte = { quoi: 'avis' | 'relance'; activer: boolean } | null
+type FeuilleOuverte = { quoi: 'avis' | 'relance' | 'rappel'; activer: boolean } | null
 
 function LigneAutomatisme({
   libelle, resume, avertissement, actif, enCours, onBasculer, onOuvrir, href, verrouille,
@@ -282,7 +283,7 @@ export default function MessagesAutomatiquesV2({
     }
   }
   const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
-  const [enCours, setEnCours] = useState<'avis' | 'relance' | null>(null)
+  const [enCours, setEnCours] = useState<'avis' | 'relance' | 'rappel' | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [expediteur, setExpediteur] = useState(expediteurSms)
   const [statutExpediteur, setStatutExpediteur] = useState(expediteurStatut)
@@ -293,7 +294,8 @@ export default function MessagesAutomatiquesV2({
   const avisMarche = avisActif(reglages, ctx)
   const relanceMarche = relanceActive(reglages)
   const blocage = reglages.review_enabled ? blocageAvis(reglages, ctx) : null
-  const actifs = nombreActifs(reglages, ctx)
+  const rappelMarche = rappelsActifs(reglages.rappel_rdv_actif)
+  const actifs = nombreActifs(reglages, ctx) + (rappelMarche ? 1 : 0)
 
   // Ce qui PEUT encore partir : les clients « ne plus contacter » en sont retirés, comme dans
   // les crons. « Parti » garde tout l'historique : un message déjà envoyé l'a bien été.
@@ -348,6 +350,20 @@ export default function MessagesAutomatiquesV2({
     setReglages({ ...reglages, [champ]: !allume })
     setEnCours(quoi)
     const message = await ecrire({ [champ]: !allume })
+    setEnCours(null)
+    if (message) {
+      setReglages(avant)
+      setErreur(message)
+    }
+  }
+
+  // Le rappel de rendez-vous : un email, pas de plan à vérifier, donc l'interrupteur écrit toujours.
+  async function basculerRappel() {
+    setErreur(null)
+    const avant = reglages
+    setReglages({ ...reglages, rappel_rdv_actif: !rappelMarche })
+    setEnCours('rappel')
+    const message = await ecrire({ rappel_rdv_actif: !rappelMarche })
     setEnCours(null)
     if (message) {
       setReglages(avant)
@@ -427,6 +443,14 @@ export default function MessagesAutomatiquesV2({
             href="/dashboard/abonnement"
           />
         )}
+        <LigneAutomatisme
+          libelle="Rappel de rendez-vous"
+          resume={`${resumeRappels(normaliserHeures(reglages.rappel_rdv_heures))} · Email`}
+          actif={rappelMarche}
+          enCours={enCours === 'rappel'}
+          onBasculer={basculerRappel}
+          onOuvrir={() => setFeuille({ quoi: 'rappel', activer: false })}
+        />
       </Carte>
 
       <p className={`mt-3 px-1 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
@@ -489,6 +513,9 @@ export default function MessagesAutomatiquesV2({
           onClose={() => setFeuille(null)}
           enregistrer={enregistrerDepuisFeuille}
         />
+      )}
+      {feuille?.quoi === 'rappel' && (
+        <ReglageRappelV2 reglages={reglages} onClose={() => setFeuille(null)} enregistrer={enregistrerDepuisFeuille} />
       )}
       {feuille?.quoi === 'relance' && (
         <ReglageRelanceV2

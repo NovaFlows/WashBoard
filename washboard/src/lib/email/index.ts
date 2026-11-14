@@ -924,6 +924,54 @@ ${paragraphe(`Référence de votre demande : <strong style="font-family:${MONO};
   }, { idempotencyKey: `acompte-rappel/${bookingId}` })
 }
 
+/** Rappel de rendez-vous, quelques heures avant (`api/cron/rappels-rdv`, règles dans
+ *  `lib/rappelsRdv.ts`). La date est écrite en toutes lettres : le même message sert pour « 24 h
+ *  avant » et pour « 3 h avant ». La clé d'idempotence évite un doublon si Resend a livré un envoi
+ *  que le réseau a signalé en échec. */
+export async function sendRappelRdv({ to, clientName, washerName, washerPhone, scheduledAt, serviceName, address, lieu, bookingId, heures }: {
+  to: string
+  clientName: string
+  washerName: string
+  washerPhone?: string | null
+  scheduledAt: string
+  serviceName: string
+  address: string
+  lieu?: string | null
+  bookingId: string
+  /** Rappel que ce message représente (24 = « 24 h avant ») : sépare les envois d'un même rendez-vous. */
+  heures: number
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const rdv = new Date(scheduledAt)
+  const jour = rdv.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heure = rdv.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const ref = bookingId.slice(0, 8).toUpperCase()
+  const tel = washerPhone?.trim() ? formatPhone(washerPhone) : ''
+  const lignes: LigneDetail[] = [
+    { libelle: 'Prestation', valeur: escapeHtml(serviceName) },
+    { libelle: 'Date', valeur: jour },
+    { libelle: 'Heure', valeur: heure },
+    { libelle: libelleAdresse(lieu), valeur: escapeHtml(address) },
+  ]
+  return resend.emails.send({
+    from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
+    to,
+    subject: `Rappel : votre rendez-vous du ${jour} à ${heure} — ${washerName}`,
+    html: page({
+      titre: 'Rappel de rendez-vous',
+      entete: enteteLaveur(escapeHtml(washerName)),
+      contenu: `
+${titre({ texte: 'Rappel de rendez-vous', sousTitre: `${jour} à ${heure}` })}
+${paragraphe(`Bonjour <strong>${escapeHtml(clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`Un petit rappel : vous avez rendez-vous avec <strong>${escapeHtml(washerName)}</strong>.`, { marge: '0 0 20px' })}
+${details(lignes)}
+${paragraphe(`Un empêchement ? Prévenez <strong>${escapeHtml(washerName)}</strong>${tel ? ` au <strong style="white-space:nowrap;">${escapeHtml(tel)}</strong>` : ''} dès que possible, pour qu’il puisse libérer le créneau.`, { ton: 'gris', marge: '0 0 16px' })}
+${paragraphe(`Référence : <strong style="font-family:${MONO};color:${COULEUR.encre};">${ref}</strong>`, { ton: 'gris', marge: '0' })}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}`,
+    }),
+  }, { idempotencyKey: `rappel-rdv/${bookingId}/${heures}` })
+}
+
 /** « Votre tampon est arrivé » : envoyé quand le laveur marque la prestation terminée
  *  (`api/bookings/[id]` → `prevenirTampon`, option C retenue par Alexandre le 2026-10-18). Le
  *  lien ouvre la page carte avec `?tampon=1`, où le tampon frappe la carte sous ses yeux. La

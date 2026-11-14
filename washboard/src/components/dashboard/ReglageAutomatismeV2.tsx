@@ -9,6 +9,7 @@ import {
   DELAI_AVIS_MAX_HEURES, DELAI_RELANCE_MAX_JOURS, RELANCE_MESSAGE_MAX,
   type Canal, type RdvMessage, type ReglagesMessages,
 } from '@/lib/messagesAutomatiques'
+import { RAPPEL_HEURES_DEFAUT, RAPPEL_HEURES_MAX, RAPPEL_NB_MAX } from '@/lib/rappelsRdv'
 
 // Réglage d'un automatisme, en feuille du bas — planche `project/Automatisme.dc.html`
 // de la maquette (refonte 2026), réservée à la PWA installée (ouverte par
@@ -449,6 +450,120 @@ export function ReglageRelanceV2({
 
         <Bloc titre="Canal">
           <ChoixCanal canal={canal} onChange={setCanal} smsAutorise={smsAutorise} cible="la demande d’avis" />
+        </Bloc>
+
+        <Erreur texte={erreur} />
+      </form>
+    </Feuille>
+  )
+}
+
+// ── Rappel de rendez-vous (email) ──────────────────────────────────────────
+
+const PRESETS_RAPPEL = [1, 2, 3, 24, 48] as const
+
+export function ReglageRappelV2({
+  reglages, onClose, enregistrer,
+}: {
+  reglages: ReglagesMessages
+  onClose: () => void
+  enregistrer: Enregistrer
+}) {
+  // Saisies gardées en texte : un champ vidé pendant la frappe ne doit pas devenir « 0 ».
+  const [saisies, setSaisies] = useState<string[]>(() =>
+    (reglages.rappel_rdv_heures?.length ? reglages.rappel_rdv_heures : [...RAPPEL_HEURES_DEFAUT]).map(String))
+  const [enCours, setEnCours] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  const changer = (i: number, v: string) => setSaisies(s => s.map((x, j) => (j === i ? v : x)))
+
+  async function valider(e: React.FormEvent) {
+    e.preventDefault()
+    setErreur(null)
+    const heures = saisies.map(s => Number(s.trim()))
+    if (heures.some(h => !Number.isInteger(h) || h < 1 || h > RAPPEL_HEURES_MAX)) {
+      setErreur(`Chaque délai doit être un nombre entier d’heures entre 1 et ${RAPPEL_HEURES_MAX}.`)
+      return
+    }
+    if (new Set(heures).size !== heures.length) {
+      setErreur('Deux rappels ont le même délai : le client recevrait le même message deux fois.')
+      return
+    }
+    setEnCours(true)
+    const message = await enregistrer({ rappel_rdv_heures: heures })
+    setEnCours(false)
+    if (message) setErreur(message)
+  }
+
+  return (
+    <Feuille
+      titre="Rappel de rendez-vous"
+      sousTitre="Un email au client, avant son rendez-vous"
+      onClose={onClose}
+      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="reglage-rappel" />}
+    >
+      <form id="reglage-rappel" onSubmit={valider} noValidate>
+        <Bloc titre="Quand" aide={`${saisies.length} sur ${RAPPEL_NB_MAX}`}>
+          <ul className="flex flex-col gap-4">
+            {saisies.map((valeur, i) => (
+              <li key={i} className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 py-3">
+                <div className="flex items-center justify-between pb-2">
+                  <span className={`text-[14px] ${corpsFort}`}>Rappel {i + 1}</span>
+                  {saisies.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setSaisies(s => s.filter((_, j) => j !== i))}
+                      className={`h-11 px-2 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
+                    >
+                      Retirer
+                    </button>
+                  )}
+                </div>
+                <Puces
+                  nom={`Délai du rappel ${i + 1}`}
+                  valeurs={PRESETS_RAPPEL}
+                  libelle={h => (h === 24 ? '1 jour' : h === 48 ? '2 jours' : `${h} h`)}
+                  valeur={(PRESETS_RAPPEL as readonly number[]).includes(Number(valeur)) ? Number(valeur) : 'autre'}
+                  onChoisir={v => { if (v !== 'autre') changer(i, String(v)) }}
+                />
+                <div className="mt-3 flex items-center gap-2.5">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={RAPPEL_HEURES_MAX}
+                    value={valeur}
+                    onChange={e => changer(i, e.target.value)}
+                    aria-label={`Nombre d’heures avant le rendez-vous, rappel ${i + 1}`}
+                    className={`${CHAMP} !w-24`}
+                  />
+                  <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>heures avant le rendez-vous</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {saisies.length < RAPPEL_NB_MAX && (
+            <button
+              type="button"
+              onClick={() => setSaisies(s => [...s, '1'])}
+              className={`mt-3 inline-flex h-11 items-center rounded-[var(--v2-radius-bouton)] px-3 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
+              style={{ background: 'color-mix(in srgb, var(--v2-color-accent) 10%, transparent)' }}
+            >
+              Ajouter un rappel
+            </button>
+          )}
+          <p className={`mt-3 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
+            Seuls les rendez-vous confirmés reçoivent un rappel, et seulement si le client a une adresse email.
+            Un rendez-vous pris trop tard pour un rappel n’en reçoit pas. C’est gratuit et sans limite : c’est un email, pas un SMS.
+          </p>
+        </Bloc>
+
+        <Bloc titre="Message" aide="Non modifiable">
+          <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 py-3">
+            <p className={`text-[14px] ${corps} leading-[1.6]`}>
+              Email « Rappel de rendez-vous » : la prestation, le jour, l’heure et l’adresse, avec votre numéro pour vous prévenir en cas d’empêchement.
+            </p>
+          </div>
         </Bloc>
 
         <Erreur texte={erreur} />

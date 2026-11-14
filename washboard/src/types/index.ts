@@ -60,6 +60,9 @@ export type Washer = {
   followup_enabled: boolean
   followup_delay_days: number
   followup_message: string | null
+  /** Rappels de rendez-vous par email (lib/rappelsRdv.ts). Absents tant que la colonne n'existe pas : valent « allumé, 24 h et 3 h avant ». */
+  rappel_rdv_actif?: boolean | null
+  rappel_rdv_heures?: number[] | null
   created_at: string
   // Preuve d'acceptation des CGV à l'inscription (voir api/auth/signup).
   // `null` pour tout compte créé avant ce contrôle.

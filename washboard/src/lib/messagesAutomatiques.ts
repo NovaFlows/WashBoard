@@ -38,6 +38,10 @@ export type ReglagesMessages = {
   followup_enabled: boolean
   followup_delay_days: number
   followup_message: string | null
+  /** Rappels de rendez-vous par email (lib/rappelsRdv.ts) : facultatifs ici, absents de la base
+   *  tant que la colonne n'existe pas — ils valent alors « allumé, 24 h et 3 h avant ». */
+  rappel_rdv_actif?: boolean
+  rappel_rdv_heures?: number[]
 }
 
 /** Ce que la page lit sur chaque rendez-vous. Les colonnes d'horodatage sont
