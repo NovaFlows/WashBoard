@@ -6,7 +6,7 @@ import { FileText } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import type { Washer } from '@/types'
 import {
-  paysFacturation, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, siretValide,
+  paysDuProfil, reglesPays, identifiantValidePour, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, siretValide,
   type RegimeTva, type StatutJuridique,
 } from '@/lib/facture'
 
@@ -14,7 +14,6 @@ const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded
 const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
 const aideClass = "text-xs text-slate-400 dark:text-slate-500 mt-1"
 
-const FORMES_JURIDIQUES = ['SASU', 'SAS', 'EURL', 'SARL', 'SA', 'SNC']
 
 function Choix<T extends string>({ nom, valeur, options, onChange }: {
   nom: string
@@ -64,10 +63,11 @@ export function FacturationCard({ washer }: { washer: Washer }) {
   const [capital, setCapital] = useState(washer.facture_capital ?? '')
   const [immatriculation, setImmatriculation] = useState(washer.facture_immatriculation ?? '')
   const [regime, setRegime] = useState<RegimeTva>(washer.facture_regime_tva ?? 'franchise')
-  const [taux, setTaux] = useState(String(washer.facture_taux_tva ?? tauxTvaNormal(paysFacturation({ facture_numero_tva: washer.facture_numero_tva, facture_siret: washer.facture_siret, phone: (washer as { phone?: string | null }).phone }))))
+  const [taux, setTaux] = useState(String(washer.facture_taux_tva ?? tauxTvaNormal(paysDuProfil({ facture_numero_tva: washer.facture_numero_tva, facture_siret: washer.facture_siret, phone: (washer as { phone?: string | null }).phone }))))
   const [numeroTva, setNumeroTva] = useState(washer.facture_numero_tva ?? '')
   // Taux du pays du laveur (France 20/10/5,5, Belgique 21/12/6, Suisse 8,1/2,6/3,8), plus celui déjà enregistré s'il est ailleurs.
-  const pays = paysFacturation({ facture_numero_tva: numeroTva, facture_siret: siret, phone: (washer as { phone?: string | null }).phone })
+  const pays = paysDuProfil({ facture_numero_tva: numeroTva, facture_siret: siret, phone: (washer as { phone?: string | null }).phone })
+  const regles = reglesPays(pays)
   const tauxProposes = [...new Set([...tauxTvaPour(pays), ...(Number.isFinite(Number(taux)) && Number(taux) > 0 ? [Number(taux)] : [])])]
   const numeroActuel = washer.facture_prochain_numero ?? 1
   const [prochainNumero, setProchainNumero] = useState(String(numeroActuel))
@@ -90,8 +90,8 @@ export function FacturationCard({ washer }: { washer: Washer }) {
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setMsg(null)
-    if (siret.trim() && !siretValide(siret)) {
-      setMsg({ ok: false, text: 'Numéro invalide : SIRET (14 chiffres), numéro BCE belge (10 chiffres) ou numéro IDE suisse (CHE-123.456.789).' })
+    if (siret.trim() && (!siretValide(siret) || !identifiantValidePour(pays, siret))) {
+      setMsg({ ok: false, text: regles.identifiantErreur })
       return
     }
     setLoading(true)
@@ -147,8 +147,8 @@ export function FacturationCard({ washer }: { washer: Washer }) {
             valeur={statut}
             onChange={setStatut}
             options={[
-              { value: 'ei', label: 'Micro-entreprise ou entrepreneur individuel', desc: 'La mention « EI » est ajoutée à votre nom sur vos factures.' },
-              { value: 'societe', label: 'Société (SASU, SAS, EURL, SARL…)', desc: 'Vos factures portent votre forme juridique, votre capital et votre RCS.' },
+              { value: 'ei', label: regles.statutEi.libelle, desc: regles.statutEi.aide },
+              { value: 'societe', label: regles.statutSociete.libelle, desc: regles.statutSociete.aide },
             ] as const}
           />
         </div>
@@ -171,23 +171,23 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         </div>
 
         <div>
-          <label htmlFor="facture-siret" className={labelClass}>SIRET, n° BCE (Belgique) ou n° IDE (Suisse)</label>
-          <input id="facture-siret" type="text" value={siret} onChange={e => setSiret(e.target.value)} placeholder="123 456 789 00012" className={inputClass} />
+          <label htmlFor="facture-siret" className={labelClass}>{regles.identifiantTitre}</label>
+          <input id="facture-siret" type="text" value={siret} onChange={e => setSiret(e.target.value)} placeholder={regles.identifiantExemple} className={inputClass} />
           <p className={aideClass}>France : 14 chiffres, sur votre avis de situation Insee ou sur annuaire-entreprises.data.gouv.fr. Suisse : numéro IDE (CHE-123.456.789), sur zefix.ch.</p>
         </div>
 
         <div>
           <label className={labelClass}>{societe ? 'Adresse du siège' : 'Adresse professionnelle'}</label>
-          <AddressAutocomplete value={adresse} onChange={setAdresse} placeholder="12 rue de la Paix, 75001 Paris" className={inputClass} />
+          <AddressAutocomplete value={adresse} onChange={setAdresse} placeholder={regles.adresseExemple} className={inputClass} />
         </div>
 
         {societe && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="facture-forme" className={labelClass}>Forme juridique</label>
-              <input id="facture-forme" list="formes-juridiques" value={forme} onChange={e => setForme(e.target.value)} placeholder="SASU" className={inputClass} />
+              <input id="facture-forme" list="formes-juridiques" value={forme} onChange={e => setForme(e.target.value)} placeholder={regles.formes[0]} className={inputClass} />
               <datalist id="formes-juridiques">
-                {FORMES_JURIDIQUES.map(f => <option key={f} value={f} />)}
+                {regles.formes.map(f => <option key={f} value={f} />)}
               </datalist>
             </div>
             <div>
@@ -196,8 +196,8 @@ export function FacturationCard({ washer }: { washer: Washer }) {
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="facture-immatriculation" className={labelClass}>Immatriculation</label>
-              <input id="facture-immatriculation" type="text" value={immatriculation} onChange={e => setImmatriculation(e.target.value)} placeholder="RCS Pontoise 123 456 789" className={inputClass} />
-              <p className={aideClass}>« RCS », la ville de votre greffe, puis votre SIREN (les 9 premiers chiffres du SIRET).</p>
+              <input id="facture-immatriculation" type="text" value={immatriculation} onChange={e => setImmatriculation(e.target.value)} placeholder={regles.immatriculationExemple} className={inputClass} />
+              <p className={aideClass}>{regles.immatriculationAide}</p>
             </div>
           </div>
         )}
@@ -244,7 +244,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
             </div>
             <div>
               <label htmlFor="facture-numero-tva" className={labelClass}>{pays === 'CH' ? 'N° de TVA' : 'N° de TVA intracommunautaire'}</label>
-              <input id="facture-numero-tva" type="text" value={numeroTva} onChange={e => setNumeroTva(e.target.value)} placeholder={pays === 'BE' ? 'BE0123456749' : pays === 'CH' ? 'CHE-109.322.551 TVA' : 'FR40123456789'} className={inputClass} />
+              <input id="facture-numero-tva" type="text" value={numeroTva} onChange={e => setNumeroTva(e.target.value)} placeholder={regles.numeroTvaExemple} className={inputClass} />
             </div>
           </div>
         )}

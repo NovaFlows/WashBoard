@@ -10,7 +10,7 @@ import type { ZoneConfig } from '@/types'
 import { normalizePhone } from '@/lib/phone'
 import { pixelIdValide, nettoyerPixelId } from '@/lib/consentement'
 import { hasFeature, requiredPlanLabel, type Feature } from '@/lib/plan'
-import { TAUX_TVA, normaliserSiret, siretValide, normaliserNumeroTva, numeroTvaValide } from '@/lib/facture'
+import { TAUX_TVA, normaliserSiret, siretValide, normaliserNumeroTva, numeroTvaValide, paysDuTelephoneLaveur, identifiantValidePour, reglesPays } from '@/lib/facture'
 import { widgetsValides } from '@/lib/dashboardWidgets'
 import { slugValide, slugLibre } from '@/lib/slug'
 import { BookingPageModeSchema } from '@/lib/bookingPageMode'
@@ -116,7 +116,7 @@ export async function PATCH(request: NextRequest) {
   // Signalé par un audit externe le 2026-09-05.
   const { data: profil, error: profilError } = await supabase
     .from('washers')
-    .select('name, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, facture_prochain_numero, sms_sender, sms_sender_statut')
+    .select('name, phone, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, facture_prochain_numero, sms_sender, sms_sender_statut')
     .eq('user_id', user.id).single()
 
   if (profilError || !profil) {
@@ -343,6 +343,12 @@ export async function PATCH(request: NextRequest) {
         { error: 'Numéro invalide : SIRET (14 chiffres, avis de situation Insee), numéro BCE belge (10 chiffres) ou numéro IDE suisse (CHE-123.456.789).' },
         { status: 400 },
       )
+    }
+    // Pays du téléphone confirmé (choisi à l'inscription) : belge ou suisse, l'identifiant doit avoir
+    // le format de ce pays. Un numéro français ne contraint rien (il peut facturer avec un BCE).
+    const paysLaveur = paysDuTelephoneLaveur((profil as { phone?: string | null }).phone)
+    if (siret && paysLaveur && !identifiantValidePour(paysLaveur, siret)) {
+      return NextResponse.json({ error: reglesPays(paysLaveur).identifiantErreur }, { status: 400 })
     }
     updates.facture_siret = siret || null
   }

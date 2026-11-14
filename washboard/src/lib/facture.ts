@@ -50,6 +50,95 @@ export function paysFacturation(w: { facture_numero_tva?: string | null; facture
   return 'FR'
 }
 
+/** Le pays du laveur d'après son téléphone CONFIRMÉ par SMS, quand il est belge ou suisse : c'est la
+ *  seule donnée sûre dès l'inscription (le pays choisi dans la liste déroulante), avant même qu'il
+ *  ait rempli son profil. Un numéro français ne tranche pas (un 06 appartient aussi à qui facture en
+ *  Belgique) : `null`, et c'est `paysFacturation` qui lit alors l'identifiant saisi. */
+export function paysDuTelephoneLaveur(phone: string | null | undefined): PaysFacturation | null {
+  const tel = (phone ?? '').replace(/[\s.()-]/g, '')
+  if (/^(\+32|0032)/.test(tel)) return 'BE'
+  if (/^(\+41|0041)/.test(tel)) return 'CH'
+  return null
+}
+
+// ── Ce qui change d'un pays à l'autre dans le profil ───────────────────────────────────────────
+
+export type ReglesPays = {
+  pays: PaysFacturation
+  /** Titre du champ d'identifiant d'entreprise. */
+  identifiantTitre: string
+  identifiantExemple: string
+  /** Phrase affichée quand l'identifiant saisi n'a pas le bon format. */
+  identifiantErreur: string
+  statutEi: { libelle: string; aide: string }
+  statutSociete: { libelle: string; aide: string }
+  formes: readonly string[]
+  immatriculationExemple: string
+  immatriculationAide: string
+  numeroTvaExemple: string
+  numeroTvaErreur: string
+  adresseExemple: string
+}
+
+const REGLES: Record<PaysFacturation, ReglesPays> = {
+  FR: {
+    pays: 'FR',
+    identifiantTitre: 'SIRET',
+    identifiantExemple: '123 456 789 00012',
+    identifiantErreur: 'SIRET invalide : 14 chiffres (avis de situation Insee).',
+    statutEi: { libelle: 'Micro-entreprise ou entrepreneur individuel', aide: 'La mention « EI » est ajoutée à votre nom sur vos factures.' },
+    statutSociete: { libelle: 'Société (SASU, SAS, EURL, SARL…)', aide: 'Vos factures portent votre forme juridique, votre capital et votre RCS.' },
+    formes: ['SASU', 'SAS', 'EURL', 'SARL', 'SA', 'SNC'],
+    immatriculationExemple: 'RCS Pontoise 123 456 789',
+    immatriculationAide: '« RCS », la ville de votre greffe, puis votre SIREN (les 9 premiers chiffres du SIRET).',
+    numeroTvaExemple: 'FR40123456789',
+    numeroTvaErreur: 'Numéro de TVA invalide : FR suivi de 11 caractères, par exemple FR40123456789.',
+    adresseExemple: '8 rue des Lilas, 95560 Maffliers',
+  },
+  BE: {
+    pays: 'BE',
+    identifiantTitre: 'Numéro d’entreprise (BCE)',
+    identifiantExemple: '0123.456.749',
+    identifiantErreur: 'Numéro d’entreprise (BCE) invalide : 10 chiffres, commençant par 0 ou 1.',
+    statutEi: { libelle: 'Indépendant (personne physique)', aide: 'Vous exercez en nom propre, avec un numéro d’entreprise BCE.' },
+    statutSociete: { libelle: 'Société (SRL, SA…)', aide: 'Vos factures portent votre forme juridique, votre capital et votre RPM.' },
+    formes: ['SRL', 'SA', 'SC', 'SNC', 'SComm'],
+    immatriculationExemple: 'RPM Bruxelles 0123.456.749',
+    immatriculationAide: '« RPM » (registre des personnes morales), la ville du tribunal, puis votre numéro d’entreprise.',
+    numeroTvaExemple: 'BE0123456749',
+    numeroTvaErreur: 'Numéro de TVA invalide : BE suivi des 10 chiffres du numéro d’entreprise, par exemple BE0123456749.',
+    adresseExemple: 'Rue de la Loi 16, 1000 Bruxelles',
+  },
+  CH: {
+    pays: 'CH',
+    identifiantTitre: 'Numéro IDE',
+    identifiantExemple: 'CHE-109.322.551',
+    identifiantErreur: 'Numéro IDE invalide : CHE suivi de 9 chiffres, par exemple CHE-109.322.551.',
+    statutEi: { libelle: 'Entreprise individuelle', aide: 'Vous exercez en nom propre.' },
+    statutSociete: { libelle: 'Société (Sàrl, SA…)', aide: 'Vos factures portent votre forme juridique, votre capital et votre inscription au RC.' },
+    formes: ['Sàrl', 'SA', 'Snc', 'Sc'],
+    immatriculationExemple: 'RC Genève CHE-109.322.551',
+    immatriculationAide: '« RC » (registre du commerce), le canton, puis votre numéro IDE.',
+    numeroTvaExemple: 'CHE-109.322.551 TVA',
+    numeroTvaErreur: 'Numéro de TVA invalide : CHE-123.456.789 TVA.',
+    adresseExemple: 'Rue du Rhône 14, 1204 Genève',
+  },
+}
+
+export const reglesPays = (pays: PaysFacturation): ReglesPays => REGLES[pays]
+
+/** Un identifiant d'entreprise au format du pays : SIRET (FR), BCE (BE) ou IDE (CH). Vide = pas de
+ *  contrôle (le champ est facultatif). Pour un pays donné, un identifiant d'un autre pays est refusé :
+ *  un laveur dont le numéro de téléphone est suisse n'a pas de SIRET français. */
+export function identifiantValidePour(pays: PaysFacturation, brut: string): boolean {
+  const s = normaliserSiret(brut)
+  if (!s) return true
+  if (!siretValide(s)) return false
+  if (pays === 'BE') return /^[01]\d{9}$/.test(s)
+  if (pays === 'CH') return /^CHE\d{9}$/.test(s)
+  return /^\d{14}$/.test(s)
+}
+
 export const tauxTvaPour = (pays: PaysFacturation): readonly number[] => (pays === 'BE' ? TAUX_TVA_BE : pays === 'CH' ? TAUX_TVA_CH : TAUX_TVA_FR)
 export const libelleIdentifiant = (pays: PaysFacturation): string =>
   pays === 'BE' ? 'numéro d’entreprise (BCE)' : pays === 'CH' ? 'numéro IDE (CHE)' : 'SIRET'
@@ -421,4 +510,11 @@ export function construireFacture(r: ReservationFacturable, v: VendeurFacturable
     remiseTtc,
     totaux: totauxFacture(brut - remiseTtc, regime, taux),
   }
+}
+
+/** Le pays qui règle le profil de facturation : celui du téléphone confirmé quand il est belge ou
+ *  suisse (c'est le choix fait à l'inscription), sinon ce que dit `paysFacturation` (TVA, puis
+ *  identifiant saisi) — un laveur à numéro français reste libre de facturer avec un BCE belge. */
+export function paysDuProfil(w: { facture_numero_tva?: string | null; facture_siret?: string | null; phone?: string | null }): PaysFacturation {
+  return paysDuTelephoneLaveur(w.phone) ?? paysFacturation(w)
 }

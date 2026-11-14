@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  paysDuTelephoneLaveur, paysDuProfil, reglesPays, identifiantValidePour,
   siretValide, numeroTvaValide, infosFacturationManquantes, phraseManques,
   ideSuisseValide, normaliserNumeroTva, normaliserSiret, libelleCourtIdentifiant, identifiantAffiche, tauxTvaNormal,
   lignesFacture, totauxFacture, construireFacture, nomLegalAffiche,
@@ -317,5 +318,54 @@ describe('Suisse (ouverture du 2026-11-13)', () => {
     expect(f.vendeur.tauxTva).toBe(8.1)
     expect(f.vendeur.numeroTva).toBe('CHE-109.322.551 TVA')
     expect(f.vendeur.siret).toBe('CHE109322551')
+  })
+})
+
+describe('règles du profil selon le pays du téléphone', () => {
+  it('un téléphone belge ou suisse donne le pays, un français ne tranche pas', () => {
+    expect(paysDuTelephoneLaveur('+32470123456')).toBe('BE')
+    expect(paysDuTelephoneLaveur('+41 79 123 45 67')).toBe('CH')
+    expect(paysDuTelephoneLaveur('0612345678')).toBeNull()
+    expect(paysDuTelephoneLaveur(null)).toBeNull()
+  })
+
+  it('chaque pays a son titre d’identifiant, ses formes juridiques et son immatriculation', () => {
+    expect(reglesPays('FR').identifiantTitre).toBe('SIRET')
+    expect(reglesPays('BE').identifiantTitre).toMatch(/BCE/)
+    expect(reglesPays('CH').identifiantTitre).toMatch(/IDE/)
+    expect(reglesPays('BE').formes).toContain('SRL')
+    expect(reglesPays('CH').formes).toContain('Sàrl')
+    expect(reglesPays('FR').formes).toContain('SASU')
+    expect(reglesPays('BE').immatriculationExemple).toMatch(/^RPM/)
+    expect(reglesPays('CH').immatriculationExemple).toMatch(/^RC /)
+  })
+
+  it('un identifiant d’un autre pays est refusé', () => {
+    const be = '0123456749' // BCE valide (clé 49)
+    const ch = 'CHE-109.322.551'
+    expect(identifiantValidePour('BE', be)).toBe(true)
+    expect(identifiantValidePour('BE', ch)).toBe(false)
+    expect(identifiantValidePour('BE', '12345678900012')).toBe(false)
+    expect(identifiantValidePour('CH', ch)).toBe(true)
+    expect(identifiantValidePour('CH', be)).toBe(false)
+    expect(identifiantValidePour('FR', be)).toBe(false)
+    expect(identifiantValidePour('FR', ch)).toBe(false)
+  })
+
+  it('un identifiant vide n’est pas contrôlé (champ facultatif)', () => {
+    expect(identifiantValidePour('CH', '')).toBe(true)
+    expect(identifiantValidePour('BE', '  ')).toBe(true)
+  })
+})
+
+describe('paysDuProfil', () => {
+  it('le téléphone belge ou suisse l’emporte sur ce qui est saisi', () => {
+    expect(paysDuProfil({ phone: '+41791234567', facture_siret: '12345678900012' })).toBe('CH')
+    expect(paysDuProfil({ phone: '+32470123456', facture_numero_tva: 'FR40123456789' })).toBe('BE')
+  })
+
+  it('un téléphone français laisse l’identifiant décider', () => {
+    expect(paysDuProfil({ phone: '0612345678' })).toBe('FR')
+    expect(paysDuProfil({ phone: '0612345678', facture_siret: '0123456749' })).toBe('BE')
   })
 })

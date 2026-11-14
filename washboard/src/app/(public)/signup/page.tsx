@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PasswordInput } from '@/components/ui/PasswordInput'
-import { normaliserMobile, normalizePhone } from '@/lib/phone'
+import { normaliserMobile, PAYS_TELEPHONE, telephoneDuPays, type PaysTelephone } from '@/lib/phone'
 import Link from 'next/link'
 import {
   BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, Guide, LIEN_DISCRET, SAISIE, TitreEntree,
@@ -13,6 +13,10 @@ export default function SignupPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  // Le pays du téléphone (2026-11-14) : il lève l'ambiguïté d'un 079… suisse / 07… français, et fixe,
+  // une fois le numéro confirmé par SMS, le format de l'identifiant d'entreprise du profil.
+  const [pays, setPays] = useState<PaysTelephone>('FR')
+  const choixPays = PAYS_TELEPHONE.find(p => p.code === pays) ?? PAYS_TELEPHONE[0]
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [cgvAcceptees, setCgvAcceptees] = useState(false)
@@ -25,9 +29,11 @@ export default function SignupPage() {
     setError(null)
     if (!name.trim()) { setError('Le nom de ton entreprise est requis'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Adresse email invalide'); return }
-    if (!normaliserMobile(phone) && !normalizePhone(phone)) { setError('Numéro de téléphone invalide (ex. 06 12 34 56 78, 0470 12 34 56 en Belgique, +41 79 123 45 67 en Suisse)'); return }
+    // Le numéro est lu sous le pays choisi dans la liste, puis envoyé sous sa forme canonique.
+    const telephone = telephoneDuPays(phone, pays)
+    if (!telephone) { setError(`Numéro de téléphone invalide pour ${choixPays.libelle} (ex. ${choixPays.exemple})`); return }
     // Le code de confirmation arrive par SMS (2026-10-21) : un mobile, forcément.
-    if (!normaliserMobile(phone)) { setError('Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique, +41 7x en Suisse) : le code de confirmation arrive par SMS.'); return }
+    if (!normaliserMobile(telephone)) { setError('Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique, 07x en Suisse) : le code de confirmation arrive par SMS.'); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
     if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères'); return }
     if (!cgvAcceptees) { setError('Merci d’accepter les CGV pour continuer'); return }
@@ -39,7 +45,7 @@ export default function SignupPage() {
       res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, phone, cgv_acceptees: cgvAcceptees }),
+        body: JSON.stringify({ name, email, password, phone: telephone, cgv_acceptees: cgvAcceptees }),
       })
     } catch {
       setError('Connexion impossible. Vérifie ta connexion internet et réessaie.')
@@ -57,7 +63,7 @@ export default function SignupPage() {
     // Pas de connexion ici : Supabase la refuse tant que l'inscription n'est pas
     // confirmée. Les deux derniers chiffres du numéro, pour que l'écran du code dise où
     // le SMS est parti.
-    const fin = (normaliserMobile(phone) ?? normalizePhone(phone) ?? '').slice(-2)
+    const fin = telephone.slice(-2)
     router.push(`/verifier-email?email=${encodeURIComponent(email.trim())}&tel=${fin}`)
   }
 
@@ -77,7 +83,17 @@ export default function SignupPage() {
             <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="toi@exemple.fr" autoComplete="email" className={SAISIE} />
           </Champ>
           <Champ id="phone" label="Téléphone" aide={<>Un code de confirmation t’arrive par SMS.<br />Il sert aussi à te joindre en cas de souci.</>}>
-            <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="06 12 34 56 78 (ou 0470 12 34 56, +41 79 123 45 67)" autoComplete="tel" className={SAISIE} />
+            <div className="flex items-center gap-2">
+              <select
+                aria-label="Pays du téléphone"
+                value={pays}
+                onChange={e => setPays(e.target.value as PaysTelephone)}
+                className="wb-entree-champ-saisie !w-auto shrink-0 cursor-pointer"
+              >
+                {PAYS_TELEPHONE.map(p => <option key={p.code} value={p.code}>{p.code} {p.indicatif}</option>)}
+              </select>
+              <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder={choixPays.exemple} autoComplete="tel-national" className={SAISIE} />
+            </div>
           </Champ>
           <Champ id="password" label="Mot de passe">
             <PasswordInput id="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="6 caractères minimum" autoComplete="new-password" className={SAISIE} />

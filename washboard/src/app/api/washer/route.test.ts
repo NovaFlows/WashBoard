@@ -573,3 +573,37 @@ describe('PATCH /api/washer — validation de base', () => {
     expect(res.status).toBe(500)
   })
 })
+
+describe('PATCH /api/washer — identifiant d’entreprise selon le pays du téléphone', () => {
+  const avecTelephone = (phone: string | null) => ({ data: { plan: 'pro', grandfathered: false, id: 'w1', phone }, error: null })
+  const SIRET_FR = '73282932000074'
+  const BCE = '0123456749'
+  const IDE = 'CHE-109.322.551'
+
+  it('téléphone suisse : refuse un SIRET français, accepte un numéro IDE', async () => {
+    plan.washer = avecTelephone('+41791234567')
+    const refus = await patch({ facture_siret: SIRET_FR })
+    expect(refus.res.status).toBe(400)
+    expect(refus.body.error).toMatch(/IDE/)
+    expect((await patch({ facture_siret: IDE })).res.status).toBe(200)
+  })
+
+  it('téléphone belge : refuse un numéro IDE, accepte un numéro BCE', async () => {
+    plan.washer = avecTelephone('+32470123456')
+    const refus = await patch({ facture_siret: IDE })
+    expect(refus.res.status).toBe(400)
+    expect(refus.body.error).toMatch(/BCE/)
+    expect((await patch({ facture_siret: BCE })).res.status).toBe(200)
+  })
+
+  it('téléphone français : aucun pays imposé (il peut facturer avec un BCE)', async () => {
+    plan.washer = avecTelephone('0612345678')
+    expect((await patch({ facture_siret: SIRET_FR })).res.status).toBe(200)
+    expect((await patch({ facture_siret: BCE })).res.status).toBe(200)
+  })
+
+  it('un identifiant vide reste permis, quel que soit le pays', async () => {
+    plan.washer = avecTelephone('+41791234567')
+    expect((await patch({ facture_siret: '' })).res.status).toBe(200)
+  })
+})

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { normalizePhone, isValidPhone, isMobilePhone, formatPhone, isPhoneExemptFromUniqueness, whatsappDigits, normaliserMobile, paysDuTelephone } from './phone'
+import { normalizePhone, isValidPhone, isMobilePhone, formatPhone, isPhoneExemptFromUniqueness, whatsappDigits, normaliserMobile, paysDuTelephone, telephoneDuPays, PAYS_TELEPHONE } from './phone'
 
 // Cette normalisation porte une règle anti-abus : sans forme canonique, la
 // contrainte d'unicité en base laisserait passer trois comptes d'essai avec le
@@ -237,5 +237,44 @@ describe('numéros suisses (ouverture du 2026-11-13)', () => {
     expect(formatPhone('+41791234567')).toBe('+41 79 123 45 67')
     expect(isMobilePhone('+41791234567')).toBe(true)
     expect(isMobilePhone('+41221234567')).toBe(false)
+  })
+})
+
+describe('telephoneDuPays — liste déroulante de l’inscription', () => {
+  it('France : lit un numéro français, avec ou sans zéro de tête', () => {
+    expect(telephoneDuPays('06 12 34 56 78', 'FR')).toBe('0612345678')
+    expect(telephoneDuPays('612345678', 'FR')).toBe('0612345678')
+  })
+
+  it('Belgique : un 0470… est belge, le zéro peut manquer', () => {
+    expect(telephoneDuPays('0470 12 34 56', 'BE')).toBe('+32470123456')
+    expect(telephoneDuPays('470 12 34 56', 'BE')).toBe('+32470123456')
+  })
+
+  it('Suisse : un 079… est suisse, et non un 07 français', () => {
+    expect(telephoneDuPays('079 123 45 67', 'CH')).toBe('+41791234567')
+    expect(telephoneDuPays('79 123 45 67', 'CH')).toBe('+41791234567')
+    // Sous « France », le même texte se lit comme un 07 français : c'est l'ambiguïté que la liste lève.
+    expect(telephoneDuPays('079 123 45 67', 'FR')).toBe('0791234567')
+  })
+
+  it('un numéro tapé en entier avec son indicatif est lu tel quel, quel que soit le pays choisi', () => {
+    expect(telephoneDuPays('+41 79 123 45 67', 'FR')).toBe('+41791234567')
+    expect(telephoneDuPays('+32 470 12 34 56', 'CH')).toBe('+32470123456')
+    expect(telephoneDuPays('0041 79 123 45 67', 'FR')).toBe('+41791234567')
+  })
+
+  it('refuse le vide et les numéros impossibles', () => {
+    expect(telephoneDuPays('', 'FR')).toBeNull()
+    expect(telephoneDuPays('abc', 'BE')).toBeNull()
+    expect(telephoneDuPays('12', 'CH')).toBeNull()
+  })
+
+  it('le pays choisi redonne le pays du numéro', () => {
+    for (const p of PAYS_TELEPHONE) {
+      const n = telephoneDuPays(p.exemple, p.code)
+      expect(n, p.code).not.toBeNull()
+      expect(paysDuTelephone(n), p.code).toBe(p.code)
+    }
   })
 })

@@ -8,7 +8,7 @@
 // ne servent qu'à répondre tout de suite, sans aller-retour.
 
 import { isValidPhone, formatPhone } from '@/lib/phone'
-import { infosFacturationManquantes, siretValide, numeroTvaValide, type InfosFacturation } from '@/lib/facture'
+import { infosFacturationManquantes, siretValide, numeroTvaValide, identifiantValidePour, reglesPays, type InfosFacturation, type PaysFacturation } from '@/lib/facture'
 
 /** Ce qu'une ligne de l'écran affiche sous son intitulé. `ton` : ambre quand c'est à faire. */
 export type Resume = { texte: string; ton?: 'ambre' }
@@ -84,7 +84,9 @@ export function validerMotDePasse(nouveau: string, confirmation: string): string
 
 /** Facturation : ce qu'on refuse AVANT d'envoyer (le reste — champs vides — est autorisé,
  *  la facture reste simplement impossible à émettre tant qu'il manque quelque chose). */
-export function validerFacturation(champs: { siret: string; regime: 'franchise' | 'assujetti'; numeroTva: string; prochainNumero: string; numeroActuel: number }): string | null {
+export function validerFacturation(champs: { siret: string; regime: 'franchise' | 'assujetti'; numeroTva: string; prochainNumero: string; numeroActuel: number; pays?: PaysFacturation }): string | null {
+  // Pays connu (téléphone confirmé) : l'identifiant doit avoir le format de CE pays, avec sa phrase.
+  if (champs.pays && champs.siret.trim() && !identifiantValidePour(champs.pays, champs.siret)) return reglesPays(champs.pays).identifiantErreur
   if (champs.siret.trim() && !siretValide(champs.siret)) return 'Numéro d’entreprise invalide : SIRET (14 chiffres), numéro BCE belge (10 chiffres) ou numéro IDE suisse (CHE-123.456.789).'
   if (champs.regime === 'assujetti' && champs.numeroTva.trim() && !numeroTvaValide(champs.numeroTva)) {
     return 'Numéro de TVA invalide : FR suivi de 11 caractères, BE suivi du numéro BCE, ou CHE-123.456.789 TVA en Suisse.'

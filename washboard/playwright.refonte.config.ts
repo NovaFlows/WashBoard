@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: /(booking-refonte|plage-bloquee|lot-centres-prestations|plusieurs-prestations)\.spec\.ts/,
+  testMatch: /(booking-refonte|plage-bloquee|lot-centres-prestations|plusieurs-prestations|signup-pays)\.spec\.ts/,
   workers: 1,
   timeout: 60_000,
   use: { baseURL: 'http://localhost:3017', ...devices['iPhone 13'], browserName: 'chromium', trace: 'retain-on-failure' },

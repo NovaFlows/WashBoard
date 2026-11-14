@@ -127,6 +127,32 @@ export function formatPhone(brut: string | null | undefined): string {
   return n.replace(/(\d{2})(?=\d)/g, '$1 ').trim()
 }
 
+// ── Choix du pays à l'inscription (2026-11-14) ──────────────────────────────────────────────────
+//
+// Une liste déroulante (FR +33, BE +32, CH +41) précède le champ du numéro : on sait alors de quel pays il
+// vient, y compris pour un mobile suisse (079…) qu'on ne pouvait pas distinguer d'un 07 français.
+// Le pays, une fois le numéro confirmé par SMS, décide du format de l'identifiant d'entreprise et
+// des mentions du profil (`lib/facture.ts`, `reglesPays`).
+
+export type ChoixPaysTelephone = { code: PaysTelephone; indicatif: string; libelle: string; exemple: string }
+
+export const PAYS_TELEPHONE: readonly ChoixPaysTelephone[] = [
+  { code: 'FR', indicatif: '+33', libelle: 'France', exemple: '06 12 34 56 78' },
+  { code: 'BE', indicatif: '+32', libelle: 'Belgique', exemple: '0470 12 34 56' },
+  { code: 'CH', indicatif: '+41', libelle: 'Suisse', exemple: '079 123 45 67' },
+]
+
+/** Le numéro saisi dans le champ, sous le pays choisi dans la liste, en forme canonique
+ *  (06… / +32… / +41…) ; `null` s'il est inutilisable. Le zéro de tête peut manquer (« 470 12 34 56 »),
+ *  et un numéro tapé en entier avec son indicatif (« +41 79… ») est lu tel quel, quel que soit le pays
+ *  choisi : on ne devine pas contre ce que la personne a écrit. */
+export function telephoneDuPays(brut: string | null | undefined, pays: PaysTelephone): string | null {
+  const n = String(brut ?? '').trim().replace(/[\s.\-()]/g, '')
+  if (!n) return null
+  if (n.startsWith('+') || n.startsWith('00')) return normalizePhone(n, pays)
+  return normalizePhone(/^0/.test(n) ? n : '0' + n, pays)
+}
+
 /** Numéros autorisés à porter plusieurs comptes.
  *
  *  L'unicité du téléphone existe pour empêcher d'ouvrir plusieurs essais

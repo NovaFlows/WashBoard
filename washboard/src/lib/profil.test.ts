@@ -70,6 +70,11 @@ describe('vérifications de saisie', () => {
     expect(validerFacturation(base)).toBeNull()
     expect(validerFacturation({ ...base, siret: '123' })).toContain('SIRET')
     expect(validerFacturation({ ...base, regime: 'assujetti', numeroTva: 'FR123' })).toContain('TVA')
+    // Pays connu (téléphone confirmé) : l'identifiant doit avoir le format de CE pays.
+    expect(validerFacturation({ ...base, siret: '73282932000074', pays: 'CH' })).toContain('IDE')
+    expect(validerFacturation({ ...base, siret: '73282932000074', pays: 'BE' })).toContain('BCE')
+    expect(validerFacturation({ ...base, siret: 'CHE-109.322.551', pays: 'CH' })).toBeNull()
+    expect(validerFacturation({ ...base, siret: '73282932000074', pays: 'FR' })).toBeNull()
     expect(validerFacturation({ ...base, prochainNumero: '6' })).toContain('arrière')
     expect(validerFacturation({ ...base, prochainNumero: '7,5' })).toContain('entier')
     // Avancer la numérotation reste possible (reprise d'un ancien logiciel).
