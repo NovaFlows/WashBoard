@@ -84,6 +84,13 @@ export async function POST(req: Request) {
   // On retente sur n'importe quelle erreur plutôt que sur le code 42703 : une
   // insertion ne renvoie pas toujours de code exploitable, et un essai de plus
   // ne coûte qu'une ligne de journal.
+  // 23503 : le laveur n'existe (plus) en base — compte supprimé, page encore en cache, identifiant
+  // inventé. Réessayer sans les colonnes d'attribution y échouerait pareil (jusqu'à trois erreurs
+  // dans les journaux Supabase pour une seule visite) : on s'arrête là, sans alerte, c'est du bruit.
+  if (error?.code === '23503') {
+    logger.info('analytics.funnel.laveur_inconnu', { washerId: parsed.data.washer_id })
+    return new Response(null, { status: 204 })
+  }
   if (error && utm_content) {
     const sansCreation = { ...sansAttribution, ...(utm_campaign ? { utm_campaign } : {}) }
     const seconde = await admin.from('booking_funnel_events').insert(sansCreation)
