@@ -16,6 +16,7 @@ import type { WidgetKey } from '@/lib/dashboardWidgets'
 import type { ZoneConfig } from '@/types'
 import PersonnaliserV2 from '@/components/dashboard/PersonnaliserV2'
 import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
+import MeteoAccueilV2, { STYLE_VERRE } from '@/components/dashboard/MeteoAccueilV2'
 import { LigneRdvVerrouilleeV2, type ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
 import { PLAN_LABELS, PLAN_COULEURS, PLAN_PRICES, PLAN_CARDS, type Plan } from '@/lib/plan'
 import type { JourSemaine } from '@/lib/semaineAccueil'
@@ -301,6 +302,8 @@ type Props = {
    *  (téléphone) : `demarrage` y disparaît déjà seul quand il n'a plus rien à réclamer, inchangé
    *  par cette passe. */
   configurationIncomplete: boolean
+  /** Nom du laveur, pour le « Bonjour » de l'en-tête. */
+  nomLaveur?: string
 }
 
 export default function AccueilV2({
@@ -323,10 +326,18 @@ export default function AccueilV2({
   rdvDemain,
   demainStr,
   configurationIncomplete,
+  nomLaveur,
 }: Props) {
   const t = useT()
   const loc = useLocale()
   const [personnaliser, setPersonnaliser] = useState(false)
+  // « Bonjour » le jour, « Bonsoir » à partir de 18 h : lu dans le navigateur après l'hydratation (le
+  // serveur ne connaît pas l'heure de la personne), « Bonjour » d'ici là.
+  const [soir, setSoir] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- heure locale, inconnue du serveur (hydratation)
+    setSoir(new Date().getHours() >= 18)
+  }, [])
   // Passe « bureau » (2026-10-05, Alexandre, 2026-10-03) : deux colonnes au-delà de
   // `SEUIL_GRAND_ECRAN_PX` (1024px), même hook que ClientsViewV2.tsx — pas un seuil inventé en
   // double. `false` au rendu serveur et jusqu'à l'hydratation : l'écran démarre donc toujours en
@@ -394,7 +405,7 @@ export default function AccueilV2({
       {prochain ? (
         <section className="mt-6">
           <TitreSection>{t('Prochain rendez-vous')}</TitreSection>
-          <CarteHeros rdv={prochain} dateDuJour={dateDuJour} />
+          <CarteHeros rdv={prochain} dateDuJour={dateDuJour} verre={!grandEcran} />
         </section>
       ) : (
         <p className={`mt-10 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
@@ -460,20 +471,42 @@ export default function AccueilV2({
 
   return (
     <div
-      className={`${grandEcran ? '' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6'} pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
+      className={`relative isolate ${grandEcran ? '' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6'} pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
+      {/* L'aura : un fond doux, chaud et bleuté, derrière l'en-tête et le premier rendez-vous. Ce qui
+          rend l'accueil « cocooning », et ce que le verre de la carte vient flouter sur téléphone. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-x-8 -top-8 -z-10 h-[560px]"
+        style={{
+          background: [
+            'radial-gradient(60% 46% at 12% 6%, color-mix(in srgb, var(--v2-color-accent) 26%, transparent), transparent 72%)',
+            'radial-gradient(52% 40% at 92% 22%, color-mix(in srgb, var(--v2-color-ambre) 24%, transparent), transparent 72%)',
+            'radial-gradient(70% 38% at 40% 58%, color-mix(in srgb, var(--v2-color-vert) 14%, transparent), transparent 74%)',
+          ].join(','),
+          // Fondu sur les quatre bords : l'aura ne doit jamais dessiner de rectangle.
+          maskImage: 'linear-gradient(to bottom, transparent, #000 12%, #000 55%, transparent), linear-gradient(to right, transparent, #000 14%, #000 86%, transparent)',
+          maskComposite: 'intersect',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 12%, #000 55%, transparent), linear-gradient(to right, transparent, #000 14%, #000 86%, transparent)',
+          WebkitMaskComposite: 'source-in',
+        }}
+      />
       <JaugeReservationsV2 {...jauge} />
       {/* En écran 45 (bureau, premier jour), la carte de configuration se pose dans la colonne de
           gauche, à la place du héros — pas ICI en plus, par-dessus (voir plus bas). */}
       {!premierJour && demarrage}
 
+      <div className={grandEcran ? 'grid grid-cols-[minmax(0,1fr)_340px] items-start gap-[26px]' : ''}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
+          <h1 className={`text-[27px] leading-[1.1] ${titre} break-words`}>
+            {soir ? t('Bonsoir') : t('Bonjour')}{nomLaveur ? ` ${nomLaveur}` : ''}
+          </h1>
           {/* first-letter, pas capitalize : « Mercredi 23 septembre », et non
               « Mercredi 23 Septembre » — un nom de mois ne prend pas de
               majuscule en français. */}
-          <h1 className={`text-[21px] ${titre} first-letter:uppercase`}>{titreJour}</h1>
-          <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] mt-1 tabular-nums`}>{sousTitre}</p>
+          <p className={`mt-1.5 text-[15px] ${corps} first-letter:uppercase`}>{titreJour}</p>
+          <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] mt-0.5 tabular-nums`}>{sousTitre}</p>
         </div>
         <button
           type="button"
@@ -483,6 +516,10 @@ export default function AccueilV2({
         >
           <MoreHorizontal size={21} strokeWidth={1.75} />
         </button>
+      </div>
+      <div className={grandEcran ? '' : 'mt-4'}>
+        <MeteoAccueilV2 verre={!grandEcran} />
+      </div>
       </div>
 
       {grandEcran ? (
@@ -783,7 +820,7 @@ function CarteListe({ children }: { children: ReactNode }) {
 
 /** Le héros de l'écran : l'heure en très gros, le nom, l'adresse, et deux
  *  actions — itinéraire et appel. Tout le reste de l'écran est en ligne. */
-function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: string }) {
+function CarteHeros({ rdv: b, dateDuJour, verre = false }: { rdv: RdvAccueil; dateDuJour: string; verre?: boolean }) {
   const t = useT()
   const loc = useLocale()
   const statut = STATUT[statutAffiche(b)]
@@ -795,7 +832,13 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
   const [choixItineraire, setChoixItineraire] = useState(false)
 
   return (
-    <div className="rounded-[18px] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] overflow-hidden">
+    // Sur téléphone, la carte est en verre (demande d'Alexandre, 2026-11-14) : exception assumée à la
+    // règle « le verre est un matériau de châssis, jamais de contenu » — le fond coloré de l'accueil
+    // (l'aura, plus haut) donne au flou quelque chose à flouter.
+    <div
+      className={`rounded-[22px] overflow-hidden ${verre ? '' : 'bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)]'}`}
+      style={verre ? STYLE_VERRE : undefined}
+    >
       <Link href={`/dashboard/calendrier?rdv=${b.id}`} className="flex items-start gap-4 px-[18px] pt-[17px] pb-[13px]">
         <span className="flex flex-col">
           {!estAujourdhui && (
@@ -854,8 +897,9 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
           {telephone && (
             <a
               href={`tel:${telephone}`}
-              className={`flex h-[47px] flex-1 items-center justify-center gap-2 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97] motion-reduce:transition-none`}
+              className={`flex h-[47px] flex-1 items-center justify-center gap-2 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] ${verre ? '' : 'bg-[color:var(--v2-color-surface)]'} text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97] motion-reduce:transition-none`}
               style={{
+                ...(verre ? { background: 'var(--v2-verre-haut)' } : {}),
                 transitionDuration: 'var(--v2-duration-press)',
                 transitionTimingFunction: 'var(--v2-ease-out)',
               }}

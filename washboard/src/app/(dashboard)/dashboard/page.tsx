@@ -363,6 +363,7 @@ export default async function DashboardPage() {
         trafic={visibles.has('traffic') ? { visiteurs: visiteursSemaine, conversions: conversionsSemaine } : null}
         prestationTop={visibles.has('services') ? (prestationsComptees[0] ?? null) : null}
         zone={washer.zone_config}
+        nomLaveur={washer.name}
         jauge={{
           utilisees: utiliseesCeMois ?? 0,
           quota: utiliseesCeMois === null ? null : plafondMensuel,
