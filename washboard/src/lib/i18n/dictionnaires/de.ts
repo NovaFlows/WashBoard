@@ -4,6 +4,7 @@ import { landing } from './de/landing'
 import { tableau } from './de/tableau'
 import { reglages } from './de/reglages'
 import { meteo } from './de/meteo'
+import { messages } from './de/messages'
 
 // Une partie par fichier : pour traduire un nouvel écran, ajouter `./de/<partie>.ts` ici.
-export const de: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo }
+export const de: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages }

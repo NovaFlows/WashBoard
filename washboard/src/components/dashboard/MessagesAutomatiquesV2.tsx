@@ -12,14 +12,15 @@ import { enregistrerReglages } from '@/lib/enregistrerReglages'
 import { enregistrerProfil } from '@/lib/profilApi'
 import { estExpediteurApprouve } from '@/lib/expediteurs'
 import {
-  avisActif, blocageAvis, relanceActive, nombreActifs, libelleCanal, libelleDelaiAvis, libelleDelaiRelance,
+  avisActif, blocageAvis, relanceActive, nombreActifs, libelleCanal, DELAI_RELANCE_DEFAUT_JOURS,
   messagesPartis, messagesProgrammes, messageRelanceSuggere,
   type LigneMessage, type RdvMessage, type ReglagesMessages,
 } from '@/lib/messagesAutomatiques'
 import { cleClient } from '@/lib/clientProfile'
 import FeuilleMessageProgrammeV2, { type ResultatMessage } from '@/components/dashboard/FeuilleMessageProgrammeV2'
 import { requiredPlanLabel } from '@/lib/plan'
-import { normaliserHeures, rappelsActifs, resumeRappels } from '@/lib/rappelsRdv'
+import { normaliserHeures, rappelsActifs } from '@/lib/rappelsRdv'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Messages automatiques » — refonte 2026, planche `project/ARelancer.dc.html`.
 // Réservé à la PWA installée (voir MessagesAutomatiques.tsx, le garde-fou) ;
@@ -115,6 +116,7 @@ function LigneAutomatisme({
   href?: string
   verrouille?: boolean
 }) {
+  const t = useT()
   const texte = (
     <span className="flex min-w-0 flex-col gap-0.5">
       <span className={`text-[15.5px] ${corpsFort}`}>{libelle}</span>
@@ -136,11 +138,11 @@ function LigneAutomatisme({
       )}
       <Interrupteur actif={actif} enCours={enCours} libelle={libelle} onClick={onBasculer} verrouille={verrouille} />
       {href ? (
-        <Link href={href} aria-label={`Réglages : ${libelle}`} className="flex h-11 w-8 shrink-0 items-center justify-center text-[color:var(--v2-color-encre-pale)]">
+        <Link href={href} aria-label={t('Réglages : {nom}', { nom: libelle })} className="flex h-11 w-8 shrink-0 items-center justify-center text-[color:var(--v2-color-encre-pale)]">
           <ChevronRight size={17} strokeWidth={2} />
         </Link>
       ) : (
-        <button type="button" onClick={onOuvrir} aria-label={`Réglages : ${libelle}`} className="flex h-11 w-8 shrink-0 items-center justify-center text-[color:var(--v2-color-encre-pale)]">
+        <button type="button" onClick={onOuvrir} aria-label={t('Réglages : {nom}', { nom: libelle })} className="flex h-11 w-8 shrink-0 items-center justify-center text-[color:var(--v2-color-encre-pale)]">
           <ChevronRight size={17} strokeWidth={2} />
         </button>
       )}
@@ -182,6 +184,7 @@ function Point({ type }: { type: LigneMessage['type'] }) {
 }
 
 function LigneMessageV2({ ligne, avecType, onOuvrir }: { ligne: LigneMessage; avecType: boolean; onOuvrir?: (l: LigneMessage) => void }) {
+  const t = useT()
   const couleur =
     ligne.ton === 'ok' ? 'var(--v2-color-vert)' : ligne.ton === 'neutre' ? 'var(--v2-color-encre)' : 'var(--v2-color-gris)'
   const contenu = (
@@ -197,7 +200,7 @@ function LigneMessageV2({ ligne, avecType, onOuvrir }: { ligne: LigneMessage; av
         <span className={`flex items-start gap-2 text-[12.5px] leading-[1.35] ${corps} text-[color:var(--v2-color-gris)]`}>
           <span className="mt-[5px] flex"><Point type={ligne.type} /></span>
           <span className="min-w-0">
-            {avecType && <><span className={corpsFort}>{ligne.type === 'avis' ? 'Avis' : 'Relance'}</span>{' · '}</>}
+            {avecType && <><span className={corpsFort}>{ligne.type === 'avis' ? t('Avis') : t('Relance')}</span>{' · '}</>}
             {ligne.detail}
           </span>
         </span>
@@ -224,6 +227,7 @@ function LigneMessageV2({ ligne, avecType, onOuvrir }: { ligne: LigneMessage; av
 function ListeMessages({
   lignes, avecType, vide, onOuvrir,
 }: { lignes: LigneMessage[]; avecType: boolean; vide: string; onOuvrir?: (l: LigneMessage) => void }) {
+  const t = useT()
   const [toutes, setToutes] = useState(false)
   if (lignes.length === 0) {
     return (
@@ -245,7 +249,7 @@ function ListeMessages({
             aria-expanded={toutes}
             className={`flex min-h-11 w-full items-center justify-center text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
           >
-            {toutes ? 'Réduire' : `Voir les ${reste} autres`}
+            {toutes ? t('Réduire') : t('Voir les {n} autres', { n: reste })}
           </button>
         </li>
       )}
@@ -256,6 +260,7 @@ function ListeMessages({
 export default function MessagesAutomatiquesV2({
   reglages: reglagesServeur, smsAutorise, avisAutorise, libellePlanAvis, relanceAutorisee, libellePlanRelance, nomLaveur, expediteurSms, expediteurStatut, telephone, slug, rdvs: rdvsServeur, clesSansContact, lectureIncomplete,
 }: MessagesAutomatiquesProps) {
+  const t = useT()
   const router = useRouter()
   const grandEcran = useGrandEcran()
   // Réglages locaux : mis à jour dès qu'une écriture réussit, sans attendre le
@@ -273,13 +278,13 @@ export default function MessagesAutomatiquesV2({
         body: JSON.stringify({ type: ligne.type, action, jours }),
       })
       const json = await res.json().catch(() => ({})) as { error?: string; champs?: Record<string, string | null> }
-      if (!res.ok) return { ok: false, erreur: json.error ?? 'L’enregistrement a échoué. Réessayez.' }
+      if (!res.ok) return { ok: false, erreur: json.error ?? t('L’enregistrement a échoué. Réessayez.') }
       const champs = json.champs ?? {}
       setRdvs(prev => prev.map(b => (b.id === ligne.rdvId ? { ...b, ...champs } : b)))
       router.refresh()
       return { ok: true, champs }
     } catch {
-      return { ok: false, erreur: 'Enregistrement impossible. Vérifiez votre connexion et réessayez.' }
+      return { ok: false, erreur: t('Enregistrement impossible. Vérifiez votre connexion et réessayez.') }
     }
   }
   const [feuille, setFeuille] = useState<FeuilleOuverte>(null)
@@ -371,14 +376,26 @@ export default function MessagesAutomatiquesV2({
     }
   }
 
+  const delaiAvis = (heures: number) => {
+    const h = Math.max(0, Math.round(Number(heures) || 0))
+    if (h === 0) return t('juste après chaque prestation')
+    if (h % 24 === 0) return t(h / 24 > 1 ? '{n} jours après chaque prestation' : '{n} jour après chaque prestation', { n: h / 24 })
+    return t('{n} h après chaque prestation', { n: h })
+  }
+  const delaiRelance = (jours: number) => {
+    const j = Math.max(1, Math.round(Number(jours) || DELAI_RELANCE_DEFAUT_JOURS))
+    if (j % 30 === 0) return t('{n} mois sans nouveau rendez-vous', { n: j / 30 })
+    return t(j > 1 ? '{n} jours sans nouveau rendez-vous' : '{n} jour sans nouveau rendez-vous', { n: j })
+  }
+
   const lienReservation = typeof window !== 'undefined' ? `${window.location.origin}/book/${slug}` : `/book/${slug}`
-  const sousTitre = actifs === 0 ? 'Aucun actif · rien à valider' : `${actifs} actif${actifs > 1 ? 's' : ''} · rien à valider`
+  const sousTitre = actifs === 0 ? t('Aucun actif · rien à valider') : t(actifs > 1 ? '{n} actifs · rien à valider' : '{n} actif · rien à valider', { n: actifs })
 
   const avertissementAvis = blocage === 'lien'
-    ? 'Rien ne part : ajoutez votre lien d’avis Google'
-    : blocage === 'sms' ? `Rien ne part : le SMS est inclus dès l’offre ${requiredPlanLabel('avis_sms')}` : null
+    ? t('Rien ne part : ajoutez votre lien d’avis Google')
+    : blocage === 'sms' ? t('Rien ne part : le SMS est inclus dès l’offre {offre}', { offre: requiredPlanLabel('avis_sms') }) : null
   const avertissementRelance = reglages.followup_enabled && !reglages.followup_message?.trim()
-    ? 'Rien ne part : écrivez le message à envoyer' : null
+    ? t('Rien ne part : écrivez le message à envoyer') : null
 
   return (
     <div
@@ -387,13 +404,13 @@ export default function MessagesAutomatiquesV2({
       <div className="flex items-center gap-1 pb-3">
         <Link
           href="/dashboard/clients"
-          aria-label="Retour à Clients"
+          aria-label={t('Retour à Clients')}
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
         <div className="min-w-0">
-          <h1 className={`text-[21px] leading-none ${titre}`}>Messages automatiques</h1>
+          <h1 className={`text-[21px] leading-none ${titre}`}>{t('Messages automatiques')}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{sousTitre}</p>
         </div>
       </div>
@@ -401,8 +418,8 @@ export default function MessagesAutomatiquesV2({
       <Carte>
         {avisAutorise || reglages.review_enabled ? (
           <LigneAutomatisme
-            libelle="Demande d’avis Google"
-            resume={`${libelleDelaiAvis(reglages.review_delay_hours)} · ${libelleCanal(reglages.review_channel)}`}
+            libelle={t('Demande d’avis Google')}
+            resume={`${delaiAvis(reglages.review_delay_hours)} · ${t(libelleCanal(reglages.review_channel))}`}
             avertissement={avertissementAvis}
             actif={avisMarche}
             enCours={enCours === 'avis'}
@@ -411,8 +428,8 @@ export default function MessagesAutomatiquesV2({
           />
         ) : (
           <LigneAutomatisme
-            libelle="Demande d’avis Google"
-            resume={`Réservé au plan ${libellePlanAvis}`}
+            libelle={t('Demande d’avis Google')}
+            resume={t('Réservé au plan {plan}', { plan: libellePlanAvis })}
             actif={false}
             enCours={false}
             verrouille
@@ -422,8 +439,8 @@ export default function MessagesAutomatiquesV2({
         )}
         {relanceAutorisee || reglages.followup_enabled ? (
           <LigneAutomatisme
-            libelle="Relance"
-            resume={`${libelleDelaiRelance(reglages.followup_delay_days)} · ${libelleCanal(reglages.review_channel)}`}
+            libelle={t('Relance')}
+            resume={`${delaiRelance(reglages.followup_delay_days)} · ${t(libelleCanal(reglages.review_channel))}`}
             avertissement={avertissementRelance}
             actif={relanceMarche}
             enCours={enCours === 'relance'}
@@ -434,8 +451,8 @@ export default function MessagesAutomatiquesV2({
           // Essentiel : la route refuse d'activer les relances. Le réglage
           // mène à l'abonnement plutôt qu'à un interrupteur qui échouerait.
           <LigneAutomatisme
-            libelle="Relance"
-            resume={`Réservé au plan ${libellePlanRelance}`}
+            libelle={t('Relance')}
+            resume={t('Réservé au plan {plan}', { plan: libellePlanRelance })}
             actif={false}
             enCours={false}
             verrouille
@@ -444,8 +461,8 @@ export default function MessagesAutomatiquesV2({
           />
         )}
         <LigneAutomatisme
-          libelle="Rappel de rendez-vous"
-          resume={`${resumeRappels(normaliserHeures(reglages.rappel_rdv_heures))} · Email`}
+          libelle={t('Rappel de rendez-vous')}
+          resume={`${normaliserHeures(reglages.rappel_rdv_heures).map(h => (h % 24 === 0 ? t(h / 24 > 1 ? '{n} jours avant' : '{n} jour avant', { n: h / 24 }) : t('{n} h avant', { n: h }))).join(' · ')} · ${t('Email')}`}
           actif={rappelMarche}
           enCours={enCours === 'rappel'}
           onBasculer={basculerRappel}
@@ -454,7 +471,7 @@ export default function MessagesAutomatiquesV2({
       </Carte>
 
       <p className={`mt-3 px-1 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
-        Vous réglez le délai une fois, les messages partent seuls. Rien à cocher chaque semaine.
+        {t('Vous réglez le délai une fois, les messages partent seuls. Rien à cocher chaque semaine.')}
       </p>
 
       {erreur && (
@@ -463,31 +480,28 @@ export default function MessagesAutomatiquesV2({
 
       {lectureIncomplete ? (
         <p role="status" className={`mt-[22px] px-1 text-[13px] ${corps} leading-[1.55]`} style={{ color: 'var(--v2-color-ambre)' }}>
-          Vos rendez-vous n’ont pas pu être lus en entier : les listes de messages programmés et envoyés sont masquées
-          plutôt qu’incomplètes. Vos réglages, eux, fonctionnent. Rechargez la page dans un instant.
+          {t('Vos rendez-vous n’ont pas pu être lus en entier : les listes de messages programmés et envoyés sont masquées plutôt qu’incomplètes. Vos réglages, eux, fonctionnent. Rechargez la page dans un instant.')}
         </p>
       ) : (
         // Côte à côte en grand écran (maquette, écrans 31/32 : la place existe pour les deux
         // sans scroll) ; empilées sinon, comme avant cette passe.
         <div className={grandEcran ? 'grid grid-cols-2 items-start gap-6' : undefined}>
-          <Section titre="Programmé" nombre={programmes.length}>
+          <Section titre={t('Programmé')} nombre={programmes.length}>
             <ListeMessages
               lignes={programmes}
               onOuvrir={setMessageOuvert}
               avecType
               vide={actifs === 0
-                ? 'Rien n’est programmé : aucun message automatique n’est actif.'
-                : 'Rien n’est programmé pour les 7 prochains jours.'}
+                ? t('Rien n’est programmé : aucun message automatique n’est actif.')
+                : t('Rien n’est programmé pour les 7 prochains jours.')}
             />
           </Section>
 
-          <Section titre="Parti ces 7 derniers jours" nombre={partis.length}>
-            <ListeMessages lignes={partis} avecType={false} vide="Aucun message n’est parti ces 7 derniers jours." />
+          <Section titre={t('Parti ces 7 derniers jours')} nombre={partis.length}>
+            <ListeMessages lignes={partis} avecType={false} vide={t('Aucun message n’est parti ces 7 derniers jours.')} />
             {partis.some(l => l.deduit) && (
               <p className={`mt-2 px-1 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
-                WashBoard n’enregistre pas d’accusé d’envoi : les emails d’avis et les relances sont déduits de l’historique
-                de vos rendez-vous. « A réservé depuis » signifie qu’un rendez-vous a été pris après la relance, sans preuve
-                que le message en soit la cause.
+                {t('WashBoard n’enregistre pas d’accusé d’envoi : les emails d’avis et les relances sont déduits de l’historique de vos rendez-vous. « A réservé depuis » signifie qu’un rendez-vous a été pris après la relance, sans preuve que le message en soit la cause.')}
               </p>
             )}
           </Section>

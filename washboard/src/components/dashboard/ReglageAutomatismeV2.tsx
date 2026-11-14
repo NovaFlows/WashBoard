@@ -10,6 +10,7 @@ import {
   type Canal, type RdvMessage, type ReglagesMessages,
 } from '@/lib/messagesAutomatiques'
 import { RAPPEL_HEURES_DEFAUT, RAPPEL_HEURES_MAX, RAPPEL_NB_MAX } from '@/lib/rappelsRdv'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Réglage d'un automatisme, en feuille du bas — planche `project/Automatisme.dc.html`
 // de la maquette (refonte 2026), réservée à la PWA installée (ouverte par
@@ -61,6 +62,7 @@ export function Puces({
   onChoisir: (v: number | 'autre') => void
   nom: string
 }) {
+  const t = useT()
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label={nom}>
       {valeurs.map(v => (
@@ -70,7 +72,7 @@ export function Puces({
       ))}
       {autre && (
         <button type="button" aria-pressed={valeur === 'autre'} onClick={() => onChoisir('autre')} className={chip(valeur === 'autre')} style={PRESSION}>
-          Autre
+          {t('Autre')}
         </button>
       )}
     </div>
@@ -80,9 +82,10 @@ export function Puces({
 function ChoixCanal({
   canal, onChange, smsAutorise, cible,
 }: { canal: Canal; onChange: (c: Canal) => void; smsAutorise: boolean; cible: string }) {
+  const t = useT()
   return (
     <>
-      <div className="flex gap-2.5" role="group" aria-label="Canal d’envoi">
+      <div className="flex gap-2.5" role="group" aria-label={t('Canal d’envoi')}>
         {(['email', 'sms'] as const).map(c => {
           const bloque = c === 'sms' && !smsAutorise && canal !== 'sms'
           const actif = canal === c
@@ -100,13 +103,13 @@ function ChoixCanal({
               }`}
               style={PRESSION}
             >
-              {libelleCanal(c)}{bloque && <span className="ml-1.5 text-[12px]">Pro</span>}
+              {t(libelleCanal(c))}{bloque && <span className="ml-1.5 text-[12px]">{t('Pro')}</span>}
             </button>
           )
         })}
       </div>
       <p className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
-        Ce choix vaut aussi pour {cible}. WhatsApp n’est pas encore proposé.
+        {t('Ce choix vaut aussi pour {cible}. WhatsApp n’est pas encore proposé.', { cible })}
       </p>
     </>
   )
@@ -122,6 +125,7 @@ export function Erreur({ texte }: { texte: string | null }) {
 export function Pied({
   enCours, libelle, onClose, formulaire,
 }: { enCours: boolean; libelle: string; onClose: () => void; formulaire: string }) {
+  const t = useT()
   return (
     <div className="flex gap-2.5">
       <button
@@ -130,7 +134,7 @@ export function Pied({
         className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-gris)]`}
         style={PRESSION}
       >
-        Annuler
+        {t('Annuler')}
       </button>
       <button
         type="submit"
@@ -148,7 +152,6 @@ export function Pied({
 // ── Demande d'avis Google ──────────────────────────────────────────────────
 
 const PRESETS_AVIS = [0, 1, 3, 24] as const
-const libellePresetAvis = (h: number) => (h === 0 ? 'Tout de suite' : h === 24 ? '1 jour' : `${h} h`)
 
 export function ReglageAvisV2({
   reglages, canal: canalInitial, smsAutorise, activer, nomLaveur, champExpediteur, onClose, enregistrer,
@@ -164,6 +167,7 @@ export function ReglageAvisV2({
   onClose: () => void
   enregistrer: Enregistrer
 }) {
+  const t = useT()
   const [url, setUrl] = useState(reglages.google_review_url ?? '')
   const preset = (PRESETS_AVIS as readonly number[]).includes(reglages.review_delay_hours) ? reglages.review_delay_hours : 'autre'
   const [choix, setChoix] = useState<number | 'autre'>(preset)
@@ -182,12 +186,12 @@ export function ReglageAvisV2({
 
     const heures = choix === 'autre' ? Number(autre.trim()) : choix
     if (!Number.isInteger(heures) || heures < 0 || heures > DELAI_AVIS_MAX_HEURES) {
-      setErreurDelai(`Indiquez un nombre d’heures entre 0 et ${DELAI_AVIS_MAX_HEURES}.`)
+      setErreurDelai(t('Indiquez un nombre d’heures entre 0 et {max}.', { max: DELAI_AVIS_MAX_HEURES }))
       return
     }
     const lien = url.trim()
-    if (veutActiver && !lien) { setErreurUrl('Collez votre lien d’avis Google : sans lui, aucune demande ne peut partir.'); return }
-    if (lien && !lienAvisValide(lien)) { setErreurUrl('Ce lien doit commencer par https://'); return }
+    if (veutActiver && !lien) { setErreurUrl(t('Collez votre lien d’avis Google : sans lui, aucune demande ne peut partir.')); return }
+    if (lien && !lienAvisValide(lien)) { setErreurUrl(t('Ce lien doit commencer par https://')); return }
 
     const champs: Partial<ReglagesMessages> = { google_review_url: lien || null, review_delay_hours: heures }
     // Le canal n'est envoyé que s'il change : renvoyer « sms » à un compte
@@ -205,13 +209,13 @@ export function ReglageAvisV2({
 
   return (
     <Feuille
-      titre="Demande d’avis Google"
-      sousTitre="Un message après chaque prestation terminée"
+      titre={t('Demande d’avis Google')}
+      sousTitre={t('Un message après chaque prestation terminée')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle={activer ? 'Enregistrer et activer' : 'Enregistrer'} onClose={onClose} formulaire="reglage-avis" />}
+      pied={<Pied enCours={enCours} libelle={activer ? t('Enregistrer et activer') : t('Enregistrer')} onClose={onClose} formulaire="reglage-avis" />}
     >
       <form id="reglage-avis" onSubmit={valider} noValidate>
-        <Bloc titre="Lien d’avis Google">
+        <Bloc titre={t('Lien d’avis Google')}>
           <input
             type="url"
             inputMode="url"
@@ -221,21 +225,21 @@ export function ReglageAvisV2({
             value={url}
             onChange={e => setUrl(e.target.value)}
             placeholder="https://g.page/r/…"
-            aria-label="Lien d’avis Google"
+            aria-label={t('Lien d’avis Google')}
             aria-invalid={!!erreurUrl}
             className={CHAMP}
           />
           {erreurUrl && <p role="alert" className={`mt-1.5 text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-rouge)' }}>{erreurUrl}</p>}
           <p className={`mt-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
-            Depuis votre fiche Google Business : « Demander des avis », puis copiez le lien à partager.
+            {t('Depuis votre fiche Google Business : « Demander des avis », puis copiez le lien à partager.')}
           </p>
         </Bloc>
 
-        <Bloc titre="Quand">
+        <Bloc titre={t('Quand')}>
           <Puces
-            nom="Délai avant l’envoi"
+            nom={t('Délai avant l’envoi')}
             valeurs={PRESETS_AVIS}
-            libelle={libellePresetAvis}
+            libelle={h => (h === 0 ? t('Tout de suite') : h === 24 ? t('1 jour') : `${h} h`)}
             valeur={choix}
             autre
             onChoisir={setChoix}
@@ -249,34 +253,35 @@ export function ReglageAvisV2({
                 max={DELAI_AVIS_MAX_HEURES}
                 value={autre}
                 onChange={e => setAutre(e.target.value)}
-                aria-label="Nombre d’heures"
+                aria-label={t('Nombre d’heures')}
                 className={`${CHAMP} !w-24`}
               />
-              <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>heures</span>
+              <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('heures')}</span>
             </div>
           )}
           {erreurDelai && <p role="alert" className={`mt-1.5 text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-rouge)' }}>{erreurDelai}</p>}
           <p className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
-            Compté à partir du moment où vous touchez « Terminé » sur le rendez-vous — une seule demande par rendez-vous
-            {Number.isFinite(heuresEcrites) && heuresEcrites > 0 ? `, ${heuresEcrites} h plus tard.` : ', tout de suite.'}
-            {' '}Le client doit avoir une adresse email enregistrée.
+            {Number.isFinite(heuresEcrites) && heuresEcrites > 0
+              ? t('Compté à partir du moment où vous touchez « Terminé » sur le rendez-vous — une seule demande par rendez-vous, {h} h plus tard.', { h: heuresEcrites })
+              : t('Compté à partir du moment où vous touchez « Terminé » sur le rendez-vous — une seule demande par rendez-vous, tout de suite.')}
+            {' '}{t('Le client doit avoir une adresse email enregistrée.')}
           </p>
         </Bloc>
 
-        <Bloc titre="Canal">
-          <ChoixCanal canal={canal} onChange={setCanal} smsAutorise={smsAutorise} cible="la relance" />
+        <Bloc titre={t('Canal')}>
+          <ChoixCanal canal={canal} onChange={setCanal} smsAutorise={smsAutorise} cible={t('la relance')} />
         </Bloc>
 
-        <Bloc titre="Message" aide="Non modifiable">
+        <Bloc titre={t('Message')} aide={t('Non modifiable')}>
           <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 py-3">
             <p className={`text-[14px] ${corps} leading-[1.6]`}>
               {canal === 'sms'
                 ? texteSmsAvis()
-                : `Email « Votre avis compte pour ${nomLaveur} », avec un bouton « Laisser un avis Google » qui ouvre votre lien.`}
+                : t('Email « Votre avis compte pour {nom} », avec un bouton « Laisser un avis Google » qui ouvre votre lien.', { nom: nomLaveur })}
             </p>
           </div>
           <p className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
-            Ce texte est le même pour tous les laveurs pour l’instant : il ne se personnalise pas encore.
+            {t('Ce texte est le même pour tous les laveurs pour l’instant : il ne se personnalise pas encore.')}
           </p>
         </Bloc>
 
@@ -291,7 +296,6 @@ export function ReglageAvisV2({
 // ── Relance ────────────────────────────────────────────────────────────────
 
 const PRESETS_RELANCE = [30, 60, 90, 180] as const
-const libellePresetRelance = (j: number) => `${j / 30} mois`
 
 export function ReglageRelanceV2({
   reglages, canal: canalInitial, smsAutorise, activer, messageSuggere, rdvs, maintenant, lectureIncomplete, onClose, enregistrer,
@@ -308,6 +312,7 @@ export function ReglageRelanceV2({
   onClose: () => void
   enregistrer: Enregistrer
 }) {
+  const t = useT()
   const preset = (PRESETS_RELANCE as readonly number[]).includes(reglages.followup_delay_days) ? reglages.followup_delay_days : 'autre'
   const [choix, setChoix] = useState<number | 'autre'>(preset)
   const [autre, setAutre] = useState(String(reglages.followup_delay_days))
@@ -340,11 +345,11 @@ export function ReglageRelanceV2({
     setErreur(null); setErreurDelai(null); setErreurMessage(null)
 
     if (!delaiValide) {
-      setErreurDelai(`Indiquez un nombre de jours entre 1 et ${DELAI_RELANCE_MAX_JOURS}.`)
+      setErreurDelai(t('Indiquez un nombre de jours entre 1 et {max}.', { max: DELAI_RELANCE_MAX_JOURS }))
       return
     }
     const texte = message.trim()
-    if (veutActiver && !texte) { setErreurMessage('Écrivez le message à envoyer : sans lui, aucune relance ne peut partir.'); return }
+    if (veutActiver && !texte) { setErreurMessage(t('Écrivez le message à envoyer : sans lui, aucune relance ne peut partir.')); return }
 
     const champs: Partial<ReglagesMessages> = { followup_delay_days: jours, followup_message: texte || null }
     if (canal !== canalInitial) champs.review_channel = canal
@@ -358,17 +363,17 @@ export function ReglageRelanceV2({
 
   return (
     <Feuille
-      titre="Relance"
-      sousTitre="Faire revenir un client qui ne revient plus"
+      titre={t('Relance')}
+      sousTitre={t('Faire revenir un client qui ne revient plus')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle={activer ? 'Enregistrer et activer' : 'Enregistrer'} onClose={onClose} formulaire="reglage-relance" />}
+      pied={<Pied enCours={enCours} libelle={activer ? t('Enregistrer et activer') : t('Enregistrer')} onClose={onClose} formulaire="reglage-relance" />}
     >
       <form id="reglage-relance" onSubmit={valider} noValidate>
-        <Bloc titre="Quand">
+        <Bloc titre={t('Quand')}>
           <Puces
-            nom="Délai avant la relance"
+            nom={t('Délai avant la relance')}
             valeurs={PRESETS_RELANCE}
-            libelle={libellePresetRelance}
+            libelle={j => t('{n} mois', { n: j / 30 })}
             valeur={choix}
             autre
             onChoisir={setChoix}
@@ -382,48 +387,47 @@ export function ReglageRelanceV2({
                 max={DELAI_RELANCE_MAX_JOURS}
                 value={autre}
                 onChange={e => setAutre(e.target.value)}
-                aria-label="Nombre de jours"
+                aria-label={t('Nombre de jours')}
                 className={`${CHAMP} !w-24`}
               />
-              <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>jours</span>
+              <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('jours')}</span>
             </div>
           )}
           {erreurDelai && <p role="alert" className={`mt-1.5 text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-rouge)' }}>{erreurDelai}</p>}
           <p className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
-            Après la dernière prestation, si le client n’a pas repris rendez-vous entre-temps.
+            {t('Après la dernière prestation, si le client n’a pas repris rendez-vous entre-temps.')}
           </p>
         </Bloc>
 
         {apercu && (
           <div className="mb-5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 py-3">
-            <p className={`text-[14px] ${corpsFort}`}>Ce que ça donne aujourd’hui</p>
+            <p className={`text-[14px] ${corpsFort}`}>{t('Ce que ça donne aujourd’hui')}</p>
             <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`} aria-live="polite">
               {apercu.concernes > 0 ? (
                 <>
                   <strong className="font-semibold text-[color:var(--v2-color-encre)]">
-                    {apercu.concernes} client{apercu.concernes > 1 ? 's' : ''}
-                  </strong>{' '}
-                  {apercu.concernes > 1 ? 'sont concernés' : 'est concerné'} : {apercu.concernes > 1 ? 'ils recevraient' : 'il recevrait'} ce message au prochain envoi.
+                    {t(apercu.concernes > 1 ? '{n} clients sont concernés : ils recevraient ce message au prochain envoi.' : '{n} client est concerné : il recevrait ce message au prochain envoi.', { n: apercu.concernes })}
+                  </strong>
                 </>
               ) : (
-                <>Personne n’est concerné aujourd’hui.</>
+                <>{t('Personne n’est concerné aujourd’hui.')}</>
               )}
               {apercu.suivant && (
                 <>
-                  {' '}Le suivant partirait <strong className="font-semibold text-[color:var(--v2-color-encre)]">{apercu.suivant.moment}</strong>, pour {apercu.suivant.nom}.
+                  {' '}{t('Le suivant partirait {moment}, pour {nom}.', { moment: apercu.suivant.moment, nom: apercu.suivant.nom })}
                 </>
               )}
             </p>
           </div>
         )}
 
-        <Bloc titre="Message" aide={`${message.length}/${RELANCE_MESSAGE_MAX}`}>
+        <Bloc titre={t('Message')} aide={`${message.length}/${RELANCE_MESSAGE_MAX}`}>
           <textarea
             ref={zone}
             value={message}
             onChange={e => setMessage(e.target.value.slice(0, RELANCE_MESSAGE_MAX))}
             rows={4}
-            aria-label="Message de relance"
+            aria-label={t('Message de relance')}
             aria-invalid={!!erreurMessage}
             className={`${CHAMP} !h-auto py-2.5 leading-[1.5] resize-none`}
           />
@@ -438,18 +442,18 @@ export function ReglageRelanceV2({
               {'{{nom}}'}
             </button>
             <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              devient le prénom du client
+              {t('devient le prénom du client')}
             </span>
           </div>
           {canal === 'sms' && message.length > 160 && (
             <p className={`mt-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Au-delà de 160 caractères, un SMS part en plusieurs morceaux.
+              {t('Au-delà de 160 caractères, un SMS part en plusieurs morceaux.')}
             </p>
           )}
         </Bloc>
 
-        <Bloc titre="Canal">
-          <ChoixCanal canal={canal} onChange={setCanal} smsAutorise={smsAutorise} cible="la demande d’avis" />
+        <Bloc titre={t('Canal')}>
+          <ChoixCanal canal={canal} onChange={setCanal} smsAutorise={smsAutorise} cible={t('la demande d’avis')} />
         </Bloc>
 
         <Erreur texte={erreur} />
@@ -469,6 +473,7 @@ export function ReglageRappelV2({
   onClose: () => void
   enregistrer: Enregistrer
 }) {
+  const t = useT()
   // Saisies gardées en texte : un champ vidé pendant la frappe ne doit pas devenir « 0 ».
   const [saisies, setSaisies] = useState<string[]>(() =>
     (reglages.rappel_rdv_heures?.length ? reglages.rappel_rdv_heures : [...RAPPEL_HEURES_DEFAUT]).map(String))
@@ -482,11 +487,11 @@ export function ReglageRappelV2({
     setErreur(null)
     const heures = saisies.map(s => Number(s.trim()))
     if (heures.some(h => !Number.isInteger(h) || h < 1 || h > RAPPEL_HEURES_MAX)) {
-      setErreur(`Chaque délai doit être un nombre entier d’heures entre 1 et ${RAPPEL_HEURES_MAX}.`)
+      setErreur(t('Chaque délai doit être un nombre entier d’heures entre 1 et {max}.', { max: RAPPEL_HEURES_MAX }))
       return
     }
     if (new Set(heures).size !== heures.length) {
-      setErreur('Deux rappels ont le même délai : le client recevrait le même message deux fois.')
+      setErreur(t('Deux rappels ont le même délai : le client recevrait le même message deux fois.'))
       return
     }
     setEnCours(true)
@@ -497,32 +502,32 @@ export function ReglageRappelV2({
 
   return (
     <Feuille
-      titre="Rappel de rendez-vous"
-      sousTitre="Un email au client, avant son rendez-vous"
+      titre={t('Rappel de rendez-vous')}
+      sousTitre={t('Un email au client, avant son rendez-vous')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="reglage-rappel" />}
+      pied={<Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="reglage-rappel" />}
     >
       <form id="reglage-rappel" onSubmit={valider} noValidate>
-        <Bloc titre="Quand" aide={`${saisies.length} sur ${RAPPEL_NB_MAX}`}>
+        <Bloc titre={t('Quand')} aide={t('{n} sur {max}', { n: saisies.length, max: RAPPEL_NB_MAX })}>
           <ul className="flex flex-col gap-4">
             {saisies.map((valeur, i) => (
               <li key={i} className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 py-3">
                 <div className="flex items-center justify-between pb-2">
-                  <span className={`text-[14px] ${corpsFort}`}>Rappel {i + 1}</span>
+                  <span className={`text-[14px] ${corpsFort}`}>{t('Rappel {n}', { n: i + 1 })}</span>
                   {saisies.length > 1 && (
                     <button
                       type="button"
                       onClick={() => setSaisies(s => s.filter((_, j) => j !== i))}
                       className={`h-11 px-2 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
                     >
-                      Retirer
+                      {t('Retirer')}
                     </button>
                   )}
                 </div>
                 <Puces
-                  nom={`Délai du rappel ${i + 1}`}
+                  nom={t('Délai du rappel {n}', { n: i + 1 })}
                   valeurs={PRESETS_RAPPEL}
-                  libelle={h => (h === 24 ? '1 jour' : h === 48 ? '2 jours' : `${h} h`)}
+                  libelle={h => (h === 24 ? t('1 jour') : h === 48 ? t('2 jours') : `${h} h`)}
                   valeur={(PRESETS_RAPPEL as readonly number[]).includes(Number(valeur)) ? Number(valeur) : 'autre'}
                   onChoisir={v => { if (v !== 'autre') changer(i, String(v)) }}
                 />
@@ -534,10 +539,10 @@ export function ReglageRappelV2({
                     max={RAPPEL_HEURES_MAX}
                     value={valeur}
                     onChange={e => changer(i, e.target.value)}
-                    aria-label={`Nombre d’heures avant le rendez-vous, rappel ${i + 1}`}
+                    aria-label={t('Nombre d’heures avant le rendez-vous, rappel {n}', { n: i + 1 })}
                     className={`${CHAMP} !w-24`}
                   />
-                  <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>heures avant le rendez-vous</span>
+                  <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('heures avant le rendez-vous')}</span>
                 </div>
               </li>
             ))}
@@ -549,19 +554,18 @@ export function ReglageRappelV2({
               className={`mt-3 inline-flex h-11 items-center rounded-[var(--v2-radius-bouton)] px-3 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
               style={{ background: 'color-mix(in srgb, var(--v2-color-accent) 10%, transparent)' }}
             >
-              Ajouter un rappel
+              {t('Ajouter un rappel')}
             </button>
           )}
           <p className={`mt-3 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
-            Seuls les rendez-vous confirmés reçoivent un rappel, et seulement si le client a une adresse email.
-            Un rendez-vous pris trop tard pour un rappel n’en reçoit pas. C’est gratuit et sans limite : c’est un email, pas un SMS.
+            {t('Seuls les rendez-vous confirmés reçoivent un rappel, et seulement si le client a une adresse email. Un rendez-vous pris trop tard pour un rappel n’en reçoit pas. C’est gratuit et sans limite : c’est un email, pas un SMS.')}
           </p>
         </Bloc>
 
-        <Bloc titre="Message" aide="Non modifiable">
+        <Bloc titre={t('Message')} aide={t('Non modifiable')}>
           <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 py-3">
             <p className={`text-[14px] ${corps} leading-[1.6]`}>
-              Email « Rappel de rendez-vous » : la prestation, le jour, l’heure et l’adresse, avec votre numéro pour vous prévenir en cas d’empêchement.
+              {t('Email « Rappel de rendez-vous » : la prestation, le jour, l’heure et l’adresse, avec votre numéro pour vous prévenir en cas d’empêchement.')}
             </p>
           </div>
         </Bloc>
