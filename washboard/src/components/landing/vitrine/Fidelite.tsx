@@ -1,4 +1,5 @@
 import FideliteDemo from './FideliteDemo'
+import { getT } from '@/lib/i18n/serveur'
 
 const POINTS = [
   { fort: 'Un tampon par prestation, ', doux: 'ou un par véhicule si tu préfères.' },
@@ -7,17 +8,18 @@ const POINTS = [
   { fort: 'Incluse dès l’offre gratuite.', doux: '' },
 ]
 
-export default function Fidelite() {
+export default async function Fidelite() {
+  const t = await getT()
   return (
     <section className="section" id="fidelite">
       <div className="w">
-        <p className="sur-titre"><span className="pt" />Carte de fidélité <span className="badge badge-new">Nouveau</span></p>
-        <h2 className="h2">La carte qu’on a envie de remplir.</h2>
+        <p className="sur-titre"><span className="pt" />{t('Carte de fidélité')} <span className="badge badge-new">{t('Nouveau')}</span></p>
+        <h2 className="h2">{t('La carte qu’on a envie de remplir.')}</h2>
         <FideliteDemo
-          avant={<p className="chapo" style={{ marginTop: 0 }}>Un tampon à chaque prestation terminée. Au bout, la récompense que tu as choisie s’applique toute seule à la réservation suivante.</p>}
+          avant={<p className="chapo" style={{ marginTop: 0 }}>{t('Un tampon à chaque prestation terminée. Au bout, la récompense que tu as choisie s’applique toute seule à la réservation suivante.')}</p>}
           apres={
             <ul className="fid-liste">
-              {POINTS.map(p => <li key={p.fort}><div>{p.fort}{p.doux && <span>{p.doux}</span>}</div></li>)}
+              {POINTS.map(p => <li key={p.fort}><div>{t(p.fort)}{p.doux && <span>{t(p.doux)}</span>}</div></li>)}
             </ul>
           }
         />

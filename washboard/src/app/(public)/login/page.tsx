@@ -7,11 +7,13 @@ import { etatOnboarding } from '@/lib/onboarding'
 import { oublierVisite } from '@/lib/visiteGuidee'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import Link from 'next/link'
+import { useT } from '@/components/i18n/I18nProvider'
 import {
   BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, LIEN_DISCRET, SAISIE, TitreEntree,
 } from '@/components/entree/Entree'
 
 export default function LoginPage() {
+  const t = useT()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +56,7 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              placeholder="toi@exemple.fr"
+              placeholder={t('toi@exemple.fr')}
               autoComplete="email"
               className={SAISIE}
             />
@@ -72,14 +74,14 @@ export default function LoginPage() {
           </Champ>
         </GroupeChamps>
 
-        <Link href="/forgot-password" className={`${LIEN_DISCRET} self-start`}>Mot de passe oublié ?</Link>
+        <Link href="/forgot-password" className={`${LIEN_DISCRET} self-start`}>{t('Mot de passe oublié ?')}</Link>
 
         {error && <Erreur texte={error} />}
 
         <BarreActions>
           <BoutonPrincipal type="submit" chargement={loading} libelleChargement="Connexion…">Se connecter</BoutonPrincipal>
           <Link href="/signup" className={`${LIEN_DISCRET} flex items-center justify-center`}>
-            Pas encore de compte ?&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">1 mois d’essai gratuit</b>
+            {t('Pas encore de compte ?')}&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('1 mois d’essai gratuit')}</b>
           </Link>
         </BarreActions>
       </form>

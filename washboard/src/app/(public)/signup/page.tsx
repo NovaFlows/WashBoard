@@ -7,11 +7,13 @@ import { normaliserMobile, PAYS_TELEPHONE, telephoneDuPays, type PaysTelephone }
 import SelecteurPays from '@/components/entree/SelecteurPays'
 import { paysOuverts } from '@/lib/paysInscription'
 import Link from 'next/link'
+import { useT } from '@/components/i18n/I18nProvider'
 import {
   BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, Guide, LIEN_DISCRET, SAISIE, TitreEntree,
 } from '@/components/entree/Entree'
 
 export default function SignupPage() {
+  const t = useT()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -86,16 +88,16 @@ export default function SignupPage() {
             <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="CleanCar" autoComplete="organization" className={SAISIE} />
           </Champ>
           <Champ id="email" label="Email">
-            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="toi@exemple.fr" autoComplete="email" className={SAISIE} />
+            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder={t('toi@exemple.fr')} autoComplete="email" className={SAISIE} />
           </Champ>
-          <Champ id="phone" label="Téléphone" aide={<>Un code de confirmation t’arrive par SMS.<br />Il sert aussi à te joindre en cas de souci.</>}>
+          <Champ id="phone" label="Téléphone" aide={<>{t('Un code de confirmation t’arrive par SMS.')}<br />{t('Il sert aussi à te joindre en cas de souci.')}</>}>
             <div className="flex items-center gap-2">
               <SelecteurPays valeur={pays} onChange={setPays} pays={proposes} />
               <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder={choixPays.exemple} autoComplete="tel-national" className={SAISIE} />
             </div>
           </Champ>
           <Champ id="password" label="Mot de passe">
-            <PasswordInput id="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="6 caractères minimum" autoComplete="new-password" className={SAISIE} />
+            <PasswordInput id="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder={t('6 caractères minimum')} autoComplete="new-password" className={SAISIE} />
           </Champ>
           <Champ id="confirm" label="Confirmer le mot de passe">
             <PasswordInput id="confirm" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" autoComplete="new-password" className={SAISIE} />
@@ -112,9 +114,9 @@ export default function SignupPage() {
             className="mt-px h-5 w-5 shrink-0 accent-[color:var(--v2-color-encre)]"
           />
           <span>
-            J’ai lu et j’accepte les{' '}
+            {t('J’ai lu et j’accepte les')}{' '}
             <Link href="/cgv" target="_blank" className="font-semibold text-[color:var(--v2-color-encre)] underline underline-offset-2">
-              conditions générales de vente
+              {t('conditions générales de vente')}
             </Link>
           </span>
         </label>
@@ -124,7 +126,7 @@ export default function SignupPage() {
         <BarreActions>
           <BoutonPrincipal type="submit" chargement={loading} libelleChargement="Création du compte…">Lancer mon mois gratuit</BoutonPrincipal>
           <Link href="/login" className={`${LIEN_DISCRET} flex items-center justify-center`}>
-            Déjà un compte ?&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">Se connecter</b>
+            {t('Déjà un compte ?')}&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('Se connecter')}</b>
           </Link>
         </BarreActions>
       </form>

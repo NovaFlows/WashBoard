@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useT } from '@/components/i18n/I18nProvider'
 import {
   BarreActions, BoutonPrincipal, BOUTON_PRINCIPAL, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, LIEN_DISCRET, SAISIE, TitreEntree,
 } from '@/components/entree/Entree'
 
 export default function ForgotPasswordPage() {
+  const t = useT()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -32,16 +34,16 @@ export default function ForgotPasswordPage() {
     <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/login' }}>
       {sent ? (
         <div className="flex flex-col gap-5">
-          <TitreEntree titre="Email envoyé" sousTitre={`Lien envoyé à ${email}`} />
+          <TitreEntree titre="Email envoyé" sousTitre={t('Lien envoyé à {email}', { email })} />
           <p className="flex items-start gap-2 text-sm">
             <span aria-hidden className="mt-[7px] h-[7px] w-[7px] shrink-0 rounded-full bg-[color:var(--v2-color-vert)]" />
             <span>
-              Clique sur le lien dans l&apos;email pour créer un nouveau mot de passe.
-              <span className="mt-1 block text-xs text-[color:var(--v2-color-gris)]">Pense à vérifier tes spams.</span>
+              {t('Clique sur le lien dans l’email pour créer un nouveau mot de passe.')}
+              <span className="mt-1 block text-xs text-[color:var(--v2-color-gris)]">{t('Pense à vérifier tes spams.')}</span>
             </span>
           </p>
           <BarreActions>
-            <Link href="/login" className={`${BOUTON_PRINCIPAL} flex items-center justify-center`}>Retour à la connexion</Link>
+            <Link href="/login" className={`${BOUTON_PRINCIPAL} flex items-center justify-center`}>{t('Retour à la connexion')}</Link>
           </BarreActions>
         </div>
       ) : (
@@ -56,7 +58,7 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                placeholder="toi@exemple.fr"
+                placeholder={t('toi@exemple.fr')}
                 autoComplete="email"
                 className={SAISIE}
               />
@@ -68,7 +70,7 @@ export default function ForgotPasswordPage() {
           <BarreActions>
             <BoutonPrincipal type="submit" disabled={!email.trim()} chargement={loading} libelleChargement="Envoi…">Envoyer le lien</BoutonPrincipal>
             <Link href="/login" className={`${LIEN_DISCRET} flex items-center justify-center`}>
-              Tu te souviens ?&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">Se connecter</b>
+              {t('Tu te souviens ?')}&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('Se connecter')}</b>
             </Link>
           </BarreActions>
         </form>

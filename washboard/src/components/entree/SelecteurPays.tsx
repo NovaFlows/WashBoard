@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useT } from '@/components/i18n/I18nProvider'
 import { PAYS_TELEPHONE, type ChoixPaysTelephone, type PaysTelephone } from '@/lib/phone'
 
 // Liste du pays du téléphone, à l'inscription (2026-11-14). Les drapeaux sont dessinés ici en
@@ -26,6 +27,7 @@ export function Drapeau({ pays, className = '' }: { pays: PaysTelephone; classNa
 }
 
 export default function SelecteurPays({ valeur, onChange, pays: liste = PAYS_TELEPHONE }: { valeur: PaysTelephone; onChange: (pays: PaysTelephone) => void; pays?: readonly ChoixPaysTelephone[] }) {
+  const t = useT()
   const [ouvert, setOuvert] = useState(false)
   // S'ouvre vers le haut quand il manque de la place en dessous : sur téléphone, la barre d'action
   // fixe du bas de l'écran recouvrirait la liste.
@@ -88,7 +90,7 @@ export default function SelecteurPays({ valeur, onChange, pays: liste = PAYS_TEL
                 className={`flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-[15px] transition-colors hover:bg-[color:var(--v2-filet)] ${p.code === valeur ? 'font-semibold' : 'font-medium'} text-[color:var(--v2-color-encre)]`}
               >
                 <Drapeau pays={p.code} />
-                <span className="flex-1">{p.libelle}</span>
+                <span className="flex-1">{t(p.libelle)}</span>
                 <span className="tabular-nums text-[color:var(--v2-color-gris)]">{p.indicatif}</span>
               </button>
             </li>

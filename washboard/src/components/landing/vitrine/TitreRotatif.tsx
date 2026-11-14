@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Le premier slogan est celui rendu côté serveur : c'est lui que Google et les
 // IA lisent comme <h1>, avant toute rotation JS. Il porte les mots-clés métier
@@ -16,6 +17,7 @@ const SLOGANS: { pre: string; hl: string }[] = [
 ]
 
 export default function TitreRotatif() {
+  const t = useT()
   const [i, setI] = useState(0)
   const [sort, setSort] = useState(false)
 
@@ -32,12 +34,13 @@ export default function TitreRotatif() {
     return () => { clearInterval(id); clearTimeout(relais) }
   }, [])
 
-  const s = SLOGANS[i]
+  const SLOGANS_T = SLOGANS.map(f => ({ pre: t(f.pre), hl: t(f.hl) }))
+  const s = SLOGANS_T[i]
   // Les slogans fantômes, invisibles et empilés dans la même cellule, donnent au
   // bloc la hauteur du plus long à chaque largeur : la page ne bouge plus.
   return (
     <div className="h1-pile">
-      {SLOGANS.map(f => (
+      {SLOGANS_T.map(f => (
         <div key={f.pre} className="h1 h1-fantome" aria-hidden="true">
           <span className="tl">{f.pre}</span> <span className="tl hl">{f.hl}</span>
         </div>

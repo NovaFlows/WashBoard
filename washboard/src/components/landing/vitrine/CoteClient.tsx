@@ -1,4 +1,5 @@
 import { ReservationClient } from './demo'
+import { getT } from '@/lib/i18n/serveur'
 
 const POINTS = [
   { n: '01', titre: 'Sans compte, sans appli', texte: 'Il choisit son véhicule et sa prestation, le prix s’affiche tout de suite. Citadine, SUV, utilitaire : chacun son tarif.' },
@@ -7,24 +8,25 @@ const POINTS = [
   { n: '04', titre: 'Sa carte de fidélité, dès la réservation', texte: 'Il voit ce qui l’attend au bout. Active une promotion dans la démo du dessus : le bandeau apparaît ici.' },
 ]
 
-export default function CoteClient() {
+export default async function CoteClient() {
+  const t = await getT()
   return (
     <section className="section" id="reservation">
       <div className="w">
-        <p className="sur-titre"><span className="pt" />Page de réservation</p>
-        <h2 className="h2">Ce que voit ton client. <span className="doux">Trois écrans, zéro message.</span></h2>
+        <p className="sur-titre"><span className="pt" />{t('Page de réservation')}</p>
+        <h2 className="h2">{t('Ce que voit ton client.')} <span className="doux">{t('Trois écrans, zéro message.')}</span></h2>
         <div className="cote">
           <div>
             <div className="points">
               {POINTS.map(p => (
                 <div className="point" key={p.n}>
                   <span className="n">{p.n}</span>
-                  <div><b>{p.titre}</b><p>{p.texte}</p></div>
+                  <div><b>{t(p.titre)}</b><p>{t(p.texte)}</p></div>
                 </div>
               ))}
             </div>
             {/* Texte, pas un lien : washboard.fr/book/ton-nom n'est qu'un exemple de lien de laveur. */}
-            <p className="url-note">Chaque laveur a son propre lien, par exemple <b>washboard.fr/book/ton-nom</b>, à mettre en bio Instagram, sur TikTok ou sur sa fiche Google.</p>
+            <p className="url-note">{t('Chaque laveur a son propre lien, par exemple')} <b>washboard.fr/book/{t('ton-nom')}</b>{t(', à mettre en bio Instagram, sur TikTok ou sur sa fiche Google.')}</p>
           </div>
           <div className="aura"><ReservationClient /></div>
         </div>

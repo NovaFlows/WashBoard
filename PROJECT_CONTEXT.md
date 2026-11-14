@@ -223,3 +223,13 @@ Colonnes `washers.profil_activite` (jsonb) et `profil_activite_le` (timestamptz)
 - **Point SEO** : le 1er slogan de `SLOGANS` est le H1 réel lu par Google et les IA (rendu serveur, avant la rotation JS). Mots-clés métier posés le 2026-09-28 — avis de l'agent `seo-geo` obligatoire avant de toucher à la position 0.
 - Vérifié : `tsc --noEmit` propre, `eslint` sans erreur sur les fichiers touchés (1 avertissement préexistant sur `ThemeToggle`), `next build` passe, captures Playwright du parcours complet en clair, sombre et mobile.
 - Reste à porter depuis le prototype : storytelling en chapitres, section créneaux intelligents interactive, tarifs façon Rezam. Rien de tout ça n'est commencé.
+
+## Langues de l'interface (2026-11-14)
+
+Français (source), anglais, espagnol, allemand. Branche `feat/i18n` (pas poussée).
+- **Principe** : le texte français écrit dans le code sert de clé. `t('Se connecter')` (serveur : `const t = await getT()` de `lib/i18n/serveur.ts` ; client : `useT()` de `components/i18n/I18nProvider`). Phrase absente du dictionnaire = reste en français, rien ne casse : on traduit partie par partie. `{nom}` = variable.
+- **Choix de la langue** (`lib/i18n/langues.ts`, `detecterLangue`) : cookie `wb_lang` (globe `SelecteurLangue`) > langue du navigateur (Accept-Language) > pays Vercel (`x-vercel-ip-country`) > français. Robots et navigateurs pilotés (« headless » : e2e Playwright) restent en français.
+- **Dictionnaires** : `lib/i18n/dictionnaires/{en,es,de}/<partie>.ts`, assemblés dans `{en,es,de}.ts`. Le test `i18n.test.ts` vérifie que les 3 langues ont les mêmes phrases et les mêmes `{variables}`.
+- **Traduit** : globe, page d'accueil (sauf FAQ et fausses applis de démonstration), connexion, inscription, mot de passe oublié (les briques `Entree.tsx` traduisent leurs textes passés en props).
+- **À faire (parties suivantes)** : FAQ (`lib/faq.ts` + JSON-LD), démos de la landing, pages métiers/blog/légal, page de réservation client, onboarding, tableau de bord, emails/SMS/factures, métadonnées SEO.
+- Piège local : le pool vitest par défaut plante sur cette machine (« reading 'config' ») ; `npx vitest run --pool=vmThreads` marche (quelques suites d'env échouent alors, sans rapport).

@@ -8,6 +8,10 @@ import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import RecoveryRedirect from "@/components/auth/RecoveryRedirect";
 import { ServiceWorkerRegistrar } from "@/components/ui/ServiceWorkerRegistrar";
 import MarqueurPret from "@/components/ui/MarqueurPret";
+import { I18nProvider } from "@/components/i18n/I18nProvider";
+import { getLangue } from "@/lib/i18n/serveur";
+import { dictionnaireDe } from "@/lib/i18n/dictionnaires";
+import { creerTraducteur } from "@/lib/i18n/traduire";
 
 // Refonte 2026 : détection "PWA installée" posée AVANT toute peinture, pour
 // la classe `wb-pwa` (niveau CSS pur — couleurs, espacements, rayons ; pas de
@@ -206,10 +210,14 @@ export default async function RootLayout({
   // directement sur <html>. Pas de flash, et aucune balise <script> rendue
   // (donc plus d'avertissement React 19 / badge "Issue" en dev).
   const isDark = (await cookies()).get("theme")?.value === "dark";
+  // Langue de l'interface : choix de la personne, sinon langue du navigateur, sinon pays (lib/i18n).
+  const langue = await getLangue();
+  const dictionnaire = dictionnaireDe(langue);
+  const t = creerTraducteur(dictionnaire);
 
   return (
     <html
-      lang="fr"
+      lang={langue}
       className={`${geistSans.variable} ${geistMono.variable} ${archivo.variable} h-full antialiased${isDark ? " dark" : ""}`}
       suppressHydrationWarning
     >
@@ -217,11 +225,11 @@ export default async function RootLayout({
         <Script id="wb-pwa-detect" strategy="beforeInteractive">
           {PWA_DETECT_SCRIPT}
         </Script>
-        <a href="#main-content" className="skip-to-content">Aller au contenu</a>
+        <a href="#main-content" className="skip-to-content">{t("Aller au contenu")}</a>
         <ServiceWorkerRegistrar />
         <MarqueurPret />
           <RecoveryRedirect />
-        <ThemeProvider>{children}</ThemeProvider>
+        <I18nProvider langue={langue} dictionnaire={dictionnaire}><ThemeProvider>{children}</ThemeProvider></I18nProvider>
         <Analytics />
       </body>
     </html>
