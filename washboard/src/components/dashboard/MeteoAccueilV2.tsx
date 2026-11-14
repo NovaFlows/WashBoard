@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSnow, CloudSun, Moon, Sun, type LucideIcon } from 'lucide-react'
+import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSnow, CloudSun, Moon, Sun, Wind, type LucideIcon } from 'lucide-react'
 import { useT } from '@/components/i18n/I18nProvider'
 import { LIBELLES, type Meteo, type Symbole } from '@/lib/meteo'
 
@@ -82,7 +82,7 @@ export default function MeteoAccueilV2({ verre }: { verre: boolean }) {
           {/* Le vent, à droite : un lavage à l'eau et un séchage dehors s'en soucient. */}
           {meteo.vent !== null && (
             <span className="ml-auto flex shrink-0 flex-col items-center gap-0.5" title={t('Vent')}>
-              <span aria-hidden className="text-[22px] leading-none">💨</span>
+              <Wind size={26} strokeWidth={1.6} aria-hidden style={{ color: '#8A93A6' }} />
               <span className={`text-[13px] ${corpsFort} tabular-nums`}>{meteo.vent} km/h</span>
             </span>
           )}
