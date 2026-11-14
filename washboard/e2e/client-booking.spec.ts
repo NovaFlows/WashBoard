@@ -45,7 +45,7 @@ test.describe('Page réservation — états de base', () => {
   test('Page de réservation se charge', async ({ page }) => {
     await page.goto(`/book/${SLUG}`)
     await expect(page.locator('text=Application error')).not.toBeVisible()
-    await expect(page.getByRole('radio').first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('input[name="booking-service"]').first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('Slug inexistant → 404 gracieuse', async ({ page }) => {

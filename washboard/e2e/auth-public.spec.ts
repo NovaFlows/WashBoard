@@ -20,7 +20,7 @@ test.describe('Inscription — validations', () => {
   const champs = (page: Page) => ({
     nom: page.getByLabel('Nom de ton entreprise'),
     email: page.getByLabel('Email'),
-    tel: page.getByLabel('Téléphone'),
+    tel: page.getByLabel('Téléphone', { exact: true }),
     mdp: page.getByLabel('Mot de passe', { exact: true }),
     confirmation: page.getByLabel('Confirmer le mot de passe'),
     cgv: page.getByLabel(/conditions générales de vente/),

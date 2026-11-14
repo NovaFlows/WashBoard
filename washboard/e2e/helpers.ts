@@ -60,7 +60,7 @@ export async function reserverCommeClient(page: Page, client: { nom: string; ema
 
   // Véhicule, puis prestation : aucun véhicule n'est présélectionné depuis le 2026-10-18.
   await page.locator('[aria-label="Type de véhicule"] button').first().click()
-  const service = page.getByRole('radio').first()
+  const service = page.locator('input[name="booking-service"]').first()
   await expect(service).toBeVisible({ timeout: 15_000 })
   await service.check()
   await page.getByTestId('booking-continue').click()
