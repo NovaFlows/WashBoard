@@ -17,7 +17,6 @@ import type { ZoneConfig } from '@/types'
 import PersonnaliserV2 from '@/components/dashboard/PersonnaliserV2'
 import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
 import MeteoAccueilV2, { STYLE_VERRE } from '@/components/dashboard/MeteoAccueilV2'
-import BonjourGraffiti from '@/components/dashboard/BonjourGraffiti'
 import { LigneRdvVerrouilleeV2, type ReservationMasquee } from '@/components/dashboard/ReservationVerrouilleeV2'
 import { PLAN_LABELS, PLAN_COULEURS, PLAN_PRICES, PLAN_CARDS, type Plan } from '@/lib/plan'
 import type { JourSemaine } from '@/lib/semaineAccueil'
@@ -332,6 +331,13 @@ export default function AccueilV2({
   const t = useT()
   const loc = useLocale()
   const [personnaliser, setPersonnaliser] = useState(false)
+  // « Bonjour » le jour, « Bonsoir » à partir de 18 h : lu dans le navigateur après l'hydratation (le
+  // serveur ne connaît pas l'heure de la personne), « Bonjour » d'ici là.
+  const [soir, setSoir] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- heure locale, inconnue du serveur (hydratation)
+    setSoir(new Date().getHours() >= 18)
+  }, [])
   // Passe « bureau » (2026-10-05, Alexandre, 2026-10-03) : deux colonnes au-delà de
   // `SEUIL_GRAND_ECRAN_PX` (1024px), même hook que ClientsViewV2.tsx — pas un seuil inventé en
   // double. `false` au rendu serveur et jusqu'à l'hydratation : l'écran démarre donc toujours en
@@ -493,11 +499,14 @@ export default function AccueilV2({
       <div className={grandEcran ? 'grid grid-cols-[minmax(0,1fr)_340px] items-start gap-[26px]' : ''}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[24px] leading-[1.1] ${titre} first-letter:uppercase`}>{titreJour}</h1>
+          <h1 className={`text-[27px] leading-[1.1] ${titre} break-words`}>
+            {soir ? t('Bonsoir') : t('Bonjour')}{nomLaveur ? ` ${nomLaveur}` : ''}
+          </h1>
           {/* first-letter, pas capitalize : « Mercredi 23 septembre », et non
               « Mercredi 23 Septembre » — un nom de mois ne prend pas de
               majuscule en français. */}
-          <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] mt-1 tabular-nums`}>{sousTitre}</p>
+          <p className={`mt-1.5 text-[15px] ${corps} first-letter:uppercase`}>{titreJour}</p>
+          <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] mt-0.5 tabular-nums`}>{sousTitre}</p>
         </div>
         <button
           type="button"
@@ -550,9 +559,6 @@ export default function AccueilV2({
           {colonneWidgets}
         </>
       )}
-
-      {/* Le « Bonjour [nom] » peint à la bombe, une fois à l'ouverture de WashBoard. */}
-      <BonjourGraffiti nom={nomLaveur} />
 
       {personnaliser && <PersonnaliserV2 visibles={widgets} onClose={() => setPersonnaliser(false)} />}
     </div>
