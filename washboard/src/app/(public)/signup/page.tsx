@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { normaliserMobile, PAYS_TELEPHONE, telephoneDuPays, type PaysTelephone } from '@/lib/phone'
+import SelecteurPays from '@/components/entree/SelecteurPays'
 import Link from 'next/link'
 import {
   BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, Guide, LIEN_DISCRET, SAISIE, TitreEntree,
@@ -84,14 +85,7 @@ export default function SignupPage() {
           </Champ>
           <Champ id="phone" label="Téléphone" aide={<>Un code de confirmation t’arrive par SMS.<br />Il sert aussi à te joindre en cas de souci.</>}>
             <div className="flex items-center gap-2">
-              <select
-                aria-label="Pays du téléphone"
-                value={pays}
-                onChange={e => setPays(e.target.value as PaysTelephone)}
-                className="wb-entree-champ-saisie !w-auto shrink-0 cursor-pointer"
-              >
-                {PAYS_TELEPHONE.map(p => <option key={p.code} value={p.code}>{p.code} {p.indicatif}</option>)}
-              </select>
+              <SelecteurPays valeur={pays} onChange={setPays} />
               <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder={choixPays.exemple} autoComplete="tel-national" className={SAISIE} />
             </div>
           </Champ>
