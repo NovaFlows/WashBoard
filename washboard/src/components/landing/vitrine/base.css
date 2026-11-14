@@ -133,6 +133,7 @@ html:has(.wb-vitrine) { scroll-behavior: smooth; scroll-padding-top: 84px; }
 .wb-vitrine .faq summary::after { content: ""; position: absolute; right: 6px; top: 50%; width: 10px; height: 10px; border-right: 2px solid var(--gris); border-bottom: 2px solid var(--gris); transform: translateY(-70%) rotate(45deg); transition: transform .25s; }
 .wb-vitrine .faq details[open] summary::after { transform: translateY(-30%) rotate(-135deg); }
 .wb-vitrine .faq details p { color: var(--gris); padding: 0 40px 22px 0; max-width: 68ch; }
+.wb-vitrine .faq .faq-plus { margin-top: 24px; cursor: pointer; color: var(--encre); font-family: inherit; }
 
 /* ── Fin et pied de page ── */
 .wb-vitrine .final { padding-block: clamp(80px, 10vw, 130px); border-top: 1px solid var(--filet); text-align: center; }

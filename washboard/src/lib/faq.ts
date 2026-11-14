@@ -17,7 +17,8 @@ import { BOOKING_QUOTA, freeMonthsLabel, PLAN_CARDS, quotaSmsEnClair, requiredPl
 import { VALIDITE_DEVIS_JOURS } from '@/lib/documents'
 import { tarifOffre } from '@/lib/resumeOffres'
 
-export type FaqItem = { q: string; a: string }
+/** `une` : question affichée d'office sur la landing, les autres sont derrière « Voir les autres questions ». */
+export type FaqItem = { q: string; a: string; une?: true }
 
 // Dérivé de PLAN_CARDS, jamais recopié : ces prix suivent leur propre
 // changement, comme freeMonthsLabel() plus bas — voir le commentaire de
@@ -38,14 +39,17 @@ const business = PLAN_CARDS.find(c => c.key === 'business')!
 
 export const FAQ_ITEMS: FaqItem[] = [
   {
+    une: true,
     q: 'Mes clients doivent créer un compte ?',
     a: 'Non. Ils réservent directement sur ta page, sans compte, sans appli. Juste leur nom, email et téléphone.',
   },
   {
+    une: true,
     q: 'C\'est long à configurer ?',
     a: 'Non. En 10 minutes tu as ta page de réservation avec tes services, tes horaires et ta zone.',
   },
   {
+    une: true,
     q: 'Les frais de déplacement sont calculés comment ?',
     a: 'Tu définis tes propres paliers de prix selon la durée du trajet en voiture ou selon la distance en kilomètres, calculées automatiquement via Google Maps. Le point de départ, c\'est soit ton adresse de base, soit ton dernier rendez-vous du jour — à toi de choisir dans tes paramètres.',
   },
@@ -86,6 +90,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: `Dans un seul sens : de WashBoard vers ton Google Agenda. Tu connectes d'abord ton compte Google (depuis l'Agenda de WashBoard ou tes réglages). Ensuite, chaque rendez-vous que tu confirmes est ajouté à ton agenda principal, avec le client, son téléphone, l'adresse et le prix. Si tu le déplaces dans WashBoard, l'événement suit ; une fois le rendez-vous terminé, son titre le dit ; si tu l'annules, l'événement est supprimé. Dans l'autre sens, rien : un événement que tu crées ou déplaces directement dans Google Agenda n'apparaît pas dans WashBoard et ne bloque aucun créneau de ta page de réservation. Tes congés et absences se posent donc dans WashBoard.`,
   },
   {
+    une: true,
     q: 'Je peux utiliser WashBoard uniquement depuis mon téléphone ?',
     a: 'Oui, le tableau de bord est pensé pour ça : agenda et clients s\'utilisent aussi bien depuis un mobile que depuis un ordinateur (la comptabilité aussi, dès la formule Starter). Tu peux même l\'installer sur ton écran d\'accueil comme une application, pour l\'ouvrir en un geste entre deux prestations.',
   },
@@ -110,6 +115,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: `Dès la formule ${requiredPlanLabel('avis_email')}. Tu colles le lien de ta fiche Google dans tes réglages, tu choisis le canal, email ou SMS, et le délai après le rendez-vous. La demande part ensuite toute seule quand tu marques le rendez-vous « Terminé ». Les emails ne sont pas comptés ; côté SMS, ${quotaSmsEnClair()}, et au-delà la demande du mois n'est pas envoyée. Un client que tu as marqué « ne plus contacter » ne reçoit rien. WashBoard envoie la demande, mais le client reste libre de laisser ou non un avis.`,
   },
   {
+    une: true,
     q: 'Que se passe-t-il après le mois gratuit ?',
     a: `Tu choisis une formule : ${starter.name} à ${tarifOffre(starter)} ou ${pro.name} à ${tarifOffre(pro)} — ou ${business.name}, ${tarifOffre(business)}, si tu travailles en équipe. Si tu ne choisis pas, ton compte passe tout seul sur l'offre ${decouverte.name} : ${tarifOffre(decouverte)}, limitée à ${BOOKING_QUOTA.decouverte} réservations par mois. On ne coupe rien. Aucune carte n'est demandée pendant l'essai.`,
   },
@@ -122,6 +128,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Oui, avec la formule Business. Tu indiques la taille de ton équipe et les absences, WashBoard accepte autant de rendez-vous en même temps que tu as de personnes disponibles.',
   },
   {
+    une: true,
     q: 'Les clients peuvent payer en ligne ?',
     a: 'Le solde se règle sur place. Si tu veux, tu demandes un acompte à la réservation, payé par ton propre lien (PayPal, Stripe, SumUp, Lydia, Wero ou virement). WashBoard n\'encaisse rien : l\'argent va directement chez toi.',
   },
