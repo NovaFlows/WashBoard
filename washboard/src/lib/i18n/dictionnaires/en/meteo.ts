@@ -18,4 +18,5 @@ export const meteo: Dictionnaire = {
   'Pluie': 'Rain',
   'Orage': 'Thunderstorm',
   'Neige': 'Snow',
+  'Vent': 'Wind',
 }

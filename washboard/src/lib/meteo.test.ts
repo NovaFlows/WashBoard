@@ -17,7 +17,7 @@ describe('symboleDe', () => {
 
 const heure = (iso: string) => Number(iso.slice(11, 13)) + 1 // « heure locale » factice : UTC + 1
 
-function serie(debutIso: string, n: number, f: (i: number) => { t: number; code?: string; mm?: number }): ReponseMet {
+function serie(debutIso: string, n: number, f: (i: number) => { t: number; code?: string; mm?: number; vent?: number }): ReponseMet {
   const base = Date.parse(debutIso)
   return {
     properties: {
@@ -26,7 +26,7 @@ function serie(debutIso: string, n: number, f: (i: number) => { t: number; code?
         return {
           time: new Date(base + i * 3_600_000).toISOString(),
           data: {
-            instant: { details: { air_temperature: v.t } },
+            instant: { details: { air_temperature: v.t, ...(v.vent === undefined ? {} : { wind_speed: v.vent }) } },
             next_1_hours: { summary: { symbol_code: v.code ?? 'clearsky_day' }, details: { precipitation_amount: v.mm ?? 0 } },
           },
         }
@@ -52,6 +52,11 @@ describe('resumerPrevisions', () => {
   it('annonce l\'heure de la première pluie notable dans les 12 prochaines heures', () => {
     const r = serie('2026-11-14T10:00:00Z', 30, i => ({ t: 10, mm: i === 5 ? 1.2 : i === 3 ? 0.1 : 0 }))
     expect(resumerPrevisions(r, maintenant, heure)!.pluieVers).toBe(16) // 15:00Z → 16 h locale
+  })
+
+  it('donne le vent en km/h (m/s × 3,6, arrondi), null sans mesure', () => {
+    expect(resumerPrevisions(serie('2026-11-14T10:00:00Z', 30, () => ({ t: 10, vent: 3.9 })), maintenant, heure)!.vent).toBe(14)
+    expect(resumerPrevisions(serie('2026-11-14T10:00:00Z', 30, () => ({ t: 10 })), maintenant, heure)!.vent).toBeNull()
   })
 
   it('ignore la pluie de nuit (avant 6 h, dès 22 h)', () => {

@@ -79,6 +79,13 @@ export default function MeteoAccueilV2({ verre }: { verre: boolean }) {
             <span className={`truncate text-[14.5px] ${corpsFort}`}>{t(LIBELLES[meteo.symbole])}</span>
             <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{indice}</span>
           </span>
+          {/* Le vent, à droite : un lavage à l'eau et un séchage dehors s'en soucient. */}
+          {meteo.vent !== null && (
+            <span className="ml-auto flex shrink-0 flex-col items-center gap-0.5" title={t('Vent')}>
+              <span aria-hidden className="text-[22px] leading-none">💨</span>
+              <span className={`text-[13px] ${corpsFort} tabular-nums`}>{meteo.vent} km/h</span>
+            </span>
+          )}
         </>
       ) : (
         <span aria-hidden className="h-9 w-full animate-pulse rounded-xl bg-[color:var(--v2-filet)] opacity-60 motion-reduce:animate-none" />

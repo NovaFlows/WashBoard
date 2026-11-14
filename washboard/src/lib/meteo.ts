@@ -42,7 +42,7 @@ export const LIBELLES: Record<Symbole, string> = {
 type Serie = {
   time: string
   data: {
-    instant?: { details?: { air_temperature?: number } }
+    instant?: { details?: { air_temperature?: number; wind_speed?: number } }
     next_1_hours?: { summary?: { symbol_code?: string }; details?: { precipitation_amount?: number } }
     next_6_hours?: { summary?: { symbol_code?: string } }
   }
@@ -58,6 +58,8 @@ export type Meteo = {
   max: number
   /** Heure (0-23, heure locale du laveur) de la première pluie notable dans les 12 prochaines heures, entre 6 h et 22 h, sinon `null`. */
   pluieVers: number | null
+  /** Vent moyen à l'heure en cours, en km/h (MET Norway le donne en m/s), `null` si absent. */
+  vent: number | null
 }
 
 const SEUIL_PLUIE_MM = 0.3
@@ -92,11 +94,14 @@ export function resumerPrevisions(reponse: ReponseMet | null | undefined, mainte
     if (h >= 6 && h < 22) { pluieVers = h; break }
   }
 
+  const ms = courante.data.instant?.details?.wind_speed
+
   return {
     temperature: Math.round(t0),
     symbole,
     min: Math.round(Math.min(...temperatures)),
     max: Math.round(Math.max(...temperatures)),
     pluieVers,
+    vent: typeof ms === 'number' ? Math.round(ms * 3.6) : null,
   }
 }
