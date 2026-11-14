@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto'
 import { logger } from '@/lib/logger'
 import { normalizePhone, normaliserMobile, isPhoneExemptFromUniqueness } from '@/lib/phone'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
-import { envoyerCodeSms, estMobileFrancais } from '@/lib/codeSms'
+import { envoyerCodeSms, estMobileFrancais, phraseMobileRequis } from '@/lib/codeSms'
 import { PLAN_ESSAI } from '@/lib/plan'
 import { generateSlug } from '@/lib/slug'
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   // numéros étrangers sont la porte d'entrée de la fraude aux SMS (voir `lib/codeSms`).
   if (!estMobileFrancais(telephone)) {
     return NextResponse.json(
-      { error: 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique, +41 7x en Suisse) : le code de confirmation arrive par SMS.' },
+      { error: phraseMobileRequis() },
       { status: 400 },
     )
   }

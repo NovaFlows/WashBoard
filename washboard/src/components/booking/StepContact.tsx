@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
-import { normalizePhone } from '@/lib/phone'
+import { normalizePhone, PAYS_TELEPHONE, type PaysTelephone } from '@/lib/phone'
 import EncartAcompte from './EncartAcompte'
 
 type Props = {
@@ -28,9 +28,11 @@ type Props = {
   onCoordonnees?: (email: string, telephone: string) => void
   /** Carte de fidélité du client, montrée une fois ses coordonnées tapées. */
   fidelite?: React.ReactNode
+  /** Pays du laveur (d'après son téléphone) : un client luxembourgeois ou québécois tape son numéro sans zéro de tête. */
+  pays?: PaysTelephone
 }
 
-export default function StepContact({ isProfessional, loading, error, onSubmit, onBack, accent = '#2563eb', acompte = null, onCoordonnees, fidelite = null }: Props) {
+export default function StepContact({ isProfessional, loading, error, onSubmit, onBack, accent = '#2563eb', acompte = null, onCoordonnees, fidelite = null, pays }: Props) {
   const [name,           setName]           = useState('')
   const [email,          setEmail]          = useState('')
   const [phone,          setPhone]          = useState('')
@@ -47,7 +49,8 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
   // le 2026-10-04 en testant sur son téléphone. Même normalisation que
   // api/washer/route.ts et lib/phone.ts partout ailleurs dans le produit.
   const phoneDigits   = phone.replace(/\D/g, '')
-  const phoneNormalise = normalizePhone(phone)
+  const phoneNormalise = normalizePhone(phone, pays)
+  const exemplePhone = (pays && pays !== 'FR' ? PAYS_TELEPHONE.find(p => p.code === pays)?.exemple : null) ?? '06 00 00 00 00'
   const phoneValid  = phoneNormalise !== null
   useEffect(() => { onCoordonnees?.(email, phone) }, [email, phone, onCoordonnees])
   const phoneError  = phoneTouched && !phoneValid
@@ -202,7 +205,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
             value={phone}
             onChange={e => setPhone(e.target.value)}
             onBlur={() => setPhoneTouched(true)}
-            placeholder="06 00 00 00 00"
+            placeholder={exemplePhone}
             className={`${inputClass} ${phoneError ? 'border-red-400 dark:border-red-500 focus:ring-red-400' : ''}`}
             style={!phoneError ? { '--tw-ring-color': accent } as React.CSSProperties : undefined}
           />

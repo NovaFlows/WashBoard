@@ -10,7 +10,7 @@ const { sendSms } = vi.hoisted(() => ({ sendSms: vi.fn() }))
 vi.mock('@/lib/sms', () => ({ sendSms, EXPEDITEUR_SMS_DEFAUT: 'WashBoard' }))
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
 
-const { envoyerCodeSms, verifierCodeSms, estMobileFrancais, telephoneMasque, texteSmsCode, phraseEnvoi, LONGUEUR_CODE_SMS, codeDuNumeroTest } = await import('./codeSms')
+const { envoyerCodeSms, verifierCodeSms, estMobileFrancais, phraseMobileRequis, telephoneMasque, texteSmsCode, phraseEnvoi, LONGUEUR_CODE_SMS, codeDuNumeroTest } = await import('./codeSms')
 
 type Ligne = Record<string, unknown>
 let lignes: Map<string, Ligne>
@@ -59,6 +59,33 @@ describe('numéro et texte', () => {
     expect(estMobileFrancais('0612345678')).toBe(true)
     expect(estMobileFrancais('0712345678')).toBe(true)
     for (const n of ['0123456789', '0912345678', '+33612345678', '061234567', null]) expect(estMobileFrancais(n), String(n)).toBe(false)
+  })
+  it('Luxembourg et Québec : refusés tant que leur pays n’est pas ouvert, acceptés une fois ouvert', () => {
+    const ferme = {} as Record<string, string | undefined>
+    const ouvert = { NEXT_PUBLIC_PAYS_INSCRIPTION: 'FR,BE,CH,LU,QC' }
+    expect(estMobileFrancais('+352621123456', ferme)).toBe(false)
+    expect(estMobileFrancais('+15142345678', ferme)).toBe(false)
+    expect(estMobileFrancais('+352621123456', ouvert)).toBe(true)
+    expect(estMobileFrancais('+15142345678', ouvert)).toBe(true)
+    // Un fixe luxembourgeois ou un numéro américain n'est jamais accepté.
+    expect(estMobileFrancais('+35226123456', ouvert)).toBe(false)
+    expect(estMobileFrancais('+14162345678', ouvert)).toBe(false)
+    // Le Luxembourg seul : le Québec reste refusé.
+    expect(estMobileFrancais('+15142345678', { NEXT_PUBLIC_PAYS_INSCRIPTION: 'FR,LU' })).toBe(false)
+  })
+  it('un numéro de test luxembourgeois ou québécois passe même pays fermé (aucun SMS ne part)', () => {
+    const env = { SMS_NUMEROS_TEST: '+352621000001,+15145550101', SMS_CODE_TEST: '123456' }
+    expect(estMobileFrancais('+352621000001', env)).toBe(true)
+    expect(estMobileFrancais('+15145550101', env)).toBe(true)
+    expect(estMobileFrancais('+352621999999', env)).toBe(false)
+  })
+  it('la phrase du refus cite les pays ouverts', () => {
+    expect(phraseMobileRequis({})).not.toMatch(/Luxembourg|québécois/)
+    expect(phraseMobileRequis({ NEXT_PUBLIC_PAYS_INSCRIPTION: 'FR,LU,QC' })).toMatch(/Luxembourg.*québécois/)
+  })
+  it('masque aussi un numéro luxembourgeois ou québécois', () => {
+    expect(telephoneMasque('+352621123456')).toBe('+352 6•• ••• 56')
+    expect(telephoneMasque('+15142345678')).toBe('+1 514 ••• ••78')
   })
   it('masque le numéro et tient en un seul SMS', () => {
     expect(telephoneMasque('0612345678')).toBe('06 •• •• •• 78')

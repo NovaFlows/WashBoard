@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Service, ServiceCategory, Availability, BookingFormData } from '@/types'
 import { dureeTotale, prixOptions } from '@/lib/pricing'
+import type { PaysTelephone } from '@/lib/phone'
 import { limitesCombinees, prestationsChoisies } from '@/lib/plusieursPrestations'
 import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } from '@/lib/funnelTracking'
 import { evenementPixel } from '@/lib/metaPixel'
@@ -88,6 +89,8 @@ export type WasherPublic = {
   silhouettes_vehicules?: boolean
   /** Le véhicule choisi apparaît dans ses vraies couleurs (sinon grisé). */
   silhouettes_couleur?: boolean
+  /** Pays du laveur (d'après son téléphone) : le numéro du client se lit sous ce pays. */
+  pays_telephone?: PaysTelephone
   /** Le client peut cumuler plusieurs prestations (lib/plusieursPrestations.ts). */
   plusieurs_prestations?: boolean
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
@@ -490,6 +493,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
         )}
         {step === 4 && !estProposition && (
           <StepContact
+            pays={washer.pays_telephone}
             isProfessional={form.is_professional ?? false}
             loading={loading}
             error={error}

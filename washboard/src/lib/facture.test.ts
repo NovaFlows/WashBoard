@@ -369,3 +369,74 @@ describe('paysDuProfil', () => {
     expect(paysDuProfil({ phone: '0612345678', facture_siret: '0123456749' })).toBe('BE')
   })
 })
+
+describe('Luxembourg', () => {
+  it('numéro de TVA : LU + 8 chiffres, clé = six premiers chiffres modulo 89', () => {
+    expect(numeroTvaValide('LU20260743')).toBe(true) // numéro réel (clé 43)
+    expect(numeroTvaValide('LU 2026 0743')).toBe(true)
+    expect(numeroTvaValide('LU20260744')).toBe(false)
+    expect(numeroTvaValide('LU1234567')).toBe(false)
+  })
+
+  it('identifiant : RCS (B + chiffres) ou matricule de 11 ou 13 chiffres', () => {
+    for (const bon of ['B123456', 'b12', '19992412345', '1987012345678', '1999 2412 345']) expect(identifiantValidePour('LU', bon), bon).toBe(true)
+    for (const mauvais of ['123456', 'B1234567', '1234567890', '73282932000074', 'CHE-109.322.551']) expect(identifiantValidePour('LU', mauvais), mauvais).toBe(false)
+    expect(siretValide('B123456')).toBe(true) // reconnu comme identifiant, sans être un SIRET
+  })
+
+  it('le pays se lit sur le téléphone, la TVA ou l’identifiant', () => {
+    expect(paysDuTelephoneLaveur('+352621123456')).toBe('LU')
+    expect(paysDuProfil({ phone: '+352621123456' })).toBe('LU')
+    expect(paysFacturation({ facture_numero_tva: 'LU20260743' })).toBe('LU')
+    expect(paysFacturation({ facture_siret: 'B123456' })).toBe('LU')
+  })
+
+  it('taux (17 % par défaut), règles du profil et mention de franchise', () => {
+    expect(tauxTvaNormal('LU')).toBe(17)
+    expect(tauxTvaPour('LU')).toEqual([17, 14, 8, 3])
+    expect(reglesPays('LU').formes).toContain('SARL')
+    expect(reglesPays('LU').immatriculationExemple).toMatch(/^RCS Luxembourg/)
+    expect(mentionFranchiseTva('LU')).toMatch(/art\. 57/)
+  })
+})
+
+describe('Québec', () => {
+  it('NEQ : 10 chiffres commençant par 11, 22, 33 ou 88', () => {
+    for (const bon of ['1123456789', '2234567890', '3345678901', '8856789012', '1123 456 789']) expect(identifiantValidePour('QC', bon), bon).toBe(true)
+    for (const mauvais of ['4423456789', '112345678', '73282932000074', 'CHE-109.322.551', 'B123456']) expect(identifiantValidePour('QC', mauvais), mauvais).toBe(false)
+    expect(siretValide('1123456789')).toBe(true)
+  })
+
+  it('un BCE belge valide reste belge même s’il commence par 1', () => {
+    expect(identifiantValidePour('BE', '0123456749')).toBe(true)
+    expect(identifiantValidePour('QC', '0123456749')).toBe(false)
+    expect(paysFacturation({ facture_siret: '0123456749' })).toBe('BE')
+  })
+
+  it('numéro de TPS (…RT0001) ou de TVQ (…TQ0001)', () => {
+    expect(numeroTvaValide('123456789 RT 0001')).toBe(true)
+    expect(numeroTvaValide('1234567890TQ0001')).toBe(true)
+    expect(numeroTvaValide('123456789RT01')).toBe(false)
+    expect(paysFacturation({ facture_numero_tva: '123456789RT0001' })).toBe('QC')
+  })
+
+  it('le pays se lit sur le téléphone, avec un indicatif québécois seulement', () => {
+    expect(paysDuTelephoneLaveur('+15142345678')).toBe('QC')
+    expect(paysDuTelephoneLaveur('+14162345678')).toBeNull()
+    expect(paysDuProfil({ phone: '+15142345678' })).toBe('QC')
+  })
+
+  it('taux cumulé 14,975 % par défaut, règles du profil et mention de petit fournisseur', () => {
+    expect(tauxTvaNormal('QC')).toBe(14.975)
+    expect(reglesPays('QC').formes).toContain('Inc.')
+    expect(reglesPays('QC').identifiantTitre).toMatch(/NEQ/)
+    expect(mentionFranchiseTva('QC')).toMatch(/30 000/)
+  })
+
+  it('libellé court d’un identifiant d’après sa forme', () => {
+    expect(libelleCourtIdentifiant('1123456789')).toBe('NEQ')
+    expect(libelleCourtIdentifiant('0123456749')).toBe('N° BCE')
+    expect(libelleCourtIdentifiant('B123456')).toBe('N° RCS')
+    expect(libelleCourtIdentifiant('73282932000074')).toBe('SIRET')
+  })
+})

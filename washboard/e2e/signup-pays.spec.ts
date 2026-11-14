@@ -37,10 +37,13 @@ test('la liste propose France, Belgique et Suisse, et l’exemple suit le pays',
   await expect(page.getByRole('button', { name: 'Pays du téléphone' })).toContainText('+33')
   await page.getByRole('button', { name: 'Pays du téléphone' }).click()
   const options = page.getByRole('option')
-  await expect(options).toHaveCount(3)
+  // Le banc d'essai ouvre aussi le Luxembourg et le Québec (NEXT_PUBLIC_PAYS_INSCRIPTION, voir la config).
+  await expect(options).toHaveCount(5)
   await expect(options.nth(0)).toContainText('France')
   await expect(options.nth(1)).toContainText('Belgique')
   await expect(options.nth(2)).toContainText('Suisse')
+  await expect(options.nth(3)).toContainText('Luxembourg')
+  await expect(options.nth(4)).toContainText('Québec')
   await page.screenshot({ path: testInfo.outputPath('signup-pays-ouvert.png'), scale: 'css' })
   await options.nth(0).click()
   await expect(page.locator('#phone')).toHaveAttribute('placeholder', '06 12 34 56 78')
@@ -77,4 +80,28 @@ test('un numéro invalide pour le pays choisi est refusé avant l’envoi, avec 
   await remplir(page, '12')
   await page.getByRole('button', { name: /Lancer mon mois gratuit/ }).last().click()
   await expect(page.getByText(/invalide pour Suisse.*079 123 45 67/)).toBeVisible()
+})
+
+test('Luxembourg : un 621… part en +352, sans zéro de tête', async ({ page }) => {
+  await ouvrir(page)
+  await choisirPays(page, 'Luxembourg')
+  await expect(page.locator('#phone')).toHaveAttribute('placeholder', '621 123 456')
+  await remplir(page, '621 123 456')
+  expect((await envoyer(page)).phone).toBe('+352621123456')
+})
+
+test('Québec : un 514… part en +1', async ({ page }) => {
+  await ouvrir(page)
+  await choisirPays(page, 'Québec')
+  await expect(page.locator('#phone')).toHaveAttribute('placeholder', '514 234 5678')
+  await remplir(page, '(514) 234-5678')
+  expect((await envoyer(page)).phone).toBe('+15142345678')
+})
+
+test('Québec : un indicatif d’un autre endroit (Toronto, 416) est refusé', async ({ page }) => {
+  await ouvrir(page)
+  await choisirPays(page, 'Québec')
+  await remplir(page, '416 234 5678')
+  await page.getByRole('button', { name: /Lancer mon mois gratuit/ }).last().click()
+  await expect(page.getByText(/invalide pour Québec/)).toBeVisible()
 })

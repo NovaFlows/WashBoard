@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import type { BookingFormData, VehicleItem } from '@/types'
 import { formatPrice } from '@/lib/pricing'
 import EncartAcompte from './EncartAcompte'
-import { normalizePhone } from '@/lib/phone'
+import { normalizePhone, PAYS_TELEPHONE, type PaysTelephone } from '@/lib/phone'
 import BookingAction from './BookingAction'
 
 type Contact = Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & {
@@ -12,7 +12,7 @@ type Contact = Pick<BookingFormData, 'client_name' | 'client_email' | 'client_ph
   acompte_accepte?: boolean
 }
 
-export default function ContactDetails({ isProfessional, clientsProAutorises, factureApresPrestation, vehicles, onChange, loading, error, onSubmit, accent = '#2563eb', actionTarget, total, whatsappHref, acompte = null, onCoordonnees, fidelite = null }: {
+export default function ContactDetails({ isProfessional, clientsProAutorises, factureApresPrestation, vehicles, onChange, loading, error, onSubmit, accent = '#2563eb', actionTarget, total, whatsappHref, acompte = null, onCoordonnees, fidelite = null, pays }: {
   isProfessional: boolean
   clientsProAutorises: boolean
   factureApresPrestation: boolean
@@ -32,6 +32,8 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
   onCoordonnees?: (email: string, telephone: string) => void
   /** Carte de fidélité du client, montrée une fois ses coordonnées tapées. */
   fidelite?: React.ReactNode
+  /** Pays du laveur (d'après son téléphone) : un client luxembourgeois ou québécois tape son numéro sans zéro de tête. */
+  pays?: PaysTelephone
 }) {
   const ref = useRef<HTMLFormElement>(null)
   const [name, setName] = useState('')
@@ -53,7 +55,8 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
   // forme que l'iPhone propose lui-même en autocomplétion — signalé par
   // Alexandre le 2026-10-04 après l'avoir vécu en testant sur son téléphone.
   // Même normalisation que washer/route.ts et lib/phone.ts partout ailleurs.
-  const phoneNormalise = normalizePhone(phone)
+  const phoneNormalise = normalizePhone(phone, pays)
+  const exemplePhone = PAYS_TELEPHONE.find(p => p.code === pays)?.exemple ?? '06 12 34 56 78'
   useEffect(() => { onCoordonnees?.(email, phone) }, [email, phone, onCoordonnees])
   // Numéro IDE suisse (CHE-123.456.789) : on garde « CHE » devant les 9 chiffres.
   const siretEnvoye = /^\s*CHE/i.test(siret) ? `CHE${siret.replace(/\D/g, '')}` : siret.replace(/\D/g, '')
@@ -76,8 +79,8 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
     <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mb-5">Pour confirmer le rendez-vous et vous prévenir le jour J.</p>
     <div className="space-y-5">
       <div><label className={label} htmlFor="booking-name">Nom et prénom</label><input id="booking-name" autoComplete="name" required minLength={2} value={name} onChange={e => setName(e.target.value)} className={input} /></div>
-      <div><label className={label} htmlFor="booking-phone">Téléphone</label><input id="booking-phone" autoComplete="tel" type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder="06 12 34 56 78" className={input} />
-        {!!phone && !phoneNormalise && <p className="text-xs text-zinc-500 mt-1">Indiquez un numéro à 10 chiffres (ou au format +33).</p>}</div>
+      <div><label className={label} htmlFor="booking-phone">Téléphone</label><input id="booking-phone" autoComplete="tel" type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder={exemplePhone} className={input} />
+        {!!phone && !phoneNormalise && <p className="text-xs text-zinc-500 mt-1">Indiquez un numéro valide (ex. {exemplePhone}) ou au format international (+33…).</p>}</div>
       <div><label className={label} htmlFor="booking-email">Email <span className="font-normal text-zinc-500">pour recevoir le récapitulatif</span></label><input id="booking-email" autoComplete="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={input} /></div>
       {vehicles.map((v, i) => isVehicle(v.type) && <div key={`${v.type}-${i}`}>
         <label className={label} htmlFor={`booking-model-${i}`}>Modèle {vehicles.length > 1 ? `· ${v.label ?? v.type} ${i + 1}` : 'du véhicule'}</label>

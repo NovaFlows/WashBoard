@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { normaliserMobile, PAYS_TELEPHONE, telephoneDuPays, type PaysTelephone } from '@/lib/phone'
 import SelecteurPays from '@/components/entree/SelecteurPays'
+import { paysOuverts } from '@/lib/paysInscription'
 import Link from 'next/link'
 import {
   BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, Guide, LIEN_DISCRET, SAISIE, TitreEntree,
@@ -17,7 +18,11 @@ export default function SignupPage() {
   // Le pays du téléphone (2026-11-14) : il lève l'ambiguïté d'un 079… suisse / 07… français, et fixe,
   // une fois le numéro confirmé par SMS, le format de l'identifiant d'entreprise du profil.
   const [pays, setPays] = useState<PaysTelephone>('FR')
-  const choixPays = PAYS_TELEPHONE.find(p => p.code === pays) ?? PAYS_TELEPHONE[0]
+  // Seuls les pays ouverts à l'inscription (lib/paysInscription : France, Belgique et Suisse, plus le
+  // Luxembourg et le Québec quand ils sont allumés) sont proposés.
+  const ouverts = paysOuverts()
+  const proposes = PAYS_TELEPHONE.filter(p => ouverts.includes(p.code))
+  const choixPays = proposes.find(p => p.code === pays) ?? proposes[0]
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [cgvAcceptees, setCgvAcceptees] = useState(false)
@@ -34,7 +39,7 @@ export default function SignupPage() {
     const telephone = telephoneDuPays(phone, pays)
     if (!telephone) { setError(`Numéro de téléphone invalide pour ${choixPays.libelle} (ex. ${choixPays.exemple})`); return }
     // Le code de confirmation arrive par SMS (2026-10-21) : un mobile, forcément.
-    if (!normaliserMobile(telephone)) { setError('Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique, 07x en Suisse) : le code de confirmation arrive par SMS.'); return }
+    if (!normaliserMobile(telephone)) { setError(`Il faut un numéro de mobile (ex. ${choixPays.exemple}) : le code de confirmation arrive par SMS.`); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
     if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères'); return }
     if (!cgvAcceptees) { setError('Merci d’accepter les CGV pour continuer'); return }
@@ -85,7 +90,7 @@ export default function SignupPage() {
           </Champ>
           <Champ id="phone" label="Téléphone" aide={<>Un code de confirmation t’arrive par SMS.<br />Il sert aussi à te joindre en cas de souci.</>}>
             <div className="flex items-center gap-2">
-              <SelecteurPays valeur={pays} onChange={setPays} />
+              <SelecteurPays valeur={pays} onChange={setPays} pays={proposes} />
               <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder={choixPays.exemple} autoComplete="tel-national" className={SAISIE} />
             </div>
           </Champ>

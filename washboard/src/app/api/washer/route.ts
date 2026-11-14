@@ -369,7 +369,8 @@ export async function PATCH(request: NextRequest) {
     const numero = normaliserNumeroTva(String(facture_numero_tva ?? ''))
     if (numero && !numeroTvaValide(numero)) {
       return NextResponse.json(
-        { error: 'Numéro de TVA invalide : FR suivi de 11 caractères, par exemple FR40123456789.' },
+        // Le message du pays du téléphone confirmé (belge, suisse, luxembourgeois, québécois), sinon français.
+        { error: reglesPays(paysDuTelephoneLaveur((profil as { phone?: string | null }).phone) ?? 'FR').numeroTvaErreur },
         { status: 400 },
       )
     }

@@ -17,7 +17,7 @@ import { fideliteActive } from '@/lib/fidelite'
 import { centreAutoPublic, lieuxPossibles } from '@/lib/centreAuto'
 import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import { infosFacturationManquantes } from '@/lib/facture'
-import { whatsappDigits } from '@/lib/phone'
+import { paysDuTelephone, whatsappDigits } from '@/lib/phone'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 import { pixelIdValide, pixelIdDev } from '@/lib/consentement'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
@@ -326,6 +326,7 @@ export default async function BookingPage({ params }: Props) {
             reservation_jour_meme: washer.reservation_jour_meme ?? false,
             silhouettes_vehicules: washer.silhouettes_vehicules !== false,
             silhouettes_couleur: silhouettesCouleur,
+            pays_telephone: paysDuTelephone(washer.phone),
             plusieurs_prestations: plusieursPrestations,
             is_preview: washer.is_preview ?? false,
             facturation_prete: facturationPrete,

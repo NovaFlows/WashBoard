@@ -278,3 +278,62 @@ describe('telephoneDuPays — liste déroulante de l’inscription', () => {
     }
   })
 })
+
+describe('Luxembourg et Québec', () => {
+  it('lit un numéro luxembourgeois avec ou sans indicatif, jamais sans pays connu', () => {
+    expect(normalizePhone('+352 621 123 456')).toBe('+352621123456')
+    expect(normalizePhone('00352621123456')).toBe('+352621123456')
+    expect(normalizePhone('621 123 456', 'LU')).toBe('+352621123456')
+    expect(normalizePhone('26 12 34 56', 'LU')).toBe('+35226123456')
+    expect(normalizePhone('+352 1')).toBeNull()
+    expect(normalizePhone('621123456')).toBeNull() // 9 chiffres sans pays : pas un numéro français
+  })
+
+  it('lit un numéro québécois, et refuse le reste de l’Amérique du Nord', () => {
+    expect(normalizePhone('+1 514 234 5678')).toBe('+15142345678')
+    expect(normalizePhone('(514) 234-5678', 'QC')).toBe('+15142345678')
+    expect(normalizePhone('1 438 234 5678', 'QC')).toBe('+14382345678')
+    expect(normalizePhone('+1 212 234 5678')).toBeNull()   // New York
+    expect(normalizePhone('+1 416 234 5678')).toBeNull()   // Toronto
+    expect(normalizePhone('416 234 5678', 'QC')).toBeNull()
+    expect(normalizePhone('514 234 5678')).toBeNull()      // sans pays : rien
+  })
+
+  it('reconnaît le pays d’un numéro', () => {
+    expect(paysDuTelephone('+352621123456')).toBe('LU')
+    expect(paysDuTelephone('+15142345678')).toBe('QC')
+    expect(paysDuTelephone('+14162345678')).toBe('FR')
+    expect(paysDuTelephone('0612345678')).toBe('FR')
+  })
+
+  it('mobile : luxembourgeois en 6, québécois toujours', () => {
+    expect(isMobilePhone('+352621123456')).toBe(true)
+    expect(isMobilePhone('+35226123456')).toBe(false)
+    expect(isMobilePhone('+15142345678')).toBe(true)
+    expect(normaliserMobile('621 123 456')).toBe('+352621123456')
+    expect(normaliserMobile('514 234 5678')).toBe('+15142345678')
+    expect(normaliserMobile('0912345678')).toBeNull()
+  })
+
+  it('affiche un numéro lisiblement', () => {
+    expect(formatPhone('+352621123456')).toBe('+352 621 123 456')
+    expect(formatPhone('+15142345678')).toBe('+1 514 234 5678')
+  })
+
+  it('la liste déroulante : le pays choisi lit le numéro sans zéro de tête', () => {
+    expect(telephoneDuPays('621 123 456', 'LU')).toBe('+352621123456')
+    expect(telephoneDuPays('514 234 5678', 'QC')).toBe('+15142345678')
+    expect(telephoneDuPays('+352 621 123 456', 'FR')).toBe('+352621123456')
+    expect(telephoneDuPays('416 234 5678', 'QC')).toBeNull()
+    for (const p of PAYS_TELEPHONE) {
+      const n = telephoneDuPays(p.exemple, p.code)
+      expect(n, p.code).not.toBeNull()
+      expect(paysDuTelephone(n), p.code).toBe(p.code)
+    }
+  })
+
+  it('WhatsApp : chiffres seuls avec l’indicatif', () => {
+    expect(whatsappDigits('+352621123456')).toBe('352621123456')
+    expect(whatsappDigits('+15142345678')).toBe('15142345678')
+  })
+})

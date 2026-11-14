@@ -1,4 +1,4 @@
-import { estMobileFrancais, PHRASE_MOBILE_REQUIS } from '@/lib/codeSms'
+import { estMobileFrancais, phraseMobileRequis } from '@/lib/codeSms'
 import { normalizePhone, normaliserMobile } from '@/lib/phone'
 
 // Changer de numéro depuis les réglages (2026-11-10), comme on change d'e-mail ou de mot de
@@ -15,12 +15,12 @@ export function verifierNouveauNumero(saisie: unknown, actuel: string | null | u
   const telephone = normaliserMobile(brut)
   if (!telephone) {
     return {
-      erreur: normalizePhone(brut) || normalizePhone(brut, 'BE') || normalizePhone(brut, 'CH')
-        ? PHRASE_MOBILE_REQUIS
-        : 'Numéro invalide : 06 12 34 56 78, 0470 12 34 56 ou format international (+33…, +32…, +41…).',
+      erreur: normalizePhone(brut) || normalizePhone(brut, 'BE') || normalizePhone(brut, 'CH') || normalizePhone(brut, 'LU') || normalizePhone(brut, 'QC')
+        ? phraseMobileRequis()
+        : 'Numéro invalide : 06 12 34 56 78, 0470 12 34 56 ou format international (+33…, +32…, +41…, +352…, +1…).',
     }
   }
-  if (!estMobileFrancais(telephone)) return { erreur: PHRASE_MOBILE_REQUIS }
+  if (!estMobileFrancais(telephone)) return { erreur: phraseMobileRequis() }
   if (telephone === normalizePhone(actuel)) return { erreur: 'C’est déjà votre numéro.' }
   return { telephone }
 }

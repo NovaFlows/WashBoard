@@ -16,6 +16,7 @@ import type { AcomptePublic } from '@/lib/acompte'
 import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
 import type { CentreAutoPublic } from '@/lib/centreAuto'
+import { paysDuTelephone } from '@/lib/phone'
 type Props = {
  washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme' | 'silhouettes_vehicules' | 'demander_type_vehicule'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
  services: Service[]; categories: ServiceCategory[]; availabilities: Availability[]
@@ -158,6 +159,7 @@ export default function LegacyBookingPage({washer, services, categories, availab
             reservation_jour_meme: washer.reservation_jour_meme ?? false,
             silhouettes_vehicules: washer.silhouettes_vehicules !== false,
             silhouettes_couleur: silhouettesCouleur,
+            pays_telephone: paysDuTelephone(washer.phone),
             plusieurs_prestations: plusieursPrestations,
             is_preview: washer.is_preview ?? false,
             facturation_prete: facturationPrete,

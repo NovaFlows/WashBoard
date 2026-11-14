@@ -2,7 +2,8 @@ import { createHmac, randomInt, timingSafeEqual } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
-import { normaliserMobile } from '@/lib/phone'
+import { normaliserMobile, paysDuTelephone } from '@/lib/phone'
+import { paysOuverts } from '@/lib/paysInscription'
 
 // Confirmation de l'inscription par un code reçu par SMS (décision d'Alexandre, 2026-10-21) :
 // remplace le code par email. Un compte n'est utilisable qu'une fois son numéro vérifié — fini
@@ -30,12 +31,29 @@ const PLAFOND_24H = 30
 /** Un mobile français (10 chiffres, 06/07) ou belge (+32 4xx), sous la forme canonique de
  *  `normalizePhone`. Gardé sous ce nom : la Belgique s'est ajoutée le 2026-11-11, les autres pays
  *  restent refusés (fraude aux SMS surtaxés, voir plus haut). */
-export function estMobileFrancais(telephone: string | null | undefined): boolean {
-  return /^0[67]\d{8}$/.test(telephone ?? '') || /^\+324[5-9]\d{7}$/.test(telephone ?? '') || /^\+417[5-9]\d{7}$/.test(telephone ?? '')
+export function estMobileFrancais(telephone: string | null | undefined, env: Record<string, string | undefined> = process.env): boolean {
+  const t = telephone ?? ''
+  if (/^0[67]\d{8}$/.test(t) || /^\+324[5-9]\d{7}$/.test(t) || /^\+417[5-9]\d{7}$/.test(t)) return true
+  // Luxembourg (+352 6…) et Québec (+1, indicatif québécois) : reconnus, mais acceptés seulement
+  // quand le pays est ouvert à l'inscription (`lib/paysInscription`) — ou pour un numéro de test,
+  // qui n'envoie aucun SMS. Tant que Brevo n'a pas prouvé qu'il y livre, le code ne partirait pas.
+  const pays = paysDuTelephone(t)
+  const formatOk = pays === 'LU' ? /^\+3526\d{8}$/.test(t) : pays === 'QC' ? /^\+1\d{10}$/.test(t) : false
+  if (!formatOk) return false
+  return paysOuverts(env.NEXT_PUBLIC_PAYS_INSCRIPTION).includes(pays) || codeDuNumeroTest(t, env) !== null
 }
 
 /** Ce qu'on dit à quelqu'un dont le numéro n'est pas un mobile accepté. */
 export const PHRASE_MOBILE_REQUIS = 'Il faut un numéro de mobile (06 ou 07 en France, 04 en Belgique, +41 7x en Suisse) : le code arrive par SMS.'
+
+/** La même phrase, avec les pays réellement ouverts à l'inscription (Luxembourg, Québec si allumés). */
+export function phraseMobileRequis(env: Record<string, string | undefined> = process.env): string {
+  const ouverts = paysOuverts(env.NEXT_PUBLIC_PAYS_INSCRIPTION)
+  const en = ['06 ou 07 en France', '04 en Belgique', '+41 7x en Suisse']
+  if (ouverts.includes('LU')) en.push('6x au Luxembourg')
+  if (ouverts.includes('QC')) en.push('un numéro québécois')
+  return `Il faut un numéro de mobile (${en.join(', ')}) : le code arrive par SMS.`
+}
 
 /** Numéro de TEST (2026-11-11) : pour essayer l'inscription avec un numéro qui n'existe pas (ex. un
  *  numéro belge fictif), sans envoyer de SMS. Deux variables d'environnement, toutes deux
@@ -55,6 +73,8 @@ export function codeDuNumeroTest(telephone: string, env: Record<string, string |
 export function telephoneMasque(telephone: string): string {
   if (telephone.startsWith('+32')) return `+32 ${telephone.slice(3, 4)}•• •• •• ${telephone.slice(-2)}`
   if (telephone.startsWith('+41')) return `+41 ${telephone.slice(3, 5)} ••• •• ${telephone.slice(-2)}`
+  if (telephone.startsWith('+352')) return `+352 ${telephone.slice(4, 5)}•• ••• ${telephone.slice(-2)}`
+  if (telephone.startsWith('+1')) return `+1 ${telephone.slice(2, 5)} ••• ••${telephone.slice(-2)}`
   return `${telephone.slice(0, 2)} •• •• •• ${telephone.slice(-2)}`
 }
 
@@ -167,7 +187,7 @@ export async function verifierCodeSms(
 export function phraseEnvoi(r: Exclude<EnvoiCode, { ok: true }>): string {
   switch (r.raison) {
     case 'attente': return `Un SMS vient de partir. Attends ${r.secondes} s avant d'en redemander un.`
-    case 'numero': return PHRASE_MOBILE_REQUIS
+    case 'numero': return phraseMobileRequis()
     case 'trop_d_envois': return 'Trop de codes demandés pour cette inscription. Recommence-la, ou écris-nous à contact@washboard.fr.'
     case 'plafond': return 'Trop d’inscriptions en ce moment. Réessaie dans quelques heures, ou écris-nous à contact@washboard.fr.'
     case 'panne': return 'Le SMS n’a pas pu partir. Réessaie dans un instant.'

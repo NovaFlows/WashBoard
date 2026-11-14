@@ -13,6 +13,7 @@ import { trackFunnelStep, type FunnelStep, resolveCampagne, resolveCreation } fr
 import { evenementPixel } from '@/lib/metaPixel'
 import StepPrestation from './StepPrestation'
 import { estAuCentre } from '@/lib/lieuAdapte'
+import type { PaysTelephone } from '@/lib/phone'
 import { limitesCombinees, prestationsChoisies } from '@/lib/plusieursPrestations'
 import BookingAction from './BookingAction'
 import './booking.css'
@@ -101,6 +102,8 @@ export type WasherPublic = {
   silhouettes_vehicules?: boolean
   /** Le véhicule choisi apparaît dans ses vraies couleurs (sinon grisé). */
   silhouettes_couleur?: boolean
+  /** Pays du laveur (d'après son téléphone) : le numéro du client se lit sous ce pays. */
+  pays_telephone?: PaysTelephone
   /** Le client peut cumuler plusieurs prestations (lib/plusieursPrestations.ts). */
   plusieurs_prestations?: boolean
   /** Page « proposition » : construite pour un laveur qui n'a pas encore de
@@ -480,6 +483,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
               </div>
             ) : (
               <ContactDetails
+                pays={washer.pays_telephone}
                 actionTarget={section === 3 ? actionTarget : null}
                 clientsProAutorises={washer.clients_pro !== false}
                 factureApresPrestation={washer.facturation_prete === true}

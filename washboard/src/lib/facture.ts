@@ -28,10 +28,17 @@ export const TAUX_TVA_BE = [21, 12, 6] as const
 /** Suisse (ouverture du 2026-11-13) : 8,1 % (taux normal depuis le 1er janvier 2024, le cas du
  *  lavage), 2,6 % (taux réduit) et 3,8 % (taux spécial, hébergement). */
 export const TAUX_TVA_CH = [8.1, 2.6, 3.8] as const
+/** Luxembourg (2026-11-14) : 17 % (taux normal, le cas du lavage), 14 %, 8 % et 3 %. */
+export const TAUX_TVA_LU = [17, 14, 8, 3] as const
+/** Québec (2026-11-14) : TPS fédérale (5 %) et TVQ provinciale (9,975 %) se cumulent, soit 14,975 %
+ *  sur le prix. Proposés : le taux cumulé, puis chacune seule. Une facture québécoise nomme les deux
+ *  taxes et leurs deux numéros ; ce module ne porte pour l'instant qu'un taux et un numéro (limite
+ *  connue, voir PROJECT_CONTEXT.md). */
+export const TAUX_TVA_QC = [14.975, 5, 9.975] as const
 /** Tous les taux acceptés par le serveur ; l'écran n'en propose que ceux du pays du laveur. */
-export const TAUX_TVA = [20, 10, 5.5, 21, 12, 6, 8.1, 2.6, 3.8] as const
+export const TAUX_TVA = [20, 10, 5.5, 21, 12, 6, 8.1, 2.6, 3.8, 17, 14, 8, 3, 14.975, 5, 9.975] as const
 
-export type PaysFacturation = 'FR' | 'BE' | 'CH'
+export type PaysFacturation = 'FR' | 'BE' | 'CH' | 'LU' | 'QC'
 
 /** Le pays de facturation d'un laveur, déduit de ce qu'il a saisi : un numéro de TVA en « BE » ou
  *  « CHE », un numéro d'entreprise à 10 chiffres (BCE) ou un numéro IDE suisse (CHE-123.456.789),
@@ -41,16 +48,22 @@ export function paysFacturation(w: { facture_numero_tva?: string | null; facture
   const tva = (w.facture_numero_tva ?? '').replace(/\s/g, '')
   if (/^BE/i.test(tva)) return 'BE'
   if (/^CHE/i.test(tva)) return 'CH'
+  if (/^LU\d/i.test(tva)) return 'LU'
+  if (/(RT\d{4}|TQ\d{4})$/i.test(tva)) return 'QC'
   const identifiant = normaliserSiret(w.facture_siret ?? '')
   if (/^0\d{9}$/.test(identifiant)) return 'BE'
   if (/^CHE\d{9}$/.test(identifiant)) return 'CH'
+  if (/^B\d{1,6}$/.test(identifiant)) return 'LU'
+  if (/^(11|22|33|88)\d{8}$/.test(identifiant) && !bceValide(identifiant)) return 'QC'
   const tel = (w.phone ?? '').replace(/[\s.()-]/g, '')
   if (/^(\+32|0032)/.test(tel)) return 'BE'
   if (/^(\+41|0041)/.test(tel)) return 'CH'
+  if (/^(\+352|00352)/.test(tel)) return 'LU'
+  if (/^(\+1|001)(263|354|367|418|438|450|468|514|579|581|819|873)/.test(tel)) return 'QC'
   return 'FR'
 }
 
-/** Le pays du laveur d'après son téléphone CONFIRMÉ par SMS, quand il est belge ou suisse : c'est la
+/** Le pays du laveur d'après son téléphone CONFIRMÉ par SMS, quand il n'est pas français : c'est la
  *  seule donnée sûre dès l'inscription (le pays choisi dans la liste déroulante), avant même qu'il
  *  ait rempli son profil. Un numéro français ne tranche pas (un 06 appartient aussi à qui facture en
  *  Belgique) : `null`, et c'est `paysFacturation` qui lit alors l'identifiant saisi. */
@@ -58,6 +71,8 @@ export function paysDuTelephoneLaveur(phone: string | null | undefined): PaysFac
   const tel = (phone ?? '').replace(/[\s.()-]/g, '')
   if (/^(\+32|0032)/.test(tel)) return 'BE'
   if (/^(\+41|0041)/.test(tel)) return 'CH'
+  if (/^(\+352|00352)/.test(tel)) return 'LU'
+  if (/^(\+1|001)(263|354|367|418|438|450|468|514|579|581|819|873)/.test(tel)) return 'QC'
   return null
 }
 
@@ -123,6 +138,34 @@ const REGLES: Record<PaysFacturation, ReglesPays> = {
     numeroTvaErreur: 'Numéro de TVA invalide : CHE-123.456.789 TVA.',
     adresseExemple: 'Rue du Rhône 14, 1204 Genève',
   },
+  LU: {
+    pays: 'LU',
+    identifiantTitre: 'Numéro RCS ou matricule',
+    identifiantExemple: 'B123456',
+    identifiantErreur: 'Numéro invalide : RCS (B suivi de 1 à 6 chiffres, par exemple B123456) ou matricule (11 ou 13 chiffres).',
+    statutEi: { libelle: 'Entreprise individuelle', aide: 'Vous exercez en nom propre, avec une autorisation d’établissement.' },
+    statutSociete: { libelle: 'Société (Sàrl, SA…)', aide: 'Vos factures portent votre forme juridique, votre capital et votre RCS.' },
+    formes: ['SARL', 'SARL-S', 'SA', 'SCS', 'SNC'],
+    immatriculationExemple: 'RCS Luxembourg B123456',
+    immatriculationAide: '« RCS » (Registre de commerce et des sociétés), Luxembourg, puis votre numéro B…',
+    numeroTvaExemple: 'LU12345613',
+    numeroTvaErreur: 'Numéro de TVA invalide : LU suivi de 8 chiffres, par exemple LU12345613.',
+    adresseExemple: '5 avenue de la Gare, L-1611 Luxembourg',
+  },
+  QC: {
+    pays: 'QC',
+    identifiantTitre: 'NEQ (Numéro d’entreprise du Québec)',
+    identifiantExemple: '1123456789',
+    identifiantErreur: 'NEQ invalide : 10 chiffres commençant par 11, 22, 33 ou 88.',
+    statutEi: { libelle: 'Travailleur autonome (entreprise individuelle)', aide: 'Vous exercez en nom propre, avec ou sans NEQ.' },
+    statutSociete: { libelle: 'Société (inc., S.E.N.C.…)', aide: 'Vos factures portent votre forme juridique, votre capital et votre immatriculation au REQ.' },
+    formes: ['Inc.', 'S.E.N.C.', 'S.E.C.'],
+    immatriculationExemple: 'REQ — NEQ 1123456789',
+    immatriculationAide: '« REQ » (Registraire des entreprises du Québec), puis votre NEQ.',
+    numeroTvaExemple: '123456789RT0001',
+    numeroTvaErreur: 'Numéro invalide : TPS (9 chiffres, RT, 4 chiffres : 123456789RT0001) ou TVQ (10 chiffres, TQ, 4 chiffres : 1234567890TQ0001).',
+    adresseExemple: '1000 rue Sherbrooke Ouest, Montréal QC H3A 3G4',
+  },
 }
 
 export const reglesPays = (pays: PaysFacturation): ReglesPays => REGLES[pays]
@@ -133,15 +176,18 @@ export const reglesPays = (pays: PaysFacturation): ReglesPays => REGLES[pays]
 export function identifiantValidePour(pays: PaysFacturation, brut: string): boolean {
   const s = normaliserSiret(brut)
   if (!s) return true
-  if (!siretValide(s)) return false
-  if (pays === 'BE') return /^[01]\d{9}$/.test(s)
-  if (pays === 'CH') return /^CHE\d{9}$/.test(s)
-  return /^\d{14}$/.test(s)
+  if (pays === 'BE') return bceValide(s)
+  if (pays === 'CH') return ideSuisseValide(s)
+  if (pays === 'LU') return identifiantLuxembourgValide(s)
+  if (pays === 'QC') return neqValide(s)
+  return /^\d{14}$/.test(s) && siretValide(s)
 }
 
-export const tauxTvaPour = (pays: PaysFacturation): readonly number[] => (pays === 'BE' ? TAUX_TVA_BE : pays === 'CH' ? TAUX_TVA_CH : TAUX_TVA_FR)
+export const tauxTvaPour = (pays: PaysFacturation): readonly number[] =>
+  pays === 'BE' ? TAUX_TVA_BE : pays === 'CH' ? TAUX_TVA_CH : pays === 'LU' ? TAUX_TVA_LU : pays === 'QC' ? TAUX_TVA_QC : TAUX_TVA_FR
 export const libelleIdentifiant = (pays: PaysFacturation): string =>
-  pays === 'BE' ? 'numéro d’entreprise (BCE)' : pays === 'CH' ? 'numéro IDE (CHE)' : 'SIRET'
+  pays === 'BE' ? 'numéro d’entreprise (BCE)' : pays === 'CH' ? 'numéro IDE (CHE)'
+    : pays === 'LU' ? 'numéro RCS ou matricule' : pays === 'QC' ? 'NEQ' : 'SIRET'
 /** Le taux de TVA normal du pays : celui qu'on propose et qu'on applique par défaut. */
 export const tauxTvaNormal = (pays: PaysFacturation): number => tauxTvaPour(pays)[0]
 
@@ -151,6 +197,10 @@ export const tauxTvaNormal = (pays: PaysFacturation): number => tauxTvaPour(pays
 export function libelleCourtIdentifiant(identifiant: string | null | undefined): string {
   const s = normaliserSiret(String(identifiant ?? ''))
   if (/^CHE\d{9}$/.test(s)) return 'N° IDE'
+  if (/^[01]\d{9}$/.test(s) && bceValide(s)) return 'N° BCE'
+  if (/^B\d{1,6}$/.test(s)) return 'N° RCS'
+  if (/^(11|22|33|88)\d{8}$/.test(s)) return 'NEQ'
+  if (/^(\d{11}|\d{13})$/.test(s)) return 'Matricule'
   if (/^[01]\d{9}$/.test(s)) return 'N° BCE'
   return 'SIRET'
 }
@@ -170,6 +220,8 @@ export function identifiantAffiche(identifiant: string | null | undefined): stri
 export function mentionFranchiseTva(pays: PaysFacturation): string {
   if (pays === 'BE') return 'TVA non applicable — franchise des petites entreprises (art. 56bis du Code de la TVA).'
   if (pays === 'CH') return 'TVA non applicable — entreprise non assujettie, chiffre d’affaires inférieur à 100 000 CHF (art. 10 al. 2 LTVA).'
+  if (pays === 'LU') return 'TVA non applicable — régime de franchise des petites entreprises (art. 57 de la loi modifiée du 12 février 1979 concernant la TVA).'
+  if (pays === 'QC') return 'TPS et TVQ non perçues — petit fournisseur (revenus inférieurs à 30 000 $ sur quatre trimestres consécutifs).'
   return 'TVA non applicable, art. 293 B du CGI.'
 }
 
@@ -209,6 +261,26 @@ export function ideSuisseValide(brut: string): boolean {
   return (cle === 11 ? 0 : cle) === Number(chiffres[8])
 }
 
+/** Numéro d'entreprise belge (BCE) : 10 chiffres commençant par 0 ou 1, dont les deux derniers sont
+ *  la clé (97 − les 8 premiers modulo 97). */
+export function bceValide(brut: string): boolean {
+  const s = normaliserSiret(brut)
+  return /^[01]\d{9}$/.test(s) && 97 - (Number(s.slice(0, 8)) % 97) === Number(s.slice(8))
+}
+
+/** NEQ québécois (Numéro d'entreprise du Québec) : 10 chiffres commençant par 11, 22, 33 ou 88. Le
+ *  registre ne publie pas de clé de contrôle : seul le format se vérifie. */
+export function neqValide(brut: string): boolean {
+  return /^(11|22|33|88)\d{8}$/.test(normaliserSiret(brut))
+}
+
+/** Identifiant luxembourgeois : numéro RCS (B suivi de 1 à 6 chiffres) ou matricule national (11
+ *  chiffres pour une personne morale, 13 pour une personne physique). */
+export function identifiantLuxembourgValide(brut: string): boolean {
+  const s = normaliserSiret(brut)
+  return /^B\d{1,6}$/.test(s) || /^(\d{11}|\d{13})$/.test(s)
+}
+
 /** 14 chiffres dont la clé de Luhn est juste. Seule exception connue : La
  *  Poste (SIREN 356 000 000), dont les établissements respectent une autre
  *  règle — la somme des chiffres est un multiple de 5. */
@@ -218,7 +290,10 @@ export function siretValide(brut: string): boolean {
   if (/^CHE/.test(s)) return ideSuisseValide(s)
   // Belgique : numéro d'entreprise (BCE), 10 chiffres commençant par 0 ou 1, dont les deux
   // derniers sont la clé : 97 − (les 8 premiers modulo 97).
-  if (/^[01]\d{9}$/.test(s)) return 97 - (Number(s.slice(0, 8)) % 97) === Number(s.slice(8))
+  if (bceValide(s)) return true
+  // Québec (NEQ) et Luxembourg (RCS, matricule) : un identifiant valide, sans être français.
+  if (neqValide(s) || identifiantLuxembourgValide(s)) return true
+  if (/^[01]\d{9}$/.test(s)) return false
   if (!/^\d{14}$/.test(s)) return false
   if (s.startsWith('356000000')) {
     return [...s].reduce((t, c) => t + Number(c), 0) % 5 === 0
@@ -247,7 +322,11 @@ export function normaliserNumeroTva(brut: string): string {
 export function numeroTvaValide(brut: string): boolean {
   if (TVA_SUISSE.test(brut.trim())) return ideSuisseValide(brut.trim().replace(/\s*(TVA|MWST|IVA|HTP)$/i, ''))
   const n = normaliserNumeroTva(brut.replace(/\./g, ''))
-  if (/^BE[01]\d{9}$/.test(n)) return siretValide(n.slice(2))
+  if (/^BE[01]\d{9}$/.test(n)) return bceValide(n.slice(2))
+  // Luxembourg : LU puis 8 chiffres, les deux derniers étant les six premiers modulo 89.
+  if (/^LU\d{8}$/.test(n)) return Number(n.slice(2, 8)) % 89 === Number(n.slice(8))
+  // Québec : numéro de TPS (9 chiffres, RT, 4 chiffres) ou de TVQ (10 chiffres, TQ, 4 chiffres).
+  if (/^\d{9}RT\d{4}$/.test(n) || /^\d{10}TQ\d{4}$/.test(n)) return true
   return /^FR[0-9A-Z]{2}\d{9}$/.test(n)
 }
 
@@ -274,7 +353,8 @@ export function infosFacturationManquantes(w: InfosFacturation): string[] {
     if (!w.facture_capital?.trim()) manques.push('votre capital social')
     if (!w.facture_immatriculation?.trim()) {
       const pays = paysFacturation(w)
-      manques.push(pays === 'BE' ? 'votre immatriculation (RPM)' : pays === 'CH' ? 'votre inscription au registre du commerce (RC)' : 'votre immatriculation (RCS)')
+      manques.push(pays === 'BE' ? 'votre immatriculation (RPM)' : pays === 'CH' ? 'votre inscription au registre du commerce (RC)'
+        : pays === 'QC' ? 'votre immatriculation (REQ)' : 'votre immatriculation (RCS)')
     }
   }
   if (w.facture_regime_tva === 'assujetti'

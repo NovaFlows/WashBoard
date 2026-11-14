@@ -14,6 +14,10 @@ export function normalizePhone(raw: string): string | null {
   // Suisse (+41…, forme canonique des numéros suisses en base) : 9 chiffres après 41.
   if (/^41[1-9]\d{8}$/.test(digits)) return `+${digits}`
   if (/^0041[1-9]\d{8}$/.test(digits)) return `+${digits.slice(2)}`
+  // Luxembourg (+352…) et Québec (+1 et un indicatif québécois) : mêmes formes canoniques en base.
+  if (/^352[2-9]\d{5,8}$/.test(digits)) return `+${digits}`
+  if (/^00352[2-9]\d{5,8}$/.test(digits)) return `+${digits.slice(2)}`
+  if (/^1(?:263|354|367|418|438|450|468|514|579|581|819|873)[2-9]\d{6}$/.test(digits)) return `+${digits}`
   // Format local français (06, 07)
   if (digits.length === 10 && digits.startsWith('0')) return `+33${digits.slice(1)}`
   return null

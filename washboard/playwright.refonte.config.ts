@@ -8,7 +8,7 @@ export default defineConfig({
   use: { baseURL: 'http://localhost:3017', ...devices['iPhone 13'], browserName: 'chromium', trace: 'retain-on-failure' },
   webServer: {
     command: 'node node_modules/next/dist/bin/next dev --port 3017',
-    env: { BOOKING_UI_PREVIEW: '1' },
+    env: { BOOKING_UI_PREVIEW: '1', NEXT_PUBLIC_PAYS_INSCRIPTION: 'FR,BE,CH,LU,QC' },
     url: 'http://localhost:3017/dev/booking-preview',
     reuseExistingServer: true,
     timeout: 180_000,

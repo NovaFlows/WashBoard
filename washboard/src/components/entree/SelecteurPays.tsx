@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { PAYS_TELEPHONE, type PaysTelephone } from '@/lib/phone'
+import { PAYS_TELEPHONE, type ChoixPaysTelephone, type PaysTelephone } from '@/lib/phone'
 
 // Liste du pays du téléphone, à l'inscription (2026-11-14). Les drapeaux sont dessinés ici en
 // SVG : les drapeaux emoji ne s'affichent pas sous Windows (ils sortent en « FR », « CH »).
@@ -13,18 +13,25 @@ export function Drapeau({ pays, className = '' }: { pays: PaysTelephone; classNa
       {pays === 'FR' && <><rect width="8" height="16" fill="#0055A4" /><rect x="8" width="8" height="16" fill="#FFFFFF" /><rect x="16" width="8" height="16" fill="#EF4135" /></>}
       {pays === 'BE' && <><rect width="8" height="16" fill="#000000" /><rect x="8" width="8" height="16" fill="#FAE042" /><rect x="16" width="8" height="16" fill="#ED2939" /></>}
       {pays === 'CH' && <><rect width="24" height="16" fill="#DA291C" /><rect x="10" y="3" width="4" height="10" fill="#FFFFFF" /><rect x="7" y="6" width="10" height="4" fill="#FFFFFF" /></>}
+      {pays === 'LU' && <><rect width="24" height="5.34" fill="#ED2939" /><rect y="5.33" width="24" height="5.34" fill="#FFFFFF" /><rect y="10.66" width="24" height="5.34" fill="#00A1DE" /></>}
+      {/* Québec : le fleurdelisé, croix blanche sur fond bleu, une fleur de lys (stylisée) par quartier. */}
+      {pays === 'QC' && <>
+        <rect width="24" height="16" fill="#003DA5" />
+        <rect x="10.5" width="3" height="16" fill="#FFFFFF" /><rect y="6.5" width="24" height="3" fill="#FFFFFF" />
+        {[[5.2, 3.2], [18.8, 3.2], [5.2, 12.8], [18.8, 12.8]].map(([x, y]) => <path key={`${x}-${y}`} d={`M${x} ${y - 2}l1.3 2-1.3 2-1.3-2z`} fill="#FFFFFF" />)}
+      </>}
       <rect x="0.25" y="0.25" width="23.5" height="15.5" rx="2.75" fill="none" stroke="rgba(0,0,0,.14)" strokeWidth="0.5" />
     </svg>
   )
 }
 
-export default function SelecteurPays({ valeur, onChange }: { valeur: PaysTelephone; onChange: (pays: PaysTelephone) => void }) {
+export default function SelecteurPays({ valeur, onChange, pays: liste = PAYS_TELEPHONE }: { valeur: PaysTelephone; onChange: (pays: PaysTelephone) => void; pays?: readonly ChoixPaysTelephone[] }) {
   const [ouvert, setOuvert] = useState(false)
   // S'ouvre vers le haut quand il manque de la place en dessous : sur téléphone, la barre d'action
   // fixe du bas de l'écran recouvrirait la liste.
   const [versLeHaut, setVersLeHaut] = useState(false)
   const conteneur = useRef<HTMLDivElement>(null)
-  const courant = PAYS_TELEPHONE.find(p => p.code === valeur) ?? PAYS_TELEPHONE[0]
+  const courant = liste.find(p => p.code === valeur) ?? liste[0]
 
   // Se ferme au clic ailleurs et à Échap.
   useEffect(() => {
@@ -40,8 +47,8 @@ export default function SelecteurPays({ valeur, onChange }: { valeur: PaysTeleph
   function fleches(e: React.KeyboardEvent) {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
     e.preventDefault()
-    const i = PAYS_TELEPHONE.findIndex(p => p.code === valeur)
-    const suivant = PAYS_TELEPHONE[(i + (e.key === 'ArrowDown' ? 1 : PAYS_TELEPHONE.length - 1)) % PAYS_TELEPHONE.length]
+    const i = liste.findIndex(p => p.code === valeur)
+    const suivant = liste[(i + (e.key === 'ArrowDown' ? 1 : liste.length - 1)) % liste.length]
     onChange(suivant.code)
   }
 
@@ -71,7 +78,7 @@ export default function SelecteurPays({ valeur, onChange }: { valeur: PaysTeleph
           aria-label="Pays du téléphone"
           className={`absolute left-0 z-30 min-w-[210px] ${versLeHaut ? 'bottom-[calc(100%+6px)]' : 'top-[calc(100%+6px)]'} overflow-hidden rounded-[14px] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-1 shadow-[0_12px_32px_rgba(0,0,0,.16)]`}
         >
-          {PAYS_TELEPHONE.map(p => (
+          {liste.map(p => (
             <li key={p.code} role="presentation">
               <button
                 type="button"

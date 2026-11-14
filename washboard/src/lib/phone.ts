@@ -6,7 +6,7 @@
 // pourrait ouvrir trois comptes d'essai avec le même téléphone. On stocke donc
 // toujours la même forme : 10 chiffres commençant par 0.
 
-export type PaysTelephone = 'FR' | 'BE' | 'CH'
+export type PaysTelephone = 'FR' | 'BE' | 'CH' | 'LU' | 'QC'
 
 // Ouverture à la Belgique (2026-11-11). Un numéro français reste stocké en 10 chiffres (06…) ;
 // un numéro belge est stocké en forme internationale (+32470123456) : c'est la seule façon de ne
@@ -27,6 +27,22 @@ const MOBILE_BELGE = /^\+324[5-9]\d{7}$/
 const SUISSE = /^\+41[1-9]\d{8}$/
 /** Un mobile suisse : +41 7 suivi de 5 à 9, puis 7 chiffres (075, 076, 077, 078, 079). */
 const MOBILE_SUISSE = /^\+417[5-9]\d{7}$/
+
+// Luxembourg et Québec (2026-11-14). Luxembourg : +352 puis 6 à 9 chiffres, sans zéro de tête
+// (les numéros s'écrivent 621 123 456) ; un mobile commence par 6. Québec : +1 puis un indicatif
+// régional québécois (514, 438, 450, 418, 581, 819, 873, 579, 367, 263, 354, 468) et 7 chiffres ; on
+// n'accepte PAS les autres numéros en +1 (reste du Canada, États-Unis) : le SMS vers l'Amérique du
+// Nord est la cible habituelle de la fraude aux SMS, et WashBoard n'y a pas de clientèle.
+// Ni l'un ni l'autre ne confond un numéro français : on ne les lit sans « + » que là où l'on sait
+// de quel pays on parle (liste déroulante de l'inscription, page d'un laveur de ce pays).
+
+/** Un numéro luxembourgeois en forme internationale : +352 puis 6 à 9 chiffres, premier chiffre 2 à 9. */
+const LUXEMBOURG = /^\+352[2-9]\d{5,8}$/
+/** Un mobile luxembourgeois : +352 6 puis 8 chiffres (621, 628, 661, 668, 691…). */
+const MOBILE_LUXEMBOURG = /^\+3526\d{8}$/
+const INDICATIFS_QUEBEC = '(?:263|354|367|418|438|450|468|514|579|581|819|873)'
+/** Un numéro québécois en forme internationale : +1, un indicatif régional du Québec, puis 7 chiffres. */
+const QUEBEC = new RegExp(`^\\+1${INDICATIFS_QUEBEC}[2-9]\\d{6}$`)
 
 /** Forme canonique d'un numéro : 10 chiffres pour un numéro français, +32… pour un numéro belge,
  *  +41… pour un numéro suisse. Renvoie `null` si l'entrée n'est pas exploitable — l'appelant décide
@@ -51,6 +67,21 @@ export function normalizePhone(brut: string | null | undefined, pays: PaysTeleph
   if (intlCh) return SUISSE.test(intlCh) ? intlCh : null
   // Saisie à la suisse, seulement quand on sait qu'on est en Suisse : 079 123 45 67, 022 123 45 67.
   if (pays === 'CH' && /^0[1-9]\d{8}$/.test(n)) return '+41' + n.slice(1)
+
+  // Luxembourg : forme internationale (+352, 00352) — jamais ambiguë ; saisie locale (sans zéro)
+  // seulement quand on sait qu'on est au Luxembourg.
+  const intlLu = n.startsWith('+352') ? n : n.startsWith('00352') ? '+' + n.slice(2) : null
+  if (intlLu) return LUXEMBOURG.test(intlLu) ? intlLu : null
+  if (pays === 'LU' && /^[2-9]\d{5,8}$/.test(n)) return '+352' + n
+
+  // Québec : +1 (ou 001) puis un indicatif québécois ; saisie locale, avec ou sans le « 1 » de tête,
+  // seulement quand on sait qu'on est au Québec.
+  const intlQc = n.startsWith('+1') ? n : n.startsWith('001') ? '+' + n.slice(2) : null
+  if (intlQc) return QUEBEC.test(intlQc) ? intlQc : null
+  if (pays === 'QC') {
+    const m = /^1?([2-9]\d{9})$/.exec(n)
+    if (m && QUEBEC.test('+1' + m[1])) return '+1' + m[1]
+  }
 
   if (n.startsWith('+33')) n = '0' + n.slice(3)
   else if (n.startsWith('0033')) n = '0' + n.slice(4)
@@ -83,7 +114,8 @@ export function whatsappDigits(brut: string): string {
  *  pouvoir arriver — un fixe accepterait la saisie mais ne recevrait jamais le message. */
 export function isMobilePhone(brut: string | null | undefined, pays: PaysTelephone = 'FR'): boolean {
   const n = normalizePhone(brut, pays)
-  return n !== null && (/^0[67]/.test(n) || MOBILE_BELGE.test(n) || MOBILE_SUISSE.test(n))
+  // Québec : aucun préfixe ne distingue un mobile d'un fixe, tout numéro québécois est accepté.
+  return n !== null && (/^0[67]/.test(n) || MOBILE_BELGE.test(n) || MOBILE_SUISSE.test(n) || MOBILE_LUXEMBOURG.test(n) || QUEBEC.test(n))
 }
 
 /** Le pays d'un numéro canonique : « +32… » est belge, « +41… » suisse, le reste français. */
@@ -91,6 +123,8 @@ export function paysDuTelephone(brut: string | null | undefined): PaysTelephone 
   const n = String(brut ?? '').trim().replace(/[\s.\-()]/g, '')
   if (/^(\+32|0032)/.test(n)) return 'BE'
   if (/^(\+41|0041)/.test(n)) return 'CH'
+  if (/^(\+352|00352)/.test(n)) return 'LU'
+  if (new RegExp(`^(\\+1|001)${INDICATIFS_QUEBEC}`).test(n)) return 'QC'
   return 'FR'
 }
 
@@ -104,7 +138,14 @@ export function normaliserMobile(brut: string | null | undefined): string | null
   if (fr && /^0[67]\d{8}$/.test(fr)) return fr
   if (fr && MOBILE_SUISSE.test(fr)) return fr
   const be = normalizePhone(brut, 'BE')
-  return be && MOBILE_BELGE.test(be) ? be : null
+  if (be && MOBILE_BELGE.test(be)) return be
+  // Luxembourg (6xx xxx xxx) et Québec (514 234 5678) : lus sans indicatif seulement ici, là où le
+  // numéro est de toute façon un mobile attendu ; leur ouverture à l'inscription est un réglage
+  // (`lib/paysInscription.ts`), pas une conséquence de ce format.
+  const lu = normalizePhone(brut, 'LU')
+  if (lu && MOBILE_LUXEMBOURG.test(lu)) return lu
+  const qc = normalizePhone(brut, 'QC')
+  return qc && QUEBEC.test(qc) ? qc : null
 }
 
 /** Affichage lisible : 06 12 34 56 78. Renvoie l'entrée telle quelle si elle
@@ -117,6 +158,13 @@ export function formatPhone(brut: string | null | undefined): string {
     const reste = n.slice(3)
     return `+41 ${reste.slice(0, 2)} ${reste.slice(2, 5)} ${reste.slice(5, 7)} ${reste.slice(7)}`
   }
+  // Luxembourg : +352 621 123 456.
+  if (n.startsWith('+352')) {
+    const reste = n.slice(4)
+    return `+352 ${reste.replace(/(\d{3})(?=\d)/g, '$1 ').trim()}`
+  }
+  // Québec : +1 514 234 5678.
+  if (n.startsWith('+1')) return `+1 ${n.slice(2, 5)} ${n.slice(5, 8)} ${n.slice(8)}`
   // Belge : +32 470 12 34 56 (mobile) ou +32 2 123 45 67 (fixe).
   if (n.startsWith('+32')) {
     const reste = n.slice(3)
@@ -140,6 +188,8 @@ export const PAYS_TELEPHONE: readonly ChoixPaysTelephone[] = [
   { code: 'FR', indicatif: '+33', libelle: 'France', exemple: '06 12 34 56 78' },
   { code: 'BE', indicatif: '+32', libelle: 'Belgique', exemple: '0470 12 34 56' },
   { code: 'CH', indicatif: '+41', libelle: 'Suisse', exemple: '079 123 45 67' },
+  { code: 'LU', indicatif: '+352', libelle: 'Luxembourg', exemple: '621 123 456' },
+  { code: 'QC', indicatif: '+1', libelle: 'Québec', exemple: '514 234 5678' },
 ]
 
 /** Le numéro saisi dans le champ, sous le pays choisi dans la liste, en forme canonique
@@ -150,6 +200,8 @@ export function telephoneDuPays(brut: string | null | undefined, pays: PaysTelep
   const n = String(brut ?? '').trim().replace(/[\s.\-()]/g, '')
   if (!n) return null
   if (n.startsWith('+') || n.startsWith('00')) return normalizePhone(n, pays)
+  // Luxembourg et Québec n'ont pas de zéro de tête : le numéro se lit tel quel.
+  if (pays === 'LU' || pays === 'QC') return normalizePhone(n, pays)
   return normalizePhone(/^0/.test(n) ? n : '0' + n, pays)
 }
 
