@@ -77,3 +77,6 @@ export const LOCALES_OG: Record<Langue, string> = { fr: 'fr_FR', en: 'en_GB', es
 export function memoriserLangue(langue: Langue): void {
   document.cookie = `${COOKIE_LANGUE}=${langue}; path=/; max-age=31536000; samesite=lax`
 }
+
+/** Code de locale pour Intl / toLocaleDateString (dates, heures, montants). */
+export const LOCALES_INTL: Record<Langue, string> = { fr: 'fr-FR', en: 'en-GB', es: 'es-ES', de: 'de-DE' }

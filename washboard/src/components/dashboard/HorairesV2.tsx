@@ -20,6 +20,7 @@ import {
 } from '@/lib/horaires'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Horaires » — refonte 2026, destination NEUVE de « Plus » (la maquette n'a
 // aucun écran pour gérer les horaires ; Alexandre, 2026-09-24 : « avec le même
@@ -63,6 +64,7 @@ type Props = {
 }
 
 export default function HorairesV2({ availabilities, unavailabilities, teamSize, jourMemeAutorise, adresseDepart, lectureIncomplete, liste }: Props) {
+  const t = useT()
   const h = useHorairesV2(availabilities)
   const grandEcran = useGrandEcran()
   const { plages } = h
@@ -146,13 +148,13 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
       <div className="flex items-center gap-1 pb-3">
         <Link
           href="/dashboard/parametres"
-          aria-label="Retour à Plus"
+          aria-label={t('Retour à Plus')}
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[21px] leading-none ${titre}`}>Horaires</h1>
+          <h1 className={`text-[21px] leading-none ${titre}`}>{t('Horaires')}</h1>
           {!lectureIncomplete && !vide && (
             // Chaque groupe (« Lun–Ven 8h–18h ») reste d'un bloc : la phrase passe à la
             // ligne entre deux groupes, jamais au milieu d'une plage.
@@ -170,7 +172,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
             className={`inline-flex h-11 shrink-0 items-center rounded-[var(--v2-radius-bouton)] px-4 text-[14.5px] ${corpsFort} text-white transition-transform active:scale-[.97] motion-reduce:transition-none`}
             style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
           >
-            + Plage
+            {t('+ Plage')}
           </button>
         )}
       </div>
@@ -178,8 +180,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
       {lectureIncomplete ? (
         <div className="mt-4 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-4">
           <Constat ton="ambre" role="status">
-            Vos horaires ou vos congés n’ont pas pu être lus. Rien n’a été modifié. Rechargez la page avant d’y toucher : un
-            écran vide ici ne veut pas dire que vous n’avez rien réglé.
+            {t('Vos horaires ou vos congés n’ont pas pu être lus. Rien n’a été modifié. Rechargez la page avant d’y toucher : un écran vide ici ne veut pas dire que vous n’avez rien réglé.')}
           </Constat>
           <button
             type="button"
@@ -187,7 +188,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
             className={`${BOUTON} mt-4 w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
             style={PRESSION}
           >
-            Recharger la page
+            {t('Recharger la page')}
           </button>
         </div>
       ) : (
@@ -197,7 +198,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
           <div data-visite-cible="horaires">
           {vide ? (
             <>
-              <div className="mt-1"><Constat ton="ambre" role="status">Aucun créneau n’est réservable pour l’instant.</Constat></div>
+              <div className="mt-1"><Constat ton="ambre" role="status">{t('Aucun créneau n’est réservable pour l’instant.')}</Constat></div>
               <HorairesEtatVideV2 onModele={creerDepuisModele} onAutre={() => ouvrirAjout([])} />
             </>
           ) : (
@@ -228,11 +229,11 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
           )}
           </div>
 
-          <section aria-label="Réservation le jour même" className="mt-[26px]">
+          <section aria-label={t('Réservation le jour même')} className="mt-[26px]">
             <CarteListe>
               <div className="flex items-center gap-1">
                 <div className="min-w-0 flex-1 py-3">
-                  <p className={`text-[15.5px] ${nom}`}>Réservation le jour même</p>
+                  <p className={`text-[15.5px] ${nom}`}>{t('Réservation le jour même')}</p>
                   <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                     {jourMeme
                       ? 'Vos clients peuvent réserver pour aujourd’hui. Le premier créneau tient compte du temps de route depuis votre position.'
@@ -242,7 +243,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
                 <Interrupteur
                   actif={jourMeme}
                   enCours={jourMemeEnCours}
-                  libelle="Les clients peuvent réserver le jour même"
+                  libelle={t('Les clients peuvent réserver le jour même')}
                   onClick={basculerJourMeme}
                 />
               </div>
@@ -250,7 +251,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
             {jourMeme && !adresseDepart && (
               <div className="mt-2">
                 <Constat ton="ambre" role="status">
-                  Sans adresse de départ, le trajet n’est vérifié que si vous avez déjà un rendez-vous dans la journée.
+                  {t('Sans adresse de départ, le trajet n’est vérifié que si vous avez déjà un rendez-vous dans la journée.')}
                 </Constat>
               </div>
             )}
@@ -259,19 +260,19 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
 
           {/* Les congés restent gérables même sans aucune plage : un laveur qui
               n'a pas encore réglé sa semaine peut déjà bloquer une période. */}
-          <section aria-label="Congés" className="mt-[26px]">
+          <section aria-label={t('Congés')} className="mt-[26px]">
             <CarteListe>
               <div className="py-3.5">
                 {conges.length > 0 ? (
                   <CongesAVenir conges={conges} teamSize={teamSize} estComplet={isFullyUnavailable} onOuvrir={setDelModal} />
                 ) : (
                   <>
-                    <h2 className={`text-[15px] ${corpsFort}`}>Congés à venir</h2>
-                    <p className={`mt-1 text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>Aucun pour l’instant.</p>
+                    <h2 className={`text-[15px] ${corpsFort}`}>{t('Congés à venir')}</h2>
+                    <p className={`mt-1 text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Aucun pour l’instant.')}</p>
                   </>
                 )}
               </div>
-              <Ligne label="+ Bloquer une période" onClick={() => openAddModal(new Date())} chevron={false} />
+              <Ligne label={t('+ Bloquer une période')} onClick={() => openAddModal(new Date())} chevron={false} />
             </CarteListe>
           </section>
         </>
@@ -299,7 +300,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
       {retrait && (
         <ConfirmationSuppression
           titre={`Retirer ${libellePlage(retrait)} le ${NOMS_JOURS[retrait.day_of_week].toLowerCase()} ?`}
-          texte="Ce jour-là, plus de créneaux sur cette plage."
+          texte={t('Ce jour-là, plus de créneaux sur cette plage.')}
           remarque="Les rendez-vous déjà pris ne sont pas touchés."
           enCours={retraitEnCours}
           erreur={retraitErreur}

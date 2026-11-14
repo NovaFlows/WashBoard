@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Barre du bas de la refonte 2026 (passe 4) — n'apparaît QUE dans la PWA
 // installée, quand `washer.beta_refonte` est vrai (voir DashboardShell.tsx,
@@ -153,8 +154,8 @@ function ContourChargement({ actif }: { actif: boolean }) {
     const b = requestAnimationFrame(() => {
       a = requestAnimationFrame(() => { setDureeFin(fin); setPhase(p => (p === 'repos' ? p : 'fin')) })
     })
-    const t = setTimeout(() => { setPhase('repos'); chargement = null }, fin + 140)
-    return () => { cancelAnimationFrame(b); cancelAnimationFrame(a); clearTimeout(t) }
+    const minuteur = setTimeout(() => { setPhase('repos'); chargement = null }, fin + 140)
+    return () => { cancelAnimationFrame(b); cancelAnimationFrame(a); clearTimeout(minuteur) }
   }
 
   // Une page vient d'arriver pendant qu'un chargement était en cours (barre neuve) : le trait
@@ -229,7 +230,7 @@ function ContourChargement({ actif }: { actif: boolean }) {
 function useRecalerBarre(ref: RefObject<HTMLElement | null>) {
   useEffect(() => {
     let raf = 0
-    let t: ReturnType<typeof setTimeout> | undefined
+    let minuteur: ReturnType<typeof setTimeout> | undefined
     const recaler = () => {
       const nav = ref.current
       if (!nav) return
@@ -241,10 +242,10 @@ function useRecalerBarre(ref: RefObject<HTMLElement | null>) {
     }
     const planifier = () => {
       cancelAnimationFrame(raf)
-      clearTimeout(t)
+      clearTimeout(minuteur)
       raf = requestAnimationFrame(recaler)
       // Second passage : iOS anime encore le clavier ou la barre d'état.
-      t = setTimeout(recaler, 350)
+      minuteur = setTimeout(recaler, 350)
     }
     const surVisibilite = () => { if (document.visibilityState === 'visible') planifier() }
     const vv = window.visualViewport
@@ -256,7 +257,7 @@ function useRecalerBarre(ref: RefObject<HTMLElement | null>) {
     vv?.addEventListener('resize', planifier)
     return () => {
       cancelAnimationFrame(raf)
-      clearTimeout(t)
+      clearTimeout(minuteur)
       window.removeEventListener('resize', planifier)
       window.removeEventListener('orientationchange', planifier)
       window.removeEventListener('pageshow', planifier)
@@ -268,6 +269,7 @@ function useRecalerBarre(ref: RefObject<HTMLElement | null>) {
 }
 
 export function BarreBasV2() {
+  const t = useT()
   const pathname = usePathname()
   const router = useRouter()
 
@@ -310,8 +312,8 @@ export function BarreBasV2() {
   // pastille revient sur l'onglet de la page réellement affichée.
   useEffect(() => {
     if (!enAttente) return
-    const t = setTimeout(() => setAttente(null), 15_000)
-    return () => clearTimeout(t)
+    const minuteur = setTimeout(() => setAttente(null), 15_000)
+    return () => clearTimeout(minuteur)
   }, [enAttente])
 
   const actifCourant = DESTINATIONS.find(dest =>
@@ -327,7 +329,7 @@ export function BarreBasV2() {
   return (
     <nav
       ref={navRef}
-      aria-label="Navigation"
+      aria-label={t('Navigation')}
       data-visite-cible="barre-bas"
       // Position fixe, pas absolue : DashboardShell n'est pas un cadre de
       // taille fixe comme dans la maquette (390×844), c'est le châssis réel
@@ -378,7 +380,7 @@ export function BarreBasV2() {
             }`}
           >
             {dest.icone(actif)}
-            {dest.label}
+            {t(dest.label)}
           </Link>
         )
       })}
@@ -388,7 +390,7 @@ export function BarreBasV2() {
           pas d'état actif, il emmène directement à la saisie. */}
       <Link
         href={CENTRE_HREF}
-        aria-label="Nouveau devis ou facture"
+        aria-label={t('Nouveau devis ou facture')}
         data-visite-cible="barre-bas-nouveau"
         // Déjà sur l'écran : la feuille s'ouvre sur place, il n'y a pas de page à attendre.
         // Allumer le contour de chargement ferait tourner un trait pour rien.

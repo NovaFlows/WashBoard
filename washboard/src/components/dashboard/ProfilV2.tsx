@@ -28,6 +28,7 @@ import { infosFacturationManquantes } from '@/lib/facture'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
 import type { Washer } from '@/types'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Mon profil » — refonte 2026, destination NEUVE de « Plus » (Alexandre, 2026-09-26 : la
 // ligne « Équipe » devient « Mon profil », et c'est là-dedans qu'on renseigne son téléphone,
@@ -52,6 +53,7 @@ type Feuille =
   | 'pause' | 'suppression' | null
 
 export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null }: { washer: Washer; email: string; peutEquipe: boolean; centreAuto?: unknown }) {
+  const t = useT()
   const router = useRouter()
   const grandEcran = useGrandEcran()
   const { peut } = useOffre()
@@ -129,15 +131,15 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
       <div className="flex items-center gap-1 pb-2">
         <Link
           href="/dashboard/parametres"
-          aria-label="Retour à Plus"
+          aria-label={t('Retour à Plus')}
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[24px] leading-none ${titre}`}>Mon profil</h1>
+          <h1 className={`text-[24px] leading-none ${titre}`}>{t('Mon profil')}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Votre entreprise, vos factures, votre connexion
+            {t('Votre entreprise, vos factures, votre connexion')}
           </p>
         </div>
       </div>
@@ -151,15 +153,15 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
         />
       )}
 
-      <Section titre="Mon entreprise">
+      <Section titre={t('Mon entreprise')}>
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
-            <Ligne label="Nom de l’entreprise" valeur={nom.texte} ton={nom.ton} tronquer onClick={() => setFeuille('nom')} />
-            <Ligne label="Adresse de départ" valeur={adresse.texte} ton={adresse.ton} onClick={() => setFeuille('adresse')} />
-            <Ligne label="Frais de déplacement" valeur={deplacement.texte} onClick={() => setFeuille('deplacement')} />
-            <Ligne label="Centre auto" valeur={resumeCentreAuto(centre)} onClick={() => setFeuille('centre')} />
+            <Ligne label={t('Nom de l’entreprise')} valeur={nom.texte} ton={nom.ton} tronquer onClick={() => setFeuille('nom')} />
+            <Ligne label={t('Adresse de départ')} valeur={adresse.texte} ton={adresse.ton} onClick={() => setFeuille('adresse')} />
+            <Ligne label={t('Frais de déplacement')} valeur={deplacement.texte} onClick={() => setFeuille('deplacement')} />
+            <Ligne label={t('Centre auto')} valeur={resumeCentreAuto(centre)} onClick={() => setFeuille('centre')} />
             <Ligne
-              label="Nombre de laveurs"
+              label={t('Nombre de laveurs')}
               valeur={equipe.texte}
               onClick={() => (peutEquipe ? setFeuille('equipe') : router.push('/dashboard/abonnement'))}
             />
@@ -167,11 +169,11 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
         </CarteListe>
       </Section>
 
-      <Section titre="Mes factures">
+      <Section titre={t('Mes factures')}>
         <CarteListe>
           <ul>
             <Ligne
-              label="Mon statut et mes factures"
+              label={t('Mon statut et mes factures')}
               valeur={facturation.texte}
               ton={facturation.ton}
               onClick={() => setFeuille('facturation')}
@@ -179,32 +181,32 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
           </ul>
         </CarteListe>
         <p className={`mt-2 px-0.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Tant qu’il manque une information, vos clients reçoivent un récapitulatif à la place d’une facture.
+          {t('Tant qu’il manque une information, vos clients reçoivent un récapitulatif à la place d’une facture.')}
         </p>
       </Section>
 
-      <Section titre="Ma connexion">
+      <Section titre={t('Ma connexion')}>
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
-            <Ligne label="Adresse e-mail" valeur={courriel.texte} ton={courriel.ton} tronquer onClick={() => setFeuille('email')} />
-            <Ligne label="Téléphone" valeur={telephone.texte} ton={telephone.ton} onClick={() => setFeuille('telephone')} />
-            <Ligne label="Mot de passe" valeur="••••••••" onClick={() => setFeuille('motDePasse')} />
+            <Ligne label={t('Adresse e-mail')} valeur={courriel.texte} ton={courriel.ton} tronquer onClick={() => setFeuille('email')} />
+            <Ligne label={t('Téléphone')} valeur={telephone.texte} ton={telephone.ton} onClick={() => setFeuille('telephone')} />
+            <Ligne label={t('Mot de passe')} valeur="••••••••" onClick={() => setFeuille('motDePasse')} />
           </ul>
         </CarteListe>
       </Section>
 
       {!etatCompte && (
-        <Section titre="Mon compte">
+        <Section titre={t('Mon compte')}>
           <CarteListe>
             <ul className="divide-y divide-[color:var(--v2-filet)]">
               <Ligne
-                label="Mettre mon compte en pause"
-                valeur="Masque votre page de réservation. Réversible."
+                label={t('Mettre mon compte en pause')}
+                valeur={t('Masque votre page de réservation. Réversible.')}
                 onClick={() => setFeuille('pause')}
               />
               <Ligne
-                label="Supprimer mon compte"
-                valeur="Efface vos données après 30 jours."
+                label={t('Supprimer mon compte')}
+                valeur={t('Efface vos données après 30 jours.')}
                 onClick={() => setFeuille('suppression')}
               />
             </ul>
@@ -214,11 +216,11 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
 
       {feuille === 'nom' && (
         <FeuilleTexteV2
-          titre="Nom de l’entreprise"
-          sousTitre="Ce que vos clients voient sur votre page de réservation."
-          etiquette="Nom"
+          titre={t('Nom de l’entreprise')}
+          sousTitre={t('Ce que vos clients voient sur votre page de réservation.')}
+          etiquette={t('Nom')}
           valeur={fiche.name ?? ''}
-          placeholder="AutoNettoyage"
+          placeholder={t('AutoNettoyage')}
           valider={validerNomEntreprise}
           onEnregistrer={v => enregistrer({ name: v })}
           onClose={fermer}

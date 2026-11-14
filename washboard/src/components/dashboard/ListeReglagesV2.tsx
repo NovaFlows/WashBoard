@@ -9,6 +9,7 @@ import { useSupportBadges } from '@/components/dashboard/SupportBadgesContext'
 import { PLAN_LABELS, type Plan } from '@/lib/plan'
 import Link from 'next/link'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Liste « Plus » — extraite de ParametresFormV2.tsx (passe bureau, 2026-10-06) pour être
 // réutilisable À CÔTÉ du contenu de chacune des 5 destinations qu'elle ouvre (Mon profil, Mes
@@ -83,6 +84,7 @@ export default function ListeReglagesV2({
   nom, slug, brandColor, plan, grandfathered, servicesCount, resumeHoraires, facturationIncomplete, selection,
   deuxColonnes = false,
 }: Props) {
+  const t = useT()
   const { estEquipeSupport, unreadSupportCount, unreadTeamCount } = useSupportBadges()
   const { etat: etatNotifications } = useNotificationsPush()
   const mobile = useDesignMobile()
@@ -110,37 +112,37 @@ export default function ListeReglagesV2({
           </span>
           <span className="flex-1 min-w-0 flex flex-col gap-px">
             <span className={`text-[16px] ${nom2} truncate`}>{nom}</span>
-            <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Votre page de réservation</span>
+            <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Votre page de réservation')}</span>
           </span>
           {slug && (
             <a href={`/book/${slug}`} data-visite-cible="voir-page" className={`text-[13px] ${corpsFort} shrink-0`} style={{ color: 'var(--v2-color-accent)' }}>
-              Voir
+              {t('Voir')}
             </a>
           )}
         </div>
       </CarteListe>
 
       <div>
-        <TitreSection>L’argent</TitreSection>
+        <TitreSection>{t('L’argent')}</TitreSection>
         <CarteListe>
-          <Ligne label="Chiffres" sousLabel="Argent, acquisition, clients" href="/dashboard/chiffres" />
-          <Ligne label="Devis et factures" sousLabel="Écrits à la main" href="/dashboard/chiffres/documents" />
+          <Ligne label={t('Chiffres')} sousLabel={t('Argent, acquisition, clients')} href="/dashboard/chiffres" />
+          <Ligne label={t('Devis et factures')} sousLabel={t('Écrits à la main')} href="/dashboard/chiffres/documents" />
         </CarteListe>
       </div>
 
       <div>
-        <TitreSection>De temps en temps</TitreSection>
+        <TitreSection>{t('De temps en temps')}</TitreSection>
         <CarteListe>
           <Ligne
-            label="Mon profil"
-            sousLabel="Entreprise, factures"
+            label={t('Mon profil')}
+            sousLabel={t('Entreprise, factures')}
             valeur={facturationIncomplete ? 'À compléter' : undefined}
             href="/dashboard/parametres/profil"
             selected={selection === 'profil'}
           />
           <Ligne
-            label="Mes liens"
-            sousLabel="Réservation, réseaux"
+            label={t('Mes liens')}
+            sousLabel={t('Réservation, réseaux')}
             href="/dashboard/parametres/liens"
             selected={selection === 'liens'}
             cibleVisite="lien"
@@ -149,17 +151,17 @@ export default function ListeReglagesV2({
       </div>
 
       <div>
-        <TitreSection>Une fois</TitreSection>
+        <TitreSection>{t('Une fois')}</TitreSection>
         <CarteListe>
           <Ligne
-            label="Prestations et prix"
-            sousLabel="Zone d’intervention"
+            label={t('Prestations et prix')}
+            sousLabel={t('Zone d’intervention')}
             valeur={typeof servicesCount === 'number' ? String(servicesCount) : undefined}
             href="/dashboard/parametres/prestations"
             selected={selection === 'prestations'}
           />
           <Ligne
-            label="Horaires"
+            label={t('Horaires')}
             valeur={resumeHoraires}
             href="/dashboard/parametres/horaires"
             selected={selection === 'horaires'}
@@ -168,7 +170,7 @@ export default function ListeReglagesV2({
             href="/dashboard/parametres/apparence"
             className={`flex items-center gap-2.5 min-h-[46px] py-1.5 w-full ${selection === 'apparence' ? 'bg-[color:var(--v2-filet)]' : ''}`}
           >
-            <span className={`flex-1 text-[15px] ${corps}`}>Apparence de ma page</span>
+            <span className={`flex-1 text-[15px] ${corps}`}>{t('Apparence de ma page')}</span>
             {brandColor && (
               <span
                 className="w-3.5 h-3.5 rounded-full shrink-0 border border-[color:var(--v2-filet-fort)]"
@@ -182,11 +184,11 @@ export default function ListeReglagesV2({
       </div>
 
       <div>
-        <TitreSection>Mon compte</TitreSection>
+        <TitreSection>{t('Mon compte')}</TitreSection>
         <CarteListe>
-          <Ligne label="Abonnement" valeur={planLabel} href="/dashboard/abonnement" selected={selection === 'abonnement'} />
+          <Ligne label={t('Abonnement')} valeur={planLabel} href="/dashboard/abonnement" selected={selection === 'abonnement'} />
           <Ligne
-            label="Réglages"
+            label={t('Réglages')}
             signal={notifications.ton === 'ambre' || unreadSupportCount
               ? <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
               : undefined}
@@ -195,7 +197,7 @@ export default function ListeReglagesV2({
           />
           <form action="/api/auth/logout" method="POST" className="flex items-center min-h-[46px] py-1.5">
             <button type="submit" className={`text-[15px] ${corps} text-left`} style={{ color: 'var(--v2-color-rouge)' }}>
-              Déconnexion
+              {t('Déconnexion')}
             </button>
           </form>
         </CarteListe>
@@ -203,10 +205,10 @@ export default function ListeReglagesV2({
 
       {estEquipeSupport && (
         <div>
-          <TitreSection>Outil interne</TitreSection>
+          <TitreSection>{t('Outil interne')}</TitreSection>
           <CarteListe>
             <Ligne
-              label="Équipe"
+              label={t('Équipe')}
               href="/dashboard/support"
               signal={<NonLus count={unreadTeamCount} />}
             />

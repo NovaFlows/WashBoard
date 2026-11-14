@@ -68,8 +68,8 @@ export function isCardRegistered(
   return !!subscriptionId && status === 'trial'
 }
 
-export function formatDateFR(date: string | Date): string {
-  return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+export function formatDateFR(date: string | Date, locale = 'fr-FR'): string {
+  return new Date(date).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 // Détermine si l'on peut différer la facturation à la fin de l'essai.

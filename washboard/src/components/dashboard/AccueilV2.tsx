@@ -20,6 +20,7 @@ import { LigneRdvVerrouilleeV2, type ReservationMasquee } from '@/components/das
 import { PLAN_LABELS, PLAN_COULEURS, PLAN_PRICES, PLAN_CARDS, type Plan } from '@/lib/plan'
 import type { JourSemaine } from '@/lib/semaineAccueil'
 import { adresseAvecLieu } from '@/lib/centreAuto'
+import { useLocale, useT } from '@/components/i18n/I18nProvider'
 
 // « Aujourd'hui », présentation v2 — réservée à la PWA installée en mode
 // standalone (voir Accueil.tsx, le point de branchement ; décision
@@ -100,6 +101,7 @@ function etatJauge(utilisees: number, quota: number | null): { depasse: boolean;
  *  même logique, jetons v2. Ne s'affiche pas sur une offre sans plafond : il n'y a alors rien à
  *  compter, une jauge pleine à 3 % serait un rappel gratuit qu'on paie. */
 function JaugeReservationsV2({ utilisees, quota, offre, remiseAZero }: { utilisees: number; quota: number | null; offre: Plan; remiseAZero?: string }) {
+  const t = useT()
   if (quota === null || quota <= 0) return null
 
   const restantes = Math.max(0, quota - utilisees)
@@ -107,10 +109,10 @@ function JaugeReservationsV2({ utilisees, quota, offre, remiseAZero }: { utilise
   const couleur = depasse ? 'var(--v2-color-rouge)' : derniere ? 'var(--v2-color-ambre)' : 'var(--v2-color-accent)'
   const pourcent = Math.min(100, Math.round((utilisees / quota) * 100))
   const message = depasse
-    ? `Plafond atteint — les suivantes sont masquées${remiseAZero ? ` jusqu’au ${remiseAZero}` : ''}`
+    ? `${t('Plafond atteint — les suivantes sont masquées')}${remiseAZero ? ` ${t('jusqu’au {date}', { date: remiseAZero })}` : ''}`
     : derniere
-      ? 'Plus qu’une réservation avant le plafond'
-      : `Encore ${restantes} réservations avant le ${remiseAZero ?? 'prochain palier'}`
+      ? t('Plus qu’une réservation avant le plafond')
+      : t('Encore {n} réservations avant le {date}', { n: restantes, date: remiseAZero ?? t('prochain palier') })
 
   return (
     <div className="mb-4 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3">
@@ -118,7 +120,7 @@ function JaugeReservationsV2({ utilisees, quota, offre, remiseAZero }: { utilise
         <p className={`text-[14px] ${corpsFort}`}>
           <span style={{ color: couleur }}>{utilisees}</span>
           <span className="text-[color:var(--v2-color-gris)]"> / {quota}</span>
-          <span className={`${corps} text-[color:var(--v2-color-gris)]`}> réservations ce mois</span>
+          <span className={`${corps} text-[color:var(--v2-color-gris)]`}> {t('réservations ce mois')}</span>
         </p>
         <span className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[color:var(--v2-color-gris)]">
           <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: PLAN_COULEURS[offre] }} aria-hidden />
@@ -136,7 +138,7 @@ function JaugeReservationsV2({ utilisees, quota, offre, remiseAZero }: { utilise
         <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{message}</p>
         {(derniere || depasse) && (
           <Link href="/dashboard/abonnement" className="shrink-0 text-[11px] font-black uppercase tracking-[0.18em] hover:underline" style={{ color: couleur }}>
-            Changer d’offre →
+            {t('Changer d’offre →')}
           </Link>
         )}
       </div>
@@ -197,8 +199,8 @@ function prixAffiche(b: RdvAccueil): string {
 /** Catégorie · prestation — même repli que l'agenda v2 et que le modal de
  *  détail v1. Pas le véhicule ni l'option affichés au cas par cas dans la
  *  planche : aucune règle de mise en forme fiable ne les couvre. */
-function lignePrestation(b: RdvAccueil): string {
-  if (!b.services) return 'Prestation'
+function lignePrestation(b: RdvAccueil, t: (p: string) => string): string {
+  if (!b.services) return t('Prestation')
   return b.services.service_categories?.name
     ? `${b.services.service_categories.name} · ${b.services.name}`
     : b.services.name
@@ -230,13 +232,13 @@ function minutesDeRoute(liste: RdvAccueil[]): number | null {
  *  ne suffit plus à situer la date : « 3 nov. » à la place. Sans cette
  *  bascule, une demande en attente pour dans six semaines s'afficherait
  *  « mar. 3 », impossible à situer. */
-function jourCourt(iso: string): string {
+function jourCourt(iso: string, loc: string): string {
   const d = new Date(iso)
   const maintenant = Date.now()
   const proche = d.getTime() >= maintenant - 86_400_000 && d.getTime() <= maintenant + 7 * 86_400_000
   return proche
-    ? d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
-    : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    ? d.toLocaleDateString(loc, { weekday: 'short', day: 'numeric' })
+    : d.toLocaleDateString(loc, { day: 'numeric', month: 'short' })
 }
 
 type Props = {
@@ -322,6 +324,8 @@ export default function AccueilV2({
   demainStr,
   configurationIncomplete,
 }: Props) {
+  const t = useT()
+  const loc = useLocale()
   const [personnaliser, setPersonnaliser] = useState(false)
   // Passe « bureau » (2026-10-05, Alexandre, 2026-10-03) : deux colonnes au-delà de
   // `SEUIL_GRAND_ECRAN_PX` (1024px), même hook que ClientsViewV2.tsx — pas un seuil inventé en
@@ -362,13 +366,13 @@ export default function AccueilV2({
 
   // `dateDuJour` (Paris, calculé par le serveur) plutôt que l'horloge : même texte au rendu
   // serveur et dans le navigateur, y compris entre minuit et 1 h.
-  const titreJour = new Date(`${dateDuJour}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })
+  const titreJour = new Date(`${dateDuJour}T12:00:00Z`).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })
   const sousTitre =
     rdvAujourdhui.length > 0
-      ? `${rdvAujourdhui.length} rendez-vous · ${totalDuJour} €`
+      ? `${t('{n} rendez-vous', { n: rdvAujourdhui.length })} · ${totalDuJour} €`
       : journeeCommencee
-        ? 'Journée terminée'
-        : 'Rien de prévu aujourd’hui'
+        ? t('Journée terminée')
+        : t('Rien de prévu aujourd’hui')
 
   // Écran 45 de la maquette bureau (« premier jour ») : la configuration manque ET il n'y a
   // réellement rien à montrer aujourd'hui — le `&& !prochain` protège le cas, rare mais possible
@@ -389,12 +393,12 @@ export default function AccueilV2({
     <>
       {prochain ? (
         <section className="mt-6">
-          <TitreSection>Prochain rendez-vous</TitreSection>
+          <TitreSection>{t('Prochain rendez-vous')}</TitreSection>
           <CarteHeros rdv={prochain} dateDuJour={dateDuJour} />
         </section>
       ) : (
         <p className={`mt-10 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          {journeeCommencee ? 'Tout est fait pour aujourd’hui.' : 'Aucun rendez-vous à venir.'}
+          {journeeCommencee ? t('Tout est fait pour aujourd’hui.') : t('Aucun rendez-vous à venir.')}
         </p>
       )}
 
@@ -402,11 +406,11 @@ export default function AccueilV2({
         <section className="mt-6">
           <div className="flex items-baseline justify-between gap-2 px-0.5 pb-2">
             <Link href="/dashboard/calendrier" className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-              La journée
+              {t('La journée')}
             </Link>
             {routeDuJour !== null && (
               <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
-                ~{routeDuJour} min de route
+                ~{routeDuJour} {t('min de route')}
               </span>
             )}
           </div>
@@ -421,9 +425,9 @@ export default function AccueilV2({
       {aConfirmer.length + verrouillees.length > 0 && (
         <section className="mt-6">
           <div className="flex items-baseline justify-between gap-2 px-0.5 pb-2">
-            <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>À confirmer</span>
+            <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('À confirmer')}</span>
             <span className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-gris)] tabular-nums`}>
-              {aConfirmer.length + verrouillees.length} demande{aConfirmer.length + verrouillees.length > 1 ? 's' : ''}
+              {t(aConfirmer.length + verrouillees.length > 1 ? '{n} demandes' : '{n} demande', { n: aConfirmer.length + verrouillees.length })}
             </span>
           </div>
           <CarteListe>
@@ -474,7 +478,7 @@ export default function AccueilV2({
         <button
           type="button"
           onClick={() => setPersonnaliser(true)}
-          aria-label="Personnaliser l’accueil"
+          aria-label={t('Personnaliser l’accueil')}
           className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-encre)] transition-colors hover:bg-[color:var(--v2-filet)]"
         >
           <MoreHorizontal size={21} strokeWidth={1.75} />
@@ -533,8 +537,8 @@ function TitreSection({ children }: { children: ReactNode }) {
  *  idée que `formatJour` dans `chiffresPeriode.ts`, non exportée de là-bas,
  *  mais seulement le jour et le quantième : la planche n'affiche jamais le
  *  mois sur ces deux blocs (« Demain, vendredi 4 »). */
-function jourLong(jourStr: string): string {
-  return new Date(`${jourStr}T00:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', timeZone: 'UTC' })
+function jourLong(jourStr: string, loc: string): string {
+  return new Date(`${jourStr}T00:00:00Z`).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', timeZone: 'UTC' })
 }
 
 /** Colonne de droite de l'écran 1 (bureau) : les rendez-vous de demain, pour
@@ -545,9 +549,11 @@ function jourLong(jourStr: string): string {
  *  acquise. Jamais de lien : un simple coup d'œil, pas une action (même
  *  registre que « Cette semaine » juste en dessous). */
 function DemainV2({ rdv, demainStr }: { rdv: RdvAccueil[]; demainStr: string }) {
+  const t = useT()
+  const loc = useLocale()
   return (
     <div>
-      <TitreSection>Demain, {jourLong(demainStr)}</TitreSection>
+      <TitreSection>{t('Demain,')} {jourLong(demainStr, loc)}</TitreSection>
       <CarteListe>
         {rdv.map(b => {
           const enAttente = b.status === 'pending'
@@ -560,7 +566,7 @@ function DemainV2({ rdv, demainStr }: { rdv: RdvAccueil[]; demainStr: string }) 
                 className={`min-w-0 flex-1 pt-0.5 text-[13.5px] ${nom} truncate`}
                 style={enAttente ? { color: 'var(--v2-color-gris)' } : undefined}
               >
-                {b.client_name} — {enAttente ? 'si confirmée' : lignePrestation(b)}
+                {b.client_name} — {enAttente ? t('si confirmée') : lignePrestation(b, t)}
               </span>
             </div>
           )
@@ -583,19 +589,21 @@ function DemainV2({ rdv, demainStr }: { rdv: RdvAccueil[]; demainStr: string }) 
  *  précise, mais la règle posée ailleurs sur ce même écran est plus juste que
  *  de la refondre en un seul ton ici. */
 function CetteSemaineV2({ jours }: { jours: JourSemaine[] }) {
+  const t = useT()
+  const loc = useLocale()
   return (
     <div>
-      <TitreSection>Cette semaine</TitreSection>
+      <TitreSection>{t('Cette semaine')}</TitreSection>
       <div
         className="rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3 grid grid-cols-7 gap-1 text-center"
       >
         {jours.map(j => (
-          <div key={j.jour} title={descriptionJourSemaine(j)}>
+          <div key={j.jour} title={descriptionJourSemaine(j, t, loc)}>
             <div
               className={`text-[10.5px] ${j.aujourdhui ? corpsFort : corps}`}
               style={{ color: j.aujourdhui ? undefined : 'var(--v2-color-gris)' }}
             >
-              {j.lettre}
+              {new Date(`${j.jour}T00:00:00Z`).toLocaleDateString(loc, { weekday: 'narrow', timeZone: 'UTC' })}
             </div>
             <PointJourSemaine jour={j} />
           </div>
@@ -636,13 +644,13 @@ function PointJourSemaine({ jour }: { jour: JourSemaine }) {
  *  légende sur l'écran (planche Système : pas de légende répétée sur chaque
  *  widget, « un point plein + le mot » veut dire au niveau de l'écran, pas de
  *  chaque widget pris seul). */
-function descriptionJourSemaine(j: JourSemaine): string {
-  const jour = j.aujourdhui ? `Aujourd’hui, ${jourLong(j.jour)}` : jourLong(j.jour)
+function descriptionJourSemaine(j: JourSemaine, t: (p: string) => string, loc: string): string {
+  const jour = j.aujourdhui ? `${t('Aujourd’hui')}, ${jourLong(j.jour, loc)}` : jourLong(j.jour, loc)
   const etat =
-    j.etat === 'attente' ? 'une demande en attente'
-      : j.etat === 'confirme' ? 'des rendez-vous confirmés'
-        : j.etat === 'ferme' ? 'fermé'
-          : 'rien de prévu'
+    j.etat === 'attente' ? t('une demande en attente')
+      : j.etat === 'confirme' ? t('des rendez-vous confirmés')
+        : j.etat === 'ferme' ? t('fermé')
+          : t('rien de prévu')
   return `${jour} : ${etat}`
 }
 
@@ -655,9 +663,10 @@ function descriptionJourSemaine(j: JourSemaine): string {
  *  bord — les jetons `--v2-*` suivraient le thème sombre, ce que cette vignette ne doit jamais
  *  faire. */
 function ApercuPageV2() {
+  const t = useT()
   return (
     <div>
-      <TitreSection>Aperçu de votre page</TitreSection>
+      <TitreSection>{t('Aperçu de votre page')}</TitreSection>
       <div
         className="overflow-hidden rounded-[16px] border"
         style={{ borderColor: 'var(--v2-filet-fort)', boxShadow: '0 10px 28px rgba(22,22,26,.12)' }}
@@ -666,7 +675,7 @@ function ApercuPageV2() {
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ed6a5e' }} aria-hidden />
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f4bf4f' }} aria-hidden />
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#61c454' }} aria-hidden />
-          <span style={{ margin: '0 auto', fontSize: 9.5, color: '#6b6b76' }}>Votre page de réservation</span>
+          <span style={{ margin: '0 auto', fontSize: 9.5, color: '#6b6b76' }}>{t('Votre page de réservation')}</span>
         </div>
         <div style={{ background: '#f8fafc' }}>
           <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -680,20 +689,20 @@ function ApercuPageV2() {
               <Store size={18} strokeWidth={1.8} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.15, color: '#0f172a' }}>Votre entreprise</div>
-              <div style={{ fontSize: 11.5, marginTop: 3, color: '#94a3b8' }}>Bienvenue sur votre espace de réservation !</div>
+              <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.15, color: '#0f172a' }}>{t('Votre entreprise')}</div>
+              <div style={{ fontSize: 11.5, marginTop: 3, color: '#94a3b8' }}>{t('Bienvenue sur votre espace de réservation !')}</div>
             </div>
           </div>
           <div style={{ padding: '6px 18px 24px' }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 10, color: '#0f172a' }}>Choisissez votre prestation</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 10, color: '#0f172a' }}>{t('Choisissez votre prestation')}</div>
             <div style={{ borderRadius: 12, padding: '18px 14px', textAlign: 'center', border: '1.5px dashed #e2e8f0' }}>
-              <span style={{ fontSize: 12.5, color: '#94a3b8', lineHeight: 1.5 }}>Aucune prestation disponible pour le moment.</span>
+              <span style={{ fontSize: 12.5, color: '#94a3b8', lineHeight: 1.5 }}>{t('Aucune prestation disponible pour le moment.')}</span>
             </div>
           </div>
         </div>
       </div>
       <p className={`mt-2.5 text-[12px] leading-[1.6] ${corps} text-[color:var(--v2-color-gris)]`}>
-        C’est ce que voit un client sur votre page tant qu’aucune prestation n’est en ligne.
+        {t('C’est ce que voit un client sur votre page tant qu’aucune prestation n’est en ligne.')}
       </p>
     </div>
   )
@@ -708,28 +717,28 @@ function CarteMonteeOffreV2({ jauge, offreDeblocage }: {
   jauge: { utilisees: number; quota: number | null; offre: Plan }
   offreDeblocage: string
 }) {
+  const t = useT()
   const cle = (Object.entries(PLAN_LABELS).find(([, label]) => label === offreDeblocage)?.[0] as Plan | undefined) ?? 'pro'
   const carte = PLAN_CARDS.find(c => c.key === cle)
   const avantages = (carte?.features ?? []).slice(0, 3)
 
   return (
     <div>
-      <TitreSection>Débloquer plus de réservations</TitreSection>
+      <TitreSection>{t('Débloquer plus de réservations')}</TitreSection>
       <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-5">
         <div className="flex items-center justify-between gap-2">
           <span className={`inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
             <Lock size={12} strokeWidth={2} aria-hidden />
-            Offre {offreDeblocage}
+            {t('Offre')} {offreDeblocage}
           </span>
           <span className={`text-[18px] ${hero} tabular-nums`}>
-            {PLAN_PRICES[cle]} €<span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>/mois</span>
+            {PLAN_PRICES[cle]} €<span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('/mois')}</span>
           </span>
         </div>
 
-        <p className={`mt-3.5 text-[18px] ${titre}`}>Plus de place pour vos clients</p>
+        <p className={`mt-3.5 text-[18px] ${titre}`}>{t('Plus de place pour vos clients')}</p>
         <p className={`mt-1.5 text-[13px] leading-[1.55] ${corps} text-[color:var(--v2-color-gris)]`}>
-          Votre offre {PLAN_LABELS[jauge.offre]} s’arrête à {jauge.quota} réservations par mois. Au-delà, vos clients
-          continuent d’arriver — ils restent juste invisibles.
+          {t('Votre offre {offre} s’arrête à {quota} réservations par mois. Au-delà, vos clients continuent d’arriver — ils restent juste invisibles.', { offre: PLAN_LABELS[jauge.offre], quota: jauge.quota ?? '' })}
         </p>
 
         {avantages.length > 0 && (
@@ -748,13 +757,13 @@ function CarteMonteeOffreV2({ jauge, offreDeblocage }: {
           className={`mt-4 flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] text-[14px] ${corpsFort} text-[color:var(--v2-color-sur-accent)] transition-transform active:scale-[.97] motion-reduce:transition-none`}
           style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
         >
-          Passer à {PLAN_LABELS[cle]} — {PLAN_PRICES[cle]} €/mois
+          {t('Passer à {offre} — {prix} €/mois', { offre: PLAN_LABELS[cle], prix: PLAN_PRICES[cle] })}
         </Link>
         <Link
           href="/dashboard/abonnement"
           className={`mt-2.5 block text-center text-[12px] ${corps} text-[color:var(--v2-color-gris)] hover:underline`}
         >
-          Comparer toutes les offres
+          {t('Comparer toutes les offres')}
         </Link>
       </div>
     </div>
@@ -775,6 +784,8 @@ function CarteListe({ children }: { children: ReactNode }) {
 /** Le héros de l'écran : l'heure en très gros, le nom, l'adresse, et deux
  *  actions — itinéraire et appel. Tout le reste de l'écran est en ligne. */
 function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: string }) {
+  const t = useT()
+  const loc = useLocale()
   const statut = STATUT[statutAffiche(b)]
   const estAujourdhui = new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) === dateDuJour
   const adresse = b.address?.trim()
@@ -788,14 +799,14 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
       <Link href={`/dashboard/calendrier?rdv=${b.id}`} className="flex items-start gap-4 px-[18px] pt-[17px] pb-[13px]">
         <span className="flex flex-col">
           {!estAujourdhui && (
-            <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)] capitalize`}>{jourCourt(b.scheduled_at)}</span>
+            <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)] capitalize`}>{jourCourt(b.scheduled_at, loc)}</span>
           )}
           <span className={`text-[44px] leading-none ${hero} tabular-nums`}>{formatHeure(new Date(b.scheduled_at))}</span>
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-[3px] pt-[3px]">
           <span className={`text-[17px] ${corpsFort} truncate`}>{b.client_name}</span>
           <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)] truncate`}>
-            {lignePrestation(b)}
+            {lignePrestation(b, t)}
           </span>
           {/* Le prix vit sur la ligne du statut, pas au bout de la prestation :
               une prestation à nom long (« Terrasse 45 m² + hydrofuge ») faisait
@@ -804,7 +815,7 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
             <span className="flex min-w-0 items-center gap-1.5">
               <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: statut.couleur }} aria-hidden />
               <span className={`truncate text-[12.5px] ${corpsFort}`} style={{ color: statut.couleur }}>
-                {statut.label}
+                {t(statut.label)}
               </span>
             </span>
             <span className={`shrink-0 text-[14.5px] ${corpsFort} tabular-nums`}>{prixAffiche(b)}</span>
@@ -837,7 +848,7 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
               }}
             >
               <Navigation size={18} strokeWidth={2} aria-hidden />
-              Itinéraire
+              {t('Itinéraire')}
             </button>
           )}
           {telephone && (
@@ -850,7 +861,7 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
               }}
             >
               <Phone size={18} strokeWidth={2} aria-hidden />
-              Appeler
+              {t('Appeler')}
             </a>
           )}
         </div>
@@ -866,6 +877,8 @@ function CarteHeros({ rdv: b, dateDuJour }: { rdv: RdvAccueil; dateDuJour: strin
 /** Une ligne de rendez-vous : heure (ou jour), nom, prestation, prix, statut.
  *  Même destination que les widgets v1 — la fiche de l'agenda. */
 function LigneRdv({ rdv: b, avecDate = false }: { rdv: RdvAccueil; avecDate?: boolean }) {
+  const t = useT()
+  const loc = useLocale()
   const statut = STATUT[statutAffiche(b)]
   return (
     <Link href={`/dashboard/calendrier?rdv=${b.id}`} className="flex min-h-[46px] items-start gap-3.5 py-[11px]">
@@ -876,18 +889,18 @@ function LigneRdv({ rdv: b, avecDate = false }: { rdv: RdvAccueil; avecDate?: bo
           avecDate ? 'w-[58px] capitalize' : 'w-10'
         }`}
       >
-        {avecDate ? jourCourt(b.scheduled_at) : formatHeure(new Date(b.scheduled_at))}
+        {avecDate ? jourCourt(b.scheduled_at, loc) : formatHeure(new Date(b.scheduled_at))}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
         <span className={`text-[15px] ${nom} truncate`}>{b.client_name}</span>
-        <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] truncate`}>{lignePrestation(b)}</span>
+        <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] truncate`}>{lignePrestation(b, t)}</span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-1">
         <span className={`text-[15px] ${corpsFort} tabular-nums`}>{prixAffiche(b)}</span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: statut.couleur }} aria-hidden />
           <span className={`text-[12.5px] ${corpsFort}`} style={{ color: statut.couleur }}>
-            {statut.label}
+            {t(statut.label)}
           </span>
         </span>
       </span>
@@ -946,6 +959,7 @@ function BlocsOptionnels({
   prestationTop: { nom: string; nombre: number } | null
   zone: ZoneConfig
 }) {
+  const t = useT()
   function ligne(cle: WidgetKey): ReactNode {
     switch (cle) {
       case 'stats': {
@@ -954,38 +968,38 @@ function BlocsOptionnels({
         return (
           <LigneBloc
             key={cle}
-            label="Ce mois"
-            valeur={`${stats.terminesCeMois} terminé${stats.terminesCeMois > 1 ? 's' : ''}${ca}`}
+            label={t('Ce mois')}
+            valeur={`${t(stats.terminesCeMois > 1 ? '{n} terminés' : '{n} terminé', { n: stats.terminesCeMois })}${ca}`}
             href="/dashboard/chiffres"
           />
         )
       }
       case 'clients': {
         if (!clients) return null
-        const nouveaux = clients.nouveauxCetteSemaine > 0 ? ` · +${clients.nouveauxCetteSemaine} cette semaine` : ''
-        return <LigneBloc key={cle} label="Clients" valeur={`${clients.total}${nouveaux}`} href="/dashboard/clients" />
+        const nouveaux = clients.nouveauxCetteSemaine > 0 ? ` · ${t('+{n} cette semaine', { n: clients.nouveauxCetteSemaine })}` : ''
+        return <LigneBloc key={cle} label={t('Clients')} valeur={`${clients.total}${nouveaux}`} href="/dashboard/clients" />
       }
       case 'traffic': {
         if (!trafic) return null
         const valeur =
           trafic.visiteurs === 0
-            ? 'Aucun cette semaine'
-            : `${trafic.visiteurs} · ${formatConversionRate(trafic.conversions, trafic.visiteurs)} ont réservé`
-        return <LigneBloc key={cle} label="Visiteurs" valeur={valeur} href="/dashboard/chiffres" />
+            ? t('Aucun cette semaine')
+            : t('{n} · {taux} ont réservé', { n: trafic.visiteurs, taux: formatConversionRate(trafic.conversions, trafic.visiteurs) })
+        return <LigneBloc key={cle} label={t('Visiteurs')} valeur={valeur} href="/dashboard/chiffres" />
       }
       case 'services':
         return (
           <LigneBloc
             key={cle}
-            label="La plus demandée"
-            valeur={prestationTop ? `${prestationTop.nom} · ${prestationTop.nombre}` : 'Aucune ce mois-ci'}
+            label={t('La plus demandée')}
+            valeur={prestationTop ? `${prestationTop.nom} · ${prestationTop.nombre}` : t('Aucune ce mois-ci')}
             href="/dashboard/parametres/prestations"
           />
         )
       case 'zone':
         // v2 seulement (cet écran n'existe pas côté site) : la zone se règle
         // depuis le 2026-09-25 dans « Prestations et prix », section `#zone`.
-        return <LigneBloc key={cle} label="Zone d’intervention" valeur={resumeZone(zone)} href="/dashboard/parametres/prestations#zone" />
+        return <LigneBloc key={cle} label={t('Zone d’intervention')} valeur={resumeZone(zone)} href="/dashboard/parametres/prestations#zone" />
       default:
         return null
     }
@@ -1015,9 +1029,9 @@ function BlocsOptionnels({
         blocs.push(
           <section key="upcoming" className="mt-6">
             <div className="flex items-baseline justify-between gap-2 px-0.5 pb-2">
-              <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Ensuite</span>
+              <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Ensuite')}</span>
               <Link href="/dashboard/calendrier" className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
-                Tout voir
+                {t('Tout voir')}
               </Link>
             </div>
             <CarteListe>

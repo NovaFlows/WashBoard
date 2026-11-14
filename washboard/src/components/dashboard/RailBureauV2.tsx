@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { LogOut } from 'lucide-react'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Rail de navigation — passe « châssis bureau » (2026-10-05, Alexandre, 2026-10-03). Ce que
 // deviennent, sur grand écran, les 5 destinations de BarreBasV2.tsx + « Documents » épinglé :
@@ -140,10 +141,11 @@ const NOUVEAU_HREF = '/dashboard/chiffres/documents?nouveau=1'
 const COMPACT_MASQUE = 'max-[1023px]:sr-only'
 
 function LigneRail({ item, actif }: { item: Destination; actif: boolean }) {
+  const t = useT()
   return (
     <Link
       href={item.href}
-      title={item.label}
+      title={t(item.label)}
       data-visite-cible={item.cibleVisite}
       aria-current={actif ? 'page' : undefined}
       className={`flex h-[42px] items-center gap-[11px] rounded-[var(--v2-radius-bouton)] px-3 max-[1023px]:justify-center max-[1023px]:px-0 text-[13.5px] ${corpsFort} transition-colors ${
@@ -153,7 +155,7 @@ function LigneRail({ item, actif }: { item: Destination; actif: boolean }) {
       }`}
     >
       <span className="shrink-0 [&>svg]:block [&>svg]:h-[19px] [&>svg]:w-[19px]">{item.icone}</span>
-      <span className={COMPACT_MASQUE}>{item.label}</span>
+      <span className={COMPACT_MASQUE}>{t(item.label)}</span>
     </Link>
   )
 }
@@ -174,6 +176,7 @@ type Props = {
 }
 
 export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Props) {
+  const t = useT()
   const pathname = usePathname() ?? ''
   const router = useRouter()
   const items = destinations()
@@ -182,7 +185,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
 
   return (
     <nav
-      aria-label="Navigation"
+      aria-label={t('Navigation')}
       className={`wb-rail-verre m-3.5 mr-0 flex shrink-0 flex-col rounded-[var(--bureau-radius-chassis)] p-3.5 ${police}`}
       style={{ width: 'var(--bureau-rail-largeur)', margin: '14px 0 14px 14px' }}
     >
@@ -195,7 +198,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
           <img src="/LogoWashBoard.png" alt="" className="h-full w-full object-cover" />
         </span>
         <span className={`min-w-0 leading-[1.15] ${COMPACT_MASQUE}`}>
-          <span className={`block truncate text-[13.5px] ${nom} text-[color:var(--v2-color-encre)]`}>WashBoard</span>
+          <span className={`block truncate text-[13.5px] ${nom} text-[color:var(--v2-color-encre)]`}>{t('WashBoard')}</span>
           {washerName && (
             <span className={`block truncate text-[11px] ${corps} text-[color:var(--v2-color-gris)]`}>{washerName}</span>
           )}
@@ -206,7 +209,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
           facture), mêmes règles de remplacement plutôt que d'empilement quand on y est déjà. */}
       <Link
         href={nouveauHref}
-        title="Nouveau devis ou facture"
+        title={t('Nouveau devis ou facture')}
         data-visite-cible="rail-nouveau"
         onClick={e => {
           if (pathname.startsWith('/dashboard/chiffres/documents')) {
@@ -220,7 +223,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" aria-hidden>
           <path d="M12 5v14M5 12h14" />
         </svg>
-        <span className={COMPACT_MASQUE}>Nouveau</span>
+        <span className={COMPACT_MASQUE}>{t('Nouveau')}</span>
       </Link>
 
       {/* Les 5 destinations */}
@@ -267,9 +270,9 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
         {!isPwa && (
           <div className="mt-1 flex items-center justify-between gap-1 px-2.5 max-[1023px]:flex-col max-[1023px]:px-0">
             <form action="/api/auth/logout" method="POST">
-              <button type="submit" title="Déconnexion" aria-label="Déconnexion" className={`flex items-center text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-rouge)' }}>
+              <button type="submit" title={t('Déconnexion')} aria-label={t('Déconnexion')} className={`flex items-center text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-rouge)' }}>
                 <LogOut size={17} strokeWidth={2} aria-hidden className="min-[1024px]:hidden" />
-                <span className="max-[1023px]:hidden">Déconnexion</span>
+                <span className="max-[1023px]:hidden">{t('Déconnexion')}</span>
               </button>
             </form>
             <ThemeToggle nav />

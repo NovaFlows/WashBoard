@@ -21,6 +21,7 @@ import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT, libelleFond } from '@/lib/appar
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import { useApparenceCoteACote } from '@/hooks/useApparenceCoteACote'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Apparence de ma page » — refonte 2026, destination NEUVE de « Plus » (la maquette
 // n'a aucun écran pour ça ; Alexandre, 2026-09-24 : « avec le même design que les
@@ -99,6 +100,7 @@ type Props = {
 }
 
 export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
+  const t = useT()
   const [pageMode, setPageMode] = useState(() => bookingPageMode(initial.pageMode))
   const h = useApparenceV2(initial)
   const grandEcran = useGrandEcran()
@@ -169,7 +171,7 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
             className={`${BOUTON} w-full text-white`}
             style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
           >
-            Ajouter mon logo
+            {t('Ajouter mon logo')}
           </button>
         )}
         <a
@@ -177,33 +179,33 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
           className={`${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
           style={PRESSION}
         >
-          Voir ma page
+          {t('Voir ma page')}
         </a>
       </div>
 
-      <section aria-label="Réglages de la page" className="mt-[26px]">
+      <section aria-label={t('Réglages de la page')} className="mt-[26px]">
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
             {/* Logo et couleur restent modifiables quel que soit le mode de
                 page — la nouvelle page les utilise aussi. Fond et message
                 d'accueil ne lui servent encore à rien, ils restent réservés
                 à la page classique. */}
-            <Ligne label="Logo" valeur={valeurLogo} onClick={() => setFeuille('logo')} />
+            <Ligne label={t('Logo')} valeur={valeurLogo} onClick={() => setFeuille('logo')} />
             <Ligne
-              label="Couleur de ma marque"
+              label={t('Couleur de ma marque')}
               pastille={h.couleur ?? COULEUR_PAR_DEFAUT}
               onClick={() => setFeuille('couleur')}
             />
             <Ligne
-              label="Avis Google"
+              label={t('Avis Google')}
               valeur={h.avisGoogle ? 'Renseigné' : 'Pas encore : note de votre site affichée'}
               onClick={() => setFeuille('avisGoogle')}
             />
             {pageMode === 'custom' && <>
-            <Ligne label="Fond de la page" valeur={libelleFond(h.fond)} onClick={() => setFeuille('fond')} />
-            <Ligne label="Message d’accueil" valeur={valeurMessage} tronquer onClick={() => setFeuille('message')} />
+            <Ligne label={t('Fond de la page')} valeur={libelleFond(h.fond)} onClick={() => setFeuille('fond')} />
+            <Ligne label={t('Message d’accueil')} valeur={valeurMessage} tronquer onClick={() => setFeuille('message')} />
             </>}
-            <Ligne label="Mon site web" valeur={h.site ? h.site.replace(/^https?:\/\//i, '') : 'Pas encore : aucun avis affiché'} tronquer onClick={() => setFeuille('site')} />
+            <Ligne label={t('Mon site web')} valeur={h.site ? h.site.replace(/^https?:\/\//i, '') : 'Pas encore : aucun avis affiché'} tronquer onClick={() => setFeuille('site')} />
           </ul>
         </CarteListe>
       </section>
@@ -277,15 +279,15 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
       <div className="flex items-center gap-1 pb-3">
         <Link
           href="/dashboard/parametres"
-          aria-label="Retour à Plus"
+          aria-label={t('Retour à Plus')}
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[21px] leading-none ${titre}`}>Apparence de ma page</h1>
+          <h1 className={`text-[21px] leading-none ${titre}`}>{t('Apparence de ma page')}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Ce que vos clients voient en ouvrant votre lien
+            {t('Ce que vos clients voient en ouvrant votre lien')}
           </p>
         </div>
       </div>
@@ -332,8 +334,8 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
 
       {retrait === 'logo' && (
         <ConfirmationSuppression
-          titre="Retirer votre logo ?"
-          texte="Vos clients verront la première lettre de votre nom à la place."
+          titre={t('Retirer votre logo ?')}
+          texte={t('Vos clients verront la première lettre de votre nom à la place.')}
           remarque="Vous pourrez en ajouter un autre quand vous voulez."
           enCours={retraitEnCours}
           erreur={retraitErreur}
@@ -345,8 +347,8 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
       )}
       {retrait === 'photo' && (
         <ConfirmationSuppression
-          titre="Retirer votre photo de fond ?"
-          texte="Votre page reprend le fond « Original » : clair ou sombre, au choix de vos clients."
+          titre={t('Retirer votre photo de fond ?')}
+          texte={t('Votre page reprend le fond « Original » : clair ou sombre, au choix de vos clients.')}
           remarque="Pour la remettre, il faudra la choisir de nouveau."
           enCours={retraitEnCours}
           erreur={retraitErreur}

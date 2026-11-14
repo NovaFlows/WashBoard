@@ -16,6 +16,7 @@ import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard
 import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
 import type { SetupProgress } from '@/lib/setupProgress'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Réglages » — ce qui règle l'APPLICATION, pas l'entreprise (Alexandre, 2026-09-27 :
 // « réglage apparaît dans Mon compte, mais juste Réglages, et quand on clique dessus on voit
@@ -44,6 +45,7 @@ type Props = {
 }
 
 export default function ReglagesV2({ liste, progress }: Props) {
+  const t = useT()
   const { theme, setTheme } = useTheme()
   const { etat: etatNotifications } = useNotificationsPush()
   const mobile = useDesignMobile()
@@ -65,39 +67,39 @@ export default function ReglagesV2({ liste, progress }: Props) {
         <div className="flex items-center gap-1">
           <Link
             href="/dashboard/parametres"
-            aria-label="Retour à Plus"
+            aria-label={t('Retour à Plus')}
             className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
           >
             <ChevronLeft size={22} strokeWidth={2} />
           </Link>
           <div className="min-w-0 flex-1">
-            <h1 className={`text-[24px] leading-none ${titre}`}>Réglages</h1>
+            <h1 className={`text-[24px] leading-none ${titre}`}>{t('Réglages')}</h1>
             <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              L’application, pas votre entreprise
+              {t('L’application, pas votre entreprise')}
             </p>
           </div>
         </div>
       )}
       {grandEcran && (
         <div>
-          <h1 className={`text-[20px] leading-none ${titre}`}>Réglages</h1>
+          <h1 className={`text-[20px] leading-none ${titre}`}>{t('Réglages')}</h1>
           <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            L’application, pas votre entreprise
+            {t('L’application, pas votre entreprise')}
           </p>
         </div>
       )}
 
       <div>
-        <TitreSection>L’application</TitreSection>
+        <TitreSection>{t('L’application')}</TitreSection>
         <CarteListe>
           <Ligne
-            label="Apparence"
+            label={t('Apparence')}
             valeur={theme === 'dark' ? 'Sombre' : 'Clair'}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             chevron={false}
           />
           <Ligne
-            label="Notifications"
+            label={t('Notifications')}
             valeur={notifications.texte || undefined}
             signal={notifications.ton === 'ambre'
               ? <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
@@ -106,7 +108,7 @@ export default function ReglagesV2({ liste, progress }: Props) {
           />
           {/* Le seul chemin pour faire revenir la carte de configuration une fois masquée. */}
           <Ligne
-            label="Barre de configuration"
+            label={t('Barre de configuration')}
             valeur={carteCachee === '1' ? 'Masquée' : 'Affichée'}
             onClick={() => setCarteCachee(carteCachee === '1' ? null : '1')}
             chevron={false}
@@ -119,12 +121,12 @@ export default function ReglagesV2({ liste, progress }: Props) {
       <SetupProgressBar progress={progress} />
 
       <div>
-        <TitreSection>De l’aide</TitreSection>
+        <TitreSection>{t('De l’aide')}</TitreSection>
         <CarteListe>
-          <Ligne label="Guide d’utilisation" sousLabel="Questions fréquentes" href="/dashboard/guide" />
+          <Ligne label={t('Guide d’utilisation')} sousLabel={t('Questions fréquentes')} href="/dashboard/guide" />
           <Ligne
-            label="Aide et assistance"
-            sousLabel="Écrire à l’équipe"
+            label={t('Aide et assistance')}
+            sousLabel={t('Écrire à l’équipe')}
             href="/dashboard/assistance"
             signal={<NonLus count={unreadSupportCount} />}
           />

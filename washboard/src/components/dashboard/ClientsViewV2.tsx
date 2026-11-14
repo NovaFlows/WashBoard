@@ -22,6 +22,7 @@ import { LigneClientVerrouilleeV2 } from '@/components/dashboard/ReservationVerr
 import AutomatismesClientsV2, { type AutomatismesClients } from '@/components/dashboard/AutomatismesClientsV2'
 import { Ligne, CarteListe, TitreSection } from '@/components/dashboard/ParametresFormV2'
 import { BoutonSupprimerSurvol } from '@/components/dashboard/BoutonSupprimerSurvol'
+import { useT } from '@/components/i18n/I18nProvider'
 
 /** Client masqué par le plafond de l'offre (rendu flouté en tête de liste). */
 export type ClientBloque = { id: string; scheduled_at: string }
@@ -170,6 +171,7 @@ const CLASSE_BOUTON_PAGINATION = `flex h-11 flex-1 items-center justify-center r
 function PaginationListe({ total, limite, onPlus, onMoins }: {
   total: number; limite: number; onPlus: () => void; onMoins: () => void
 }) {
+  const t = useT()
   const restants = total - limite
   const peutReplier = limite > PAS_AFFICHAGE && total > PAS_AFFICHAGE
   if (restants <= 0 && !peutReplier) return null
@@ -177,12 +179,12 @@ function PaginationListe({ total, limite, onPlus, onMoins }: {
     <div className="flex gap-2">
       {peutReplier && (
         <button type="button" onClick={onMoins} className={CLASSE_BOUTON_PAGINATION}>
-          Charger moins
+          {t('Charger moins')}
         </button>
       )}
       {restants > 0 && (
         <button type="button" onClick={onPlus} className={CLASSE_BOUTON_PAGINATION}>
-          Charger plus
+          {t('Charger plus')}
           <span className="ml-1.5 text-[color:var(--v2-color-gris)]">({restants})</span>
         </button>
       )}
@@ -230,6 +232,7 @@ export default function ClientsViewV2({
   /** Section « Automatismes » (avis Google, relance, créneaux intelligents), 2026-09-30. */
   automatismes?: AutomatismesClients
 }) {
+  const t = useT()
   const router = useRouter()
   // Passe bureau : voir l'en-tête du fichier. `false` au rendu serveur et jusqu'à l'hydratation
   // — l'écran démarre donc toujours en disposition à une colonne, comme avant cette passe.
@@ -391,11 +394,11 @@ export default function ClientsViewV2({
   const contenuListe = filtre === 'relancer' ? (
     aRelancer.length === 0 ? (
       <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-        Tous vos clients sont revenus, ou n’ont pas encore de quoi être relancés.
+        {t('Tous vos clients sont revenus, ou n’ont pas encore de quoi être relancés.')}
       </p>
     ) : (
       <>
-      <ul aria-label="Clients à relancer" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+      <ul aria-label={t('Clients à relancer')} className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
         {aRelancer.slice(0, limite).map(l => (
           <LigneARelancerVue
             key={l.cle}
@@ -414,7 +417,7 @@ export default function ClientsViewV2({
     )
   ) : filtre === 'entreprises' ? (
     <>
-    <ul aria-label="Entreprises" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+    <ul aria-label={t('Entreprises')} className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
       {entreprisesAffichees.slice(0, limite).map(e => (
         <LigneEntreprise
           key={e.id}
@@ -447,7 +450,7 @@ export default function ClientsViewV2({
       )}
 
       {(affiches.length > 0 || bloquesAffiches.length > 0) && (
-        <ul aria-label="Liste des clients" className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
+        <ul aria-label={t('Liste des clients')} className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] overflow-hidden">
           {bloquesVus.map(b => (
             <LigneClientVerrouilleeV2 key={b.id} reservation={b} offre={offreDeblocage} />
           ))}
@@ -516,23 +519,23 @@ export default function ClientsViewV2({
       className={`${grandEcran ? '' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6'} space-y-5 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
       <div>
-        <h1 className={`text-[21px] ${titre}`}>Clients</h1>
+        <h1 className={`text-[21px] ${titre}`}>{t('Clients')}</h1>
         <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-1`}>
           {filtre === 'relancer' ? (
-            <span className="tabular-nums">{aRelancer.length} client{aRelancer.length > 1 ? 's' : ''} pas revenu{aRelancer.length > 1 ? 's' : ''}</span>
+            <span className="tabular-nums">{aRelancer.length} {t('client')}{aRelancer.length > 1 ? 's' : ''} {t('pas revenu')}{aRelancer.length > 1 ? 's' : ''}</span>
           ) : filtre === 'entreprises' ? (
-            <span className="tabular-nums">{entreprisesAffichees.length} entreprise{entreprisesAffichees.length > 1 ? 's' : ''}</span>
+            <span className="tabular-nums">{entreprisesAffichees.length} {t('entreprise')}{entreprisesAffichees.length > 1 ? 's' : ''}</span>
           ) : clients.length === 0 ? (
             'Vos clients apparaîtront ici dès leur première réservation.'
           ) : pros > 0 ? (
-            <span className="tabular-nums">{clients.length} client{clients.length > 1 ? 's' : ''} · {pros} pro{pros > 1 ? 's' : ''}</span>
+            <span className="tabular-nums">{clients.length} {t('client')}{clients.length > 1 ? 's' : ''} · {pros} {t('pro')}{pros > 1 ? 's' : ''}</span>
           ) : (
-            <span className="tabular-nums">{clients.length} client{clients.length > 1 ? 's' : ''}</span>
+            <span className="tabular-nums">{clients.length} {t('client')}{clients.length > 1 ? 's' : ''}</span>
           )}
         </p>
         {filtre !== 'relancer' && filtre !== 'entreprises' && bloques.length > 0 && (
           <p className={`text-[13px] mt-0.5 ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
-            {bloques.length} masqué{bloques.length > 1 ? 's' : ''}
+            {bloques.length} {t('masqué')}{bloques.length > 1 ? 's' : ''}
             {montantBloque > 0 && ` · ${formatEuros(montantBloque)} € de lavages`}
           </p>
         )}
@@ -551,10 +554,9 @@ export default function ClientsViewV2({
       {grandEcran && clients.length === 0 && bloques.length === 0 && (
         <div className="flex h-[420px] items-center justify-center rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] px-8 text-center">
           <div className="max-w-[420px]">
-            <p className={`text-[22px] leading-snug ${titre}`}>D’où viendront vos premiers clients ?</p>
+            <p className={`text-[22px] leading-snug ${titre}`}>{t('D’où viendront vos premiers clients ?')}</p>
             <p className={`mt-2.5 text-[13.5px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-              Pas besoin de les ajouter à la main : dès qu’une réservation arrive sur votre page,
-              la personne devient un client ici, avec son historique qui se construit tout seul.
+              {t('Pas besoin de les ajouter à la main : dès qu’une réservation arrive sur votre page, la personne devient un client ici, avec son historique qui se construit tout seul.')}
             </p>
           </div>
         </div>
@@ -571,8 +573,8 @@ export default function ClientsViewV2({
                 inputMode="search"
                 value={recherche}
                 onChange={e => setRecherche(e.target.value)}
-                placeholder="Nom, téléphone, adresse"
-                aria-label="Rechercher un client"
+                placeholder={t('Nom, téléphone, adresse')}
+                aria-label={t('Rechercher un client')}
                 autoComplete="off"
                 className={`w-full h-11 pl-11 pr-11 rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[16px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40 [&::-webkit-search-cancel-button]:hidden`}
               />
@@ -580,7 +582,7 @@ export default function ClientsViewV2({
                 <button
                   type="button"
                   onClick={() => setRecherche('')}
-                  aria-label="Effacer la recherche"
+                  aria-label={t('Effacer la recherche')}
                   className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-[color:var(--v2-color-gris)] hover:text-[color:var(--v2-color-encre)]"
                 >
                   <X size={16} />
@@ -663,7 +665,7 @@ export default function ClientsViewV2({
                   <div className="flex h-full flex-col items-center justify-center gap-2.5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-6 text-center">
                     <Users2 size={22} strokeWidth={1.8} className="text-[color:var(--v2-color-gris)]" aria-hidden />
                     <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                      Sélectionnez un client pour voir sa fiche.
+                      {t('Sélectionnez un client pour voir sa fiche.')}
                     </p>
                   </div>
                 )}
@@ -680,10 +682,10 @@ export default function ClientsViewV2({
           c'est le même écran, pas une copie, pour qui consulte ses chiffres
           juste après avoir regardé ses clients plutôt que de rouvrir le
           menu. */}
-      <section aria-label="Chiffres">
-        <TitreSection>L’argent</TitreSection>
+      <section aria-label={t('Chiffres')}>
+        <TitreSection>{t('L’argent')}</TitreSection>
         <CarteListe>
-          <Ligne label="Chiffres" sousLabel="Argent, acquisition, clients" href="/dashboard/chiffres" />
+          <Ligne label={t('Chiffres')} sousLabel={t('Argent, acquisition, clients')} href="/dashboard/chiffres" />
         </CarteListe>
       </section>
 
@@ -707,7 +709,7 @@ export default function ClientsViewV2({
       {suppression && (
         <ConfirmationSuppression
           titre={`Supprimer ${suppression.isProfessional && suppression.companyName ? suppression.companyName : suppression.name} ?`}
-          texte="Il disparaît de votre fichier. Ses réservations et ses documents restent intacts — rien n’est supprimé de son historique ni de vos chiffres."
+          texte={t('Il disparaît de votre fichier. Ses réservations et ses documents restent intacts — rien n’est supprimé de son historique ni de vos chiffres.')}
           enCours={suppressionEnCours}
           erreur={suppressionErreur}
           onConfirmer={() => void confirmerSuppressionClient()}
@@ -718,7 +720,7 @@ export default function ClientsViewV2({
       {annulationRelance && (
         <ConfirmationSuppression
           titre={`Ne plus relancer ${annulationRelance.nom} ?`}
-          texte="Il ne recevra plus ni relance, ni demande d’avis. Il reste dans votre fichier — vous pouvez toujours l’appeler ou lui écrire vous-même."
+          texte={t('Il ne recevra plus ni relance, ni demande d’avis. Il reste dans votre fichier — vous pouvez toujours l’appeler ou lui écrire vous-même.')}
           libelleAction="Ne plus relancer"
           libelleEnCours="Enregistrement…"
           enCours={annulationRelanceEnCours}
@@ -731,7 +733,7 @@ export default function ClientsViewV2({
       {entrepriseASupprimer && (
         <ConfirmationSuppression
           titre={`Supprimer « ${entrepriseASupprimer.nom} » ?`}
-          texte="Ses sites disparaissent avec elle. Ses contacts redeviennent de simples clients : ils gardent toutes leurs réservations et leurs documents, rien n'est supprimé de leur côté."
+          texte={t('Ses sites disparaissent avec elle. Ses contacts redeviennent de simples clients : ils gardent toutes leurs réservations et leurs documents, rien n\'est supprimé de leur côté.')}
           enCours={suppressionEntrepriseEnCours}
           erreur={suppressionEntrepriseErreur}
           onConfirmer={() => void confirmerSuppressionEntreprise()}
@@ -753,6 +755,7 @@ function LigneClient({ client: c, maintenant, onOuvrir, selectionnee, ouverte, o
   onFermerLigne: () => void
   onSupprimer: () => void
 }) {
+  const t = useT()
   const titreClient = c.isProfessional && c.companyName ? c.companyName : c.name
   const pastille = pastilleDroite(c, maintenant)
   const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
@@ -774,7 +777,7 @@ function LigneClient({ client: c, maintenant, onOuvrir, selectionnee, ouverte, o
         style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
         <Trash2 size={20} strokeWidth={2} aria-hidden />
-        Supprimer
+        {t('Supprimer')}
       </button>
       <div
         {...poignee}
@@ -834,6 +837,7 @@ function LigneARelancerVue({ ligne: l, onOuvrir, selectionnee, ouverte, onOuvrir
   onFermerLigne: () => void
   onSupprimer: () => void
 }) {
+  const t = useT()
   const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
     ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
   })
@@ -851,7 +855,7 @@ function LigneARelancerVue({ ligne: l, onOuvrir, selectionnee, ouverte, onOuvrir
         style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
         <Trash2 size={20} strokeWidth={2} aria-hidden />
-        Supprimer
+        {t('Supprimer')}
       </button>
       <div
         {...poignee}
@@ -899,6 +903,7 @@ function LigneEntreprise({ entreprise: e, onOuvrir, ouverte, onOuvrirLigne, onFe
   onFermerLigne: () => void
   onSupprimer: () => void
 }) {
+  const t = useT()
   const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({
     ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne,
   })
@@ -914,7 +919,7 @@ function LigneEntreprise({ entreprise: e, onOuvrir, ouverte, onOuvrirLigne, onFe
         style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
         <Trash2 size={20} strokeWidth={2} aria-hidden />
-        Supprimer
+        {t('Supprimer')}
       </button>
       <div
         {...poignee}
@@ -932,7 +937,7 @@ function LigneEntreprise({ entreprise: e, onOuvrir, ouverte, onOuvrirLigne, onFe
           <span className="min-w-0 flex-1">
             <span className={`block text-[15px] ${nom} truncate`}>{e.nom}</span>
             <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>
-              {e.contacts.length} contact{e.contacts.length > 1 ? 's' : ''}
+              {e.contacts.length} {t('contact')}{e.contacts.length > 1 ? 's' : ''}
               {e.sites.length > 0 && ` · ${e.sites.length} site${e.sites.length > 1 ? 's' : ''}`}
             </span>
           </span>

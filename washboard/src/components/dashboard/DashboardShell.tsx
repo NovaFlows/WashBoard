@@ -21,6 +21,7 @@ import { useEcranRail } from '@/hooks/useEcranRail'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
 import SuiviPwa from '@/components/dashboard/SuiviPwa'
 import SuiviConnexion from '@/components/dashboard/SuiviConnexion'
+import { useLocale, useT } from '@/components/i18n/I18nProvider'
 
 type Props = {
   // Absent pour un compte qui n'a pas de fiche laveur (ex. un membre du
@@ -99,6 +100,7 @@ function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
   libelleLien?: string
   onDismiss?: () => void
 }) {
+  const t = useT()
   const couleur = couleurTon(ton)
   return (
     <div className="px-3 pt-3 sm:px-4">
@@ -128,7 +130,7 @@ function BandeauV2({ etiquette, ton, children, lien, libelleLien, onDismiss }: {
         {onDismiss && (
           <button
             onClick={onDismiss}
-            aria-label="Fermer"
+            aria-label={t('Fermer')}
             className="-mr-1 -mt-1 shrink-0 p-1 text-[color:var(--v2-color-gris)] transition-opacity hover:opacity-70"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -160,6 +162,7 @@ function BandeauBureauV2({ etiquette, children, lien, libelleLien, onDismiss }: 
   libelleLien?: string
   onDismiss?: () => void
 }) {
+  const t = useT()
   return (
     <div className="px-[34px] pt-[14px]">
       <div className="flex items-center gap-3 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] py-2.5 pl-3.5 pr-3 shadow-[0_1px_2px_rgba(22,22,26,.04),0_6px_18px_rgba(22,22,26,.06)] dark:shadow-[0_1px_3px_rgba(0,0,0,.4)]">
@@ -179,7 +182,7 @@ function BandeauBureauV2({ etiquette, children, lien, libelleLien, onDismiss }: 
         {onDismiss && (
           <button
             onClick={onDismiss}
-            aria-label="Fermer"
+            aria-label={t('Fermer')}
             className="shrink-0 p-1 text-[color:var(--v2-color-gris)] transition-opacity hover:opacity-70"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -223,6 +226,7 @@ type PropsBandeau = {
 }
 
 function AppBetaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
+  const t = useT()
   // On part de « masqué » : ce qui décide de l'affichage n'existe que dans le
   // navigateur, et un rendu serveur différent provoquerait un clignotement.
   const [visible, setVisible] = useState(false)
@@ -266,21 +270,21 @@ function AppBetaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
 
   if (bureau) {
     return (
-      <BandeauBureauV2 etiquette="Bêta" lien="/dashboard/guide#guide-application" libelleLien="En savoir plus" onDismiss={fermer}>
-        Recevez vos réservations en notification sur votre téléphone.
+      <BandeauBureauV2 etiquette={t('Bêta')} lien="/dashboard/guide#guide-application" libelleLien={t('En savoir plus')} onDismiss={fermer}>
+        {t('Recevez vos réservations en notification sur votre téléphone.')}
       </BandeauBureauV2>
     )
   }
 
   return (
     <BandeauV2
-      etiquette="Bêta"
+      etiquette={t('Bêta')}
       ton="accent"
       lien="/dashboard/guide#guide-application"
-      libelleLien="En savoir plus"
+      libelleLien={t('En savoir plus')}
       onDismiss={fermer}
     >
-      Recevez vos réservations en notification sur votre téléphone.
+      {t('Recevez vos réservations en notification sur votre téléphone.')}
     </BandeauV2>
   )
 }
@@ -304,6 +308,7 @@ const CLE_BANDEAU_ESSAI = 'wb-bandeau-essai'
 const CLE_FERMEE_OFFRES_2026 = 'wb_annonce_offres_2026_fermee'
 
 function NouvellesOffresBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
+  const t = useT()
   // Comme pour AppBetaBanner : on part de masqué pour éviter un clignotement
   // au premier rendu serveur, avant de savoir si ce laveur l'a déjà fermé.
   const [visible, setVisible] = useState(false)
@@ -335,21 +340,21 @@ function NouvellesOffresBanner({ bureau, actif, onDisponibiliteChange }: PropsBa
 
   if (bureau) {
     return (
-      <BandeauBureauV2 etiquette="Nouveau" lien="/dashboard/abonnement" libelleLien="Voir les offres" onDismiss={fermer}>
-        WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.
+      <BandeauBureauV2 etiquette={t('Nouveau')} lien="/dashboard/abonnement" libelleLien={t('Voir les offres')} onDismiss={fermer}>
+        {t('WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.')}
       </BandeauBureauV2>
     )
   }
 
   return (
     <BandeauV2
-      etiquette="Nouveau"
+      etiquette={t('Nouveau')}
       ton="nouveau"
       lien="/dashboard/abonnement"
-      libelleLien="Voir les offres"
+      libelleLien={t('Voir les offres')}
       onDismiss={fermer}
     >
-      WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.
+      {t('WashBoard passe à 4 offres — Découverte, Starter, Pro, Business.')}
     </BandeauV2>
   )
 }
@@ -357,6 +362,8 @@ function NouvellesOffresBanner({ bureau, actif, onDisponibiliteChange }: PropsBa
 function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule, grandfathered, subscriptionEndsAt, bureau, actif, onDisponibiliteChange }: {
   trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean; grandfathered?: boolean; subscriptionEndsAt?: string | null
 } & PropsBandeau) {
+  const t = useT()
+  const loc = useLocale()
   const [ferme, setFerme] = usePreferenceLocale(CLE_BANDEAU_ESSAI)
   const [now] = useState(() => Date.now())
 
@@ -370,12 +377,12 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     ton: TonBandeau, texte: React.ReactNode, libelleLien: string, fermer?: () => void,
   ) => bureau
     ? (
-      <BandeauBureauV2 lien="/dashboard/abonnement" libelleLien={libelleLien} onDismiss={fermer}>
+      <BandeauBureauV2 lien="/dashboard/abonnement" libelleLien={t(libelleLien)} onDismiss={fermer}>
         {texte}
       </BandeauBureauV2>
     )
     : (
-      <BandeauV2 ton={ton} lien="/dashboard/abonnement" libelleLien={libelleLien} onDismiss={fermer}>
+      <BandeauV2 ton={ton} lien="/dashboard/abonnement" libelleLien={t(libelleLien)} onDismiss={fermer}>
         {texte}
       </BandeauV2>
     )
@@ -394,7 +401,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     if (choisirFormule) {
       return bandeau('choisir-formule', fermer => etat(
         'accent',
-        'Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.',
+        t('Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.'),
         'Voir les offres', fermer,
       ))
     }
@@ -403,7 +410,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     if (cancelsAt && (subscriptionStatus === 'active' || subscriptionStatus === 'trial')) {
       return bandeau(`resilie-${cancelsAt}`, fermer => etat(
         'rouge',
-        <>Abonnement résilié — valable jusqu&apos;au {formatDateFR(cancelsAt)}</>,
+        t('Abonnement résilié — valable jusqu’au {date}', { date: formatDateFR(cancelsAt, loc) }),
         'Réactiver', fermer,
       ))
     }
@@ -419,7 +426,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     if (subscriptionStatus === 'expired') {
       return bandeau('expire', fermer => etat(
         'rouge',
-        'Votre période d’essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.',
+        t('Votre période d’essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.'),
         'Voir les offres', fermer,
       ))
     }
@@ -432,18 +439,18 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
       if (isCardRegistered(stripeSubscriptionId, subscriptionStatus)) {
         return bandeau(`carte-${daysLeft}`, fermer => etat(
           'vert',
-          <>✓ Carte enregistrée — facturation dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}</>,
+          daysLeft > 1 ? t('✓ Carte enregistrée — facturation dans {n} jours', { n: daysLeft }) : t('✓ Carte enregistrée — facturation dans {n} jour', { n: daysLeft }),
           'Gérer', fermer,
         ))
       }
 
       if (daysLeft <= 0) {
-        return bandeau('essai-expire', fermer => etat('rouge', 'Votre période d’essai a expiré.', 'Activer mon abonnement', fermer))
+        return bandeau('essai-expire', fermer => etat('rouge', t('Votre période d’essai a expiré.'), 'Activer mon abonnement', fermer))
       }
 
       return bandeau(`essai-${daysLeft}`, fermer => etat(
         isUrgent ? 'ambre' : 'accent',
-        <>Essai gratuit — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}</>,
+        daysLeft > 1 ? t('Essai gratuit — {n} jours restants', { n: daysLeft }) : t('Essai gratuit — {n} jour restant', { n: daysLeft }),
         'Voir l’abonnement', fermer,
       ))
     }
@@ -458,6 +465,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
 }
 
 export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee, avancementVisite }: Props) {
+  const t = useT()
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
   const fiche = {
@@ -641,7 +649,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
           <RailBureauV2
             washerName={washerName}
             isPwa={isPwa}
-            offreLabel={complet ? 'Accès complet' : PLAN_LABELS[offreEffective]}
+            offreLabel={complet ? t('Accès complet') : PLAN_LABELS[offreEffective]}
             offreCouleur={complet ? null : PLAN_COULEURS[offreEffective]}
           />
           {/* `min-w-0`/`min-h-0` : sans eux, un enfant flex refuse de rétrécir sous la taille
