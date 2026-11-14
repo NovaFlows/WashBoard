@@ -45,6 +45,11 @@ export default defineConfig({
   timeout: 60_000,
   use: {
     baseURL: BASE_URL,
+    // L'interface suit la langue du navigateur (lib/i18n/langues.ts) : sans cette ligne, le navigateur
+    // de CI annonce « en-US » et toute l'appli s'affiche en anglais, alors que les tests cherchent
+    // des textes français (25 échecs sur GitHub Actions le 2026-11-14). Le français est aussi la
+    // langue de repli en local, où rien ne contredit : on le dit explicitement ici.
+    locale: 'fr-FR',
     navigationTimeout: 60_000,
     trace: 'on-first-retry',
   },
