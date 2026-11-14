@@ -17,6 +17,9 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "playwright-report/**",
     "test-results/**",
+    // Outil local de traduction (CommonJS, hors du périmètre React) : sans ça, ESLint plante sur
+    // le fichier .cjs, que la config Next ne couvre pas, et le build Vercel échoue.
+    "scripts/i18n/**",
   ]),
   {
     rules: {
