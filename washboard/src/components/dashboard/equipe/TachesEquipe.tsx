@@ -3,24 +3,23 @@
 import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
-import { EQUIPE, type Responsable } from '@/lib/responsables'
-import { TITRE_MAX, type Tache } from '@/lib/tachesEquipe'
+import { ASSIGNES, TITRE_MAX, concerne, type Assigne, type Tache } from '@/lib/tachesEquipe'
 import { Carte, Section } from './EcranEquipe'
 
 // Tâches à faire de l'équipe : on en ajoute une pour Alexandre, Ryan ou Yanis,
 // on la supprime (coche) une fois faite.
 
-type Filtre = 'toutes' | Responsable
+type Filtre = 'toutes' | Assigne
 
 export default function TachesEquipe({ taches: initiales, actif }: { taches: Tache[]; actif: boolean }) {
   const [taches, setTaches] = useState(initiales)
   const [filtre, setFiltre] = useState<Filtre>('toutes')
   const [titre, setTitre] = useState('')
-  const [assigne, setAssigne] = useState<Responsable>(EQUIPE[0])
+  const [assigne, setAssigne] = useState<Assigne>(ASSIGNES[0])
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
-  const visibles = taches.filter(t => filtre === 'toutes' || t.assigne_a === filtre)
+  const visibles = taches.filter(t => filtre === 'toutes' || concerne(t, filtre))
 
   async function ajouter(e: React.FormEvent) {
     e.preventDefault()
@@ -59,16 +58,16 @@ export default function TachesEquipe({ taches: initiales, actif }: { taches: Tac
       ) : (
         <div className="space-y-3">
           <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Filtrer par membre">
-            {(['toutes', ...EQUIPE] as Filtre[]).map(f => (
+            {(['toutes', ...ASSIGNES] as Filtre[]).map(f => (
               <button key={f} type="button" aria-pressed={filtre === f} onClick={() => setFiltre(f)} className={puce(filtre === f)}>
-                {f === 'toutes' ? 'Toutes' : f} {f === 'toutes' ? taches.length : taches.filter(t => t.assigne_a === f).length}
+                {f === 'toutes' ? 'Toutes' : f} {f === 'toutes' ? taches.length : taches.filter(t => concerne(t, f)).length}
               </button>
             ))}
           </div>
 
           <Carte>
             {visibles.length === 0 ? (
-              <p className={`px-4 py-4 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Aucune tâche{filtre !== 'toutes' ? ` pour ${filtre}` : ''}.</p>
+              <p className={`px-4 py-4 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Aucune tâche{filtre !== 'toutes' ? ` pour ${filtre === 'Équipe' ? 'l’équipe' : filtre}` : ''}.</p>
             ) : (
               <ul className="divide-y divide-[color:var(--v2-filet)]">
                 {visibles.map(t => (
@@ -92,10 +91,10 @@ export default function TachesEquipe({ taches: initiales, actif }: { taches: Tac
               className={`h-11 min-w-0 flex-[1_1_220px] rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[14.5px] ${corps}`}
             />
             <select
-              value={assigne} onChange={e => setAssigne(e.target.value as Responsable)} aria-label="Attribuer à"
+              value={assigne} onChange={e => setAssigne(e.target.value as Assigne)} aria-label="Attribuer à"
               className={`h-11 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[14.5px] ${corps}`}
             >
-              {EQUIPE.map(m => <option key={m} value={m}>{m}</option>)}
+              {ASSIGNES.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
             <button type="submit" disabled={!titre.trim() || envoi} className={`h-11 rounded-[var(--v2-radius-pilule)] bg-[color:var(--v2-color-encre)] px-5 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-surface)] disabled:opacity-40`}>
               Ajouter
