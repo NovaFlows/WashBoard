@@ -26,7 +26,7 @@ const TON_POINT = { ok: 'vert', attention: 'ambre', alerte: 'rouge', neutre: 'gr
 
 type Resume = { expediteursEnAttente: number | null; suiviActif: boolean }
 
-function heureParis(iso: string): string {
+export function heureParis(iso: string): string {
   return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
 }
 function jourMois(aaaammjj: string): string {
@@ -115,7 +115,7 @@ function GraphiqueInscriptions({ semaines }: { semaines: { debut: string; nombre
 
 // ── Ligne de laveur ──────────────────────────────────────────────────────────
 
-function LigneLaveur({ l, sousTitre, droite, apres }: { l: LaveurResume; sousTitre: React.ReactNode; droite?: React.ReactNode; apres?: React.ReactNode }) {
+export function LigneLaveur({ l, sousTitre, droite, apres }: { l: LaveurResume; sousTitre: React.ReactNode; droite?: React.ReactNode; apres?: React.ReactNode }) {
   return (
     <li className="flex items-center">
       <Link href={`/dashboard/support/laveurs/${l.id}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 hover:bg-[color:var(--v2-filet)]/50">
@@ -135,9 +135,9 @@ function LigneLaveur({ l, sousTitre, droite, apres }: { l: LaveurResume; sousTit
   )
 }
 
-const LISTE = 'overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)]'
+export const LISTE = 'overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)]'
 
-function Vide({ children }: { children: React.ReactNode }) {
+export function Vide({ children }: { children: React.ReactNode }) {
   return <Carte className="px-4 py-4"><p className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{children}</p></Carte>
 }
 

@@ -11,6 +11,7 @@ import type { ProspectARappeler } from '@/lib/prospects'
 import type { ResumeMembre } from '@/lib/espaceEquipe'
 import CartesEquipe from './CartesEquipe'
 import TachesEquipe from './TachesEquipe'
+import ActiviteLaveursJour from './ActiviteLaveursJour'
 import type { Tache } from '@/lib/tachesEquipe'
 
 // Accueil de l'espace équipe : trois portes, chacune avec ce qui l'attend.
@@ -39,6 +40,8 @@ export default function AccueilEquipeV2({ resume, email, laveurs, maintenant, pr
       )}
 
       <TachesEquipe taches={taches} actif={tachesActives} />
+
+      <ActiviteLaveursJour laveurs={laveurs} maintenant={maintenant} />
 
       <Section titre="Laveurs">
         <CarteListe>
