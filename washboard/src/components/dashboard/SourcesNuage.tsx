@@ -5,6 +5,7 @@ import {
 } from 'recharts'
 import type { PointSource } from '@/lib/graphiquesCrm'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Sources de trafic : volume × conversion.
 //
@@ -97,12 +98,7 @@ export default function SourcesNuage({ sources, visiteurs, conversions, accent =
       </p>
 
       {points.length < 2 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500 py-8 text-center leading-relaxed">
-          {t('Il faut au moins deux sources d’au moins')} {SEUIL_VISITEURS} {t('visiteurs pour les comparer.')}
-          {/* Ne pas écrire ici le titre de l'encart des liens : les tests de bout
-              en bout le cherchent comme texte unique sur la page. */}
-          <br />{t('Utilisez les liens de partage en bas de page pour que chaque source soit reconnue.')}
-        </p>
+        <p className="text-sm text-slate-400 dark:text-slate-500 py-8 text-center leading-relaxed">{trans(t, 'Il faut au moins deux sources d’au moins {e0} visiteurs pour les comparer.{e1}Utilisez les liens de partage en bas de page pour que chaque source soit reconnue.', { e0: SEUIL_VISITEURS, e1: <br /> })}</p>
       ) : (
         <>
           <div className="text-slate-300 dark:text-slate-700">

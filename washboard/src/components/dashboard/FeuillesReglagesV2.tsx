@@ -13,6 +13,7 @@ import {
   type ModeDeplacement, type PalierDeplacement, type UniteDeplacement,
 } from '@/lib/profil'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Feuilles du bas des réglages qui n'existaient que sur l'ancien écran « Tous les réglages »
 // (`ParametresFormV1`) : frais de déplacement, nom d'expéditeur des SMS (avec SMS test), et la
@@ -388,9 +389,7 @@ export function FeuilleSuppressionV2({
       }
     >
       <form id="reglage-suppression" onSubmit={soumettre} noValidate>
-        <p className={`text-[14.5px] leading-[1.55] ${corps}`}>
-          {t('Cela programme l’effacement de votre compte et de')} <strong className={corpsFort}>{t('toutes vos données')}</strong> {t(': clients, rendez-vous, comptabilité, prestations. Vous avez')} <strong className={corpsFort}>{t('30 jours')}</strong> {t('pour annuler avant l’effacement définitif.')}
-        </p>
+        <p className={`text-[14.5px] leading-[1.55] ${corps}`}>{trans(t, 'Cela programme l’effacement de votre compte et de {e0} : clients, rendez-vous, comptabilité, prestations. Vous avez {e1} pour annuler avant l’effacement définitif.', { e0: <strong className={corpsFort}>{t('toutes vos données')}</strong>, e1: <strong className={corpsFort}>{t('30 jours')}</strong> })}</p>
         <div className="mt-4">
           <Constat ton="ambre">
             {t('Un abonnement en cours ne s’arrête pas tout seul : résiliez-le avant la prochaine échéance pour ne pas être prélevé.')}
@@ -442,7 +441,7 @@ export function CarteEtatCompte({
       <h2 className={`text-[16px] ${corpsFort}`}>{supprime ? t('Suppression programmée') : 'Compte en pause'}</h2>
       <p className={`mt-1.5 text-[14px] leading-[1.55] ${corps}`}>
         {supprime
-          ? <>{t('Votre compte sera')} <strong className={corpsFort}>{t('définitivement supprimé dans {jours} jour{v1}', { jours, v1: jours > 1 ? 's' : '' })}</strong>{t(', avec toutes vos données. Votre page de réservation est déjà masquée.')}</>
+          ? <>{trans(t, 'Votre compte sera {e0}, avec toutes vos données. Votre page de réservation est déjà masquée.', { e0: <strong className={corpsFort}>{t('définitivement supprimé dans {jours} jour{v1}', { jours, v1: jours > 1 ? 's' : '' })}</strong> })}</>
           : t('Votre page de réservation est masquée et vous ne recevez plus de nouveaux rendez-vous. Vos données sont conservées.')}
       </p>
       {erreur && <div className="mt-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}

@@ -11,6 +11,7 @@ import { TAMPONS_PROPOSES, phraseCarte, recompenseCourte, type ReglagesFidelite,
 import { COULEUR_CARTE_DEFAUT, FINITIONS_CARTE, LIBELLES_FINITION, NUANCES_CARTE, couleurCarte, type EmblemeCarte, type FinitionCarte } from '@/lib/carteFidelite'
 import CarteFidelite3D, { type CommandesCarte, type ScenarioCarte } from '@/components/fidelite/CarteFidelite3D'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // « Carte de fidélité » — décisions d'Alexandre, 2026-10-17 : des tampons (une prestation
 // terminée = un tampon), une récompense au choix du laveur (offerte, % ou €) appliquée
@@ -271,7 +272,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                   <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
                     {logoHorsOffre
                       ? t('Votre offre actuelle n’affiche pas votre logo sur vos pages : la carte porte votre initiale.')
-                      : <>{t('Ajoutez votre logo dans')} <Link href="/dashboard/parametres/apparence" className="underline underline-offset-2">{t('Apparence de ma page')}</Link> {t('pour l’afficher sur la carte.')}</>}
+                      : <>{trans(t, 'Ajoutez votre logo dans {e0} pour l’afficher sur la carte.', { e0: <Link href="/dashboard/parametres/apparence" className="underline underline-offset-2">{t('Apparence de ma page')}</Link> })}</>}
                   </p>
                 )}
               </section>

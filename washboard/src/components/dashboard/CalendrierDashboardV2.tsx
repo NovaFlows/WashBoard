@@ -34,6 +34,7 @@ import { semainesDuMois, compterActifsParJour, pointsRendezVous } from '@/lib/vu
 import { adresseAvecLieu } from '@/lib/centreAuto'
 import { openGmail, openWhatsapp } from '@/lib/contact'
 import { useT , useLocale } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboard.tsx, le point de branchement ; décision
@@ -681,10 +682,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                               </div>
                             )}
                             {suivant && trajet && (
-                              <div className={`flex items-center gap-1.5 border-t border-[color:var(--v2-filet)] px-3.5 py-1.5 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                                <IconeRoute />
-                                {trajet.minutes} {tr('min de route ·')} {km(trajet.km)} {tr('km')}
-                              </div>
+                              <div className={`flex items-center gap-1.5 border-t border-[color:var(--v2-filet)] px-3.5 py-1.5 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{trans(tr, '{e0}{e1} min de route · {e2} km', { e0: <IconeRoute />, e1: trajet.minutes, e2: km(trajet.km) })}</div>
                             )}
                           </li>
                         )
@@ -1069,10 +1067,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                       }}
                     />
                     {trajet && (
-                      <span className={`flex items-center gap-1.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                        <IconeRoute />
-                        {trajet.minutes} {tr('min de route ·')} {km(trajet.km)} {tr('km')}
-                      </span>
+                      <span className={`flex items-center gap-1.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{trans(tr, '{e0}{e1} min de route · {e2} km', { e0: <IconeRoute />, e1: trajet.minutes, e2: km(trajet.km) })}</span>
                     )}
                   </div>
                 )}

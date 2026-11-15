@@ -8,6 +8,7 @@ import { extraireZip, extension, TYPES_ACCEPTES, LIMITES } from '@/lib/zipFactur
 import { BUCKET_FACTURES_IMPORTEES } from '@/lib/importFactures'
 import type { SourceDate } from '@/lib/dateFacture'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Import des factures qu'un laveur a faites ailleurs, avant WashBoard.
 //
@@ -206,16 +207,10 @@ export function ImportFactures() {
   return (
     <section aria-labelledby="import-titre" className="w-full mb-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
       <h2 id="import-titre" className="text-base font-bold text-slate-900 dark:text-white">{tr('Ajouter mes factures existantes')}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        {tr('Vos factures')} <strong className="font-semibold text-slate-700 dark:text-slate-200">{tr('de vente')}</strong>{tr(', envoyées à vos clients avant WashBoard : PDF, photos (JPG, PNG) ou un fichier ZIP. Vous vérifiez la date de chacune avant de l’enregistrer, elle se range au bon mois et garde son numéro d’origine.')}
-      </p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{trans(tr, 'Vos factures {e0}, envoyées à vos clients avant WashBoard : PDF, photos (JPG, PNG) ou un fichier ZIP. Vous vérifiez la date de chacune avant de l’enregistrer, elle se range au bon mois et garde son numéro d’origine.', { e0: <strong className="font-semibold text-slate-700 dark:text-slate-200">{tr('de vente')}</strong> })}</p>
       {/* Les achats n'ont rien à faire du côté Ventes : ils fausseraient le
           total encaissé du mois. Ils auront leur propre côté dans cet onglet. */}
-      <p className="mt-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-        {tr('Factures d’achat (matériel, produits, abonnements) : ne les ajoutez pas ici. Elles auront leur place dans le côté')}{' '}
-        <Link href="/dashboard/factures?cote=achats" className="font-semibold underline">{tr('Achats')}</Link> {tr('de cet onglet,')}{' '}
-        <span className="font-semibold">{tr('en développement')}</span>.
-      </p>
+      <p className="mt-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">{trans(tr, 'Factures d’achat (matériel, produits, abonnements) : ne les ajoutez pas ici. Elles auront leur place dans le côté{e0}{e1} de cet onglet,{e2}{e3}.', { e0: ' ', e1: <Link href="/dashboard/factures?cote=achats" className="font-semibold underline">{tr('Achats')}</Link>, e2: ' ', e3: <span className="font-semibold">{tr('en développement')}</span> })}</p>
 
       <label
         onDragOver={e => { e.preventDefault(); setSurvol(true) }}

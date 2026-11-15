@@ -6,6 +6,7 @@ import {
 import type { PointDelai } from '@/lib/graphiquesCrm'
 import { FUSEAU } from '@/lib/dateUtils'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Délai de réservation : combien de jours avant le rendez-vous les clients
 // réservent. Un point par réservation, la date où elle a été prise en
@@ -49,9 +50,7 @@ export default function DelaiReservation({ points, mediane, teinte, className = 
         <p className="text-sm text-slate-400 dark:text-slate-500 py-8 text-center">{tr('Pas assez de réservations sur la période.')}</p>
       ) : (
         <>
-          <p className="text-sm text-slate-700 dark:text-slate-200 mb-2">
-            {tr('La moitié de vos clients réservent')} <span className="font-semibold">{avance(mediane)}</span> {tr('à l’avance ou moins.')}
-          </p>
+          <p className="text-sm text-slate-700 dark:text-slate-200 mb-2">{trans(tr, 'La moitié de vos clients réservent {e0} à l’avance ou moins.', { e0: <span className="font-semibold">{avance(mediane)}</span> })}</p>
           <div className="text-slate-300 dark:text-slate-700">
             <ResponsiveContainer width="100%" height={180}>
               <ScatterChart margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>

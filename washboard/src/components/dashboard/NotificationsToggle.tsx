@@ -2,6 +2,7 @@
 
 import { useNotificationsPush } from '@/hooks/useNotificationsPush'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Activation des notifications push, dans les réglages du laveur (écran du site, inchangé).
 //
@@ -26,9 +27,7 @@ export function NotificationsToggle() {
       </p>
 
       {etat === 'ios-non-installe' && (
-        <p className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-xl p-3.5">
-          {t('Sur iPhone, ajoutez d’abord WashBoard à votre écran d’accueil : bouton Partager dans Safari, puis')} <strong>{t('Sur l’écran d’accueil')}</strong>{t('. Revenez ensuite ici depuis l’icône WashBoard.')}
-        </p>
+        <p className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-xl p-3.5">{trans(t, 'Sur iPhone, ajoutez d’abord WashBoard à votre écran d’accueil : bouton Partager dans Safari, puis {e0}. Revenez ensuite ici depuis l’icône WashBoard.', { e0: <strong>{t('Sur l’écran d’accueil')}</strong> })}</p>
       )}
 
       {etat === 'non-supporte' && (
@@ -67,9 +66,7 @@ export function NotificationsToggle() {
           laveur qui ne les a jamais activées ne le recevait jamais et ne
           pouvait pas le deviner (relevé par Ryan le 2026-09-15). */}
       {etat !== 'actif' && (
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
-          {t('Sans notifications actives, vous ne recevrez pas le')} <strong>{t('rappel de 22 h')}</strong> {t('sur les rendez-vous du jour qui ne sont pas encore marqués « Terminé » — il n’existe ni par email, ni par SMS. Les réservations, elles, vous arrivent toujours par email.')}
-        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">{trans(t, 'Sans notifications actives, vous ne recevrez pas le {e0} sur les rendez-vous du jour qui ne sont pas encore marqués « Terminé » — il n’existe ni par email, ni par SMS. Les réservations, elles, vous arrivent toujours par email.', { e0: <strong>{t('rappel de 22 h')}</strong> })}</p>
       )}
 
       {erreur && <p className="text-sm text-red-600 dark:text-red-400 mt-3">{erreur}</p>}

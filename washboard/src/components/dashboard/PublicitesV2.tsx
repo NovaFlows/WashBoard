@@ -14,6 +14,7 @@ import {
   type BilanCreation, type CampagneAffichee, type Format, type Plateforme,
 } from '@/lib/campagne'
 import { useT , useLocale } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // « Publicités » — l'écran de l'application installée (v2).
 //
@@ -457,17 +458,12 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
             style={{ background: 'color-mix(in srgb, var(--v2-color-ambre) 10%, transparent)' }}
           >
             <AlertTriangle size={14} strokeWidth={2.5} className="mt-0.5 shrink-0" style={{ color: 'var(--v2-color-ambre)' }} />
-            <span className={`text-[12.5px] leading-relaxed ${corps}`} style={{ color: 'var(--v2-color-ambre)' }}>
-              {t('Ce budget date de')} {jours} {t('jours et la campagne tourne toujours. Tant qu’il n’est pas actualisé, le retour affiché monte tout seul.')}{' '}
-              <span className={corpsFort}>{t('Mettre à jour')}</span>
-            </span>
+            <span className={`text-[12.5px] leading-relaxed ${corps}`} style={{ color: 'var(--v2-color-ambre)' }}>{trans(t, 'Ce budget date de {e0} jours et la campagne tourne toujours. Tant qu’il n’est pas actualisé, le retour affiché monte tout seul.{e1}{e2}', { e0: jours, e1: ' ', e2: <span className={corpsFort}>{t('Mettre à jour')}</span> })}</span>
           </button>
         )}
 
         {b.reservations > 0 && (
-          <p className={`mt-2 text-[14px] leading-relaxed ${corps}`}>
-            {formatEuros(c.budget)} {t('€ dépensés,')} <span className={corpsFort}>{t('{formatEuros} € de lavages', { formatEuros: formatEuros(b.chiffreAffaires) })}</span> {t('réservés.')}
-          </p>
+          <p className={`mt-2 text-[14px] leading-relaxed ${corps}`}>{trans(t, '{e0} € dépensés, {e1} réservés.', { e0: formatEuros(c.budget), e1: <span className={corpsFort}>{t('{formatEuros} € de lavages', { formatEuros: formatEuros(b.chiffreAffaires) })}</span> })}</p>
         )}
       </div>
 
@@ -635,13 +631,9 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
                     : `${formatEuros(Math.round(totaux.coutParReservation * 100) / 100)} € chacun`}
                 />
                 {totaux.reservations > 0 && totaux.retour !== null && (
-                  <p className={`mt-2 border-t border-[color:var(--v2-filet)] pt-3 text-[14px] leading-relaxed ${corps}`}>
-                    {t('Pour 1 € de publicité, vous avez encaissé')}{' '}
-                    <span className={corpsFort} style={couleur ? { color: couleur } : undefined}>
+                  <p className={`mt-2 border-t border-[color:var(--v2-filet)] pt-3 text-[14px] leading-relaxed ${corps}`}>{trans(t, 'Pour 1 € de publicité, vous avez encaissé{e0}{e1}{e2}de lavages.', { e0: ' ', e1: <span className={corpsFort} style={couleur ? { color: couleur } : undefined}>
                       {formatEuros(Math.round(totaux.retour * 100) / 100)} €
-                    </span>{' '}
-                    {t('de lavages.')}
-                  </p>
+                    </span>, e2: ' ' })}</p>
                 )}
               </div>
             </Carte>

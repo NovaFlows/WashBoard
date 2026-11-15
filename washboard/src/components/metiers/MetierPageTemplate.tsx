@@ -8,6 +8,7 @@ import { Faq, type FaqItem } from '@/components/blog/Prose'
 import Coque from '@/components/landing/vitrine/Coque'
 import FilAriane from '@/components/landing/vitrine/FilAriane'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Gabarit commun aux pages métier ("logiciel pour <métier>"). Une page par
 // métier publié : voir `@/lib/metiers`. Ce fichier porte la structure et le
@@ -190,10 +191,7 @@ export default function MetierPageTemplate({
                 {c.features.join(', ')}.
               </p>
             ))}
-            <p>
-              {t('Passage à l’année possible (engagement de 12 mois),')} {freeMonthsLabel()}{t('. Détail complet des formules sur')}{' '}
-              <Link href="/#tarifs">{t('la page d’accueil')}</Link>.
-            </p>
+            <p>{trans(t, 'Passage à l’année possible (engagement de 12 mois), {e0}. Détail complet des formules sur{e1}{e2}.', { e0: freeMonthsLabel(), e1: ' ', e2: <Link href="/#tarifs">{t('la page d’accueil')}</Link> })}</p>
           </div>
         </div>
       </section>

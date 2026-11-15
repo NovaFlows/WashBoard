@@ -14,6 +14,7 @@ import {
   type BilanCreation, type CampagneAffichee, type Format, type Plateforme,
 } from '@/lib/campagne'
 import { useT , useLocale } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // ════════════════════════════════════════════════════════════════════════════
 // L'écran des publicités, dans l'onglet CRM
@@ -480,21 +481,15 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
           className="mt-3 w-full flex items-start gap-2 text-left px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
         >
           <AlertTriangle size={14} strokeWidth={2.5} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-          <span className="text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed">
-            {t('Ce budget date de')} {joursBudget} {t('jours et la campagne tourne toujours. Tant qu’il n’est pas actualisé, le retour affiché monte tout seul et vous paraît meilleur qu’il ne l’est.')}
-            <span className="underline font-semibold"> {t('Mettre à jour')}</span>
-          </span>
+          <span className="text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed">{trans(t, 'Ce budget date de {e0} jours et la campagne tourne toujours. Tant qu’il n’est pas actualisé, le retour affiché monte tout seul et vous paraît meilleur qu’il ne l’est.{e1}', { e0: joursBudget, e1: <span className="underline font-semibold"> {t('Mettre à jour')}</span> })}</span>
         </button>
       )}
 
       {/* La phrase qui dit tout, en toutes lettres : un laveur ne lit pas un
           tableau, il lit une conclusion. */}
       {b.reservations > 0 && (
-        <p className="mt-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-          {formatEuros(c.budget)} {t('€ dépensés,')} <strong>{formatEuros(b.chiffreAffaires)} {t('€ de lavages')}</strong> {t('réservés')}
-          {b.tauxConversion !== null && b.visites >= SEUIL_FIABILITE
-            && <> — {pourcent(b.tauxConversion)} {t('des visiteurs ont réservé')}</>}.
-        </p>
+        <p className="mt-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{trans(t, '{e0} € dépensés, {e1} réservés{e2}.', { e0: formatEuros(c.budget), e1: <strong>{formatEuros(b.chiffreAffaires)} {t('€ de lavages')}</strong>, e2: b.tauxConversion !== null && b.visites >= SEUIL_FIABILITE
+            && <> — {pourcent(b.tauxConversion)} {t('des visiteurs ont réservé')}</> })}</p>
       )}
 
       {/* ── Le détail par vidéo ─────────────────────────────────────────── */}
@@ -726,13 +721,9 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
           </div>
 
           {totaux.reservations > 0 && totaux.retour !== null && (
-            <p className="mt-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {t('Pour 1 € de publicité, vous avez encaissé')}{' '}
-              <strong style={couleurTotal ? { color: couleurTotal } : undefined}>
+            <p className="mt-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{trans(t, 'Pour 1 € de publicité, vous avez encaissé{e0}{e1}{e2}de lavages.', { e0: ' ', e1: <strong style={couleurTotal ? { color: couleurTotal } : undefined}>
                 {formatEuros(Math.round(totaux.retour * 100) / 100)} €
-              </strong>{' '}
-              {t('de lavages.')}
-            </p>
+              </strong>, e2: ' ' })}</p>
           )}
         </div>
       )}

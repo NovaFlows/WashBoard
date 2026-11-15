@@ -9,6 +9,7 @@ import { adresseAvecLieu } from '@/lib/centreAuto'
 import { getLangue } from '@/lib/i18n/serveur'
 import { LOCALES_INTL } from '@/lib/i18n/langues'
 import { getT } from '@/lib/i18n/serveur'
+import { trans } from '@/lib/i18n/trans'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -159,14 +160,9 @@ export default async function ConfirmationPage({ params }: Props) {
           <p className="wb-recu-reglement">{t('Mode de règlement : paiement comptant sur place')}</p>
 
           {/* Encart justificatif */}
-          <div className="wb-recu-just">
-            <b>{t('Justificatif de prestation — facture')}</b>
-            {t('Ce document fait office de reçu de prestation de service et peut être utilisé pour une facture. Référence :')} <strong>{ref}</strong> {t('· Émis le')} {today}
-          </div>
+          <div className="wb-recu-just">{trans(t, '{e0}Ce document fait office de reçu de prestation de service et peut être utilisé pour une facture. Référence : {e1} · Émis le {e2}', { e0: <b>{t('Justificatif de prestation — facture')}</b>, e1: <strong>{ref}</strong>, e2: today })}</div>
 
-          <div className="wb-recu-pied">
-            {t('Ce reçu a été généré automatiquement par')} <strong>{t('WashBoard')}</strong> {t('· Plateforme de réservation de prestations à domicile')}
-          </div>
+          <div className="wb-recu-pied">{trans(t, 'Ce reçu a été généré automatiquement par {e0} · Plateforme de réservation de prestations à domicile', { e0: <strong>{t('WashBoard')}</strong> })}</div>
         </div>
       </div>
     </div>

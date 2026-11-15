@@ -24,6 +24,7 @@ import ConsentementCookies, { LienGererCookies } from '@/components/booking/Cons
 import { getLangue } from '@/lib/i18n/serveur'
 import { LOCALES_INTL } from '@/lib/i18n/langues'
 import { getT } from '@/lib/i18n/serveur'
+import { trans } from '@/lib/i18n/trans'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -139,9 +140,7 @@ export default async function BookingPage({ params }: Props) {
         <div style={{ maxWidth: '400px', textAlign: 'center' }}>
           <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔒</div>
           <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>{t('Page temporairement indisponible')}</h1>
-          <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.6', marginBottom: '24px' }}>
-            {t('La page de réservation de')} <strong>{washer.name}</strong> {t('est momentanément suspendue. Contactez directement votre prestataire pour prendre rendez-vous.')}
-          </p>
+          <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.6', marginBottom: '24px' }}>{trans(t, 'La page de réservation de {e0} est momentanément suspendue. Contactez directement votre prestataire pour prendre rendez-vous.', { e0: <strong>{washer.name}</strong> })}</p>
           {washer.phone && (
             <a href={`tel:${washer.phone}`} style={{ display: 'inline-block', background: '#2563eb', color: '#fff', textDecoration: 'none', fontWeight: '700', fontSize: '14px', padding: '12px 24px', borderRadius: '10px' }}>{t('Appeler {name}', { name: washer.name })}</a>
           )}

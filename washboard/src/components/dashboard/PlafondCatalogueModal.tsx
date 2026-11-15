@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // ── Identité WashBoard ──────────────────────────────────────────────────────
 // Mêmes valeurs que ChoixVeilleModal, et pour la même raison : une fenêtre qui
@@ -103,9 +104,7 @@ export function PlafondCatalogueModal({ message, cible, actives, onEchanger, onF
               </p>
               {/* Le nom de la cible, pour que l'échange soit concret. « Une
                   prestation » ne se visualise pas ; « sf » si. */}
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                {t('Choisissez celle qui laisse sa place à')} <span className="font-semibold text-slate-700 dark:text-slate-200">{cible.name}</span>{t('. Elle passera en veille, vous pourrez la remettre quand vous voulez.')}
-              </p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{trans(t, 'Choisissez celle qui laisse sa place à {e0}. Elle passera en veille, vous pourrez la remettre quand vous voulez.', { e0: <span className="font-semibold text-slate-700 dark:text-slate-200">{cible.name}</span> })}</p>
 
               <ul className="mt-3 space-y-1.5">
                 {actives.map(p => {

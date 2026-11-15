@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { isPwaStandalone } from '@/lib/pwaStandalone'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Ligne de diagnostic discrète au bas de l'écran « Plus » de la PWA : la version
 // réellement chargée par le téléphone, et ce qu'il détecte de lui-même.
@@ -48,7 +49,7 @@ export function DiagnosticPwa() {
       v. {process.env.NEXT_PUBLIC_BUILD_SHA}
       {etat && <><br />{etat.hote}</>}
       {etat && <>{t('· mode appli : {oui} · classe wb-pwa : {v1}', { oui: oui(etat.appli), v1: oui(etat.classe) })}</>}
-      {equipe && <><br />{t('compte :')} {equipe.compte ?? '?'} {t('· équipe :')} {oui(equipe.membre)} {t('· liste du déploiement :')} {equipe.listeConfiguree ? t('définie') : 'ABSENTE'}</>}
+      {equipe && <>{trans(t, '{e0}compte : {e1} · équipe : {e2} · liste du déploiement : {e3}', { e0: <br />, e1: equipe.compte ?? '?', e2: oui(equipe.membre), e3: equipe.listeConfiguree ? t('définie') : 'ABSENTE' })}</>}
     </p>
   )
 }

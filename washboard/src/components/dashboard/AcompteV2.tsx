@@ -15,6 +15,7 @@ import {
   APPLIS_PAIEMENT, DELAIS_PAIEMENT, estLienWero, formaterIban, ibanValide, normaliserIban, DELAIS_REMBOURSEMENT, conditionsAcompte, montantAcompte, moyensPaiement, type LiensPaiement, type ReglagesAcompte, type TypeAcompte,
 } from '@/lib/acompte'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // « Acompte » — décisions d'Alexandre, 2026-10-17 : option 1 (lien de paiement du laveur),
 // et tout au choix du laveur : l'acompte, son montant (fixe ou %), le délai pour le payer
@@ -175,9 +176,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                 {b.type === 'pourcentage' ? (
                   <p className={`mt-2.5 flex items-start gap-2 text-[12.5px] leading-snug ${corps}`}>
                     <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
-                    <span>
-                      {t('En pourcentage, le montant change à chaque réservation :')} <strong className={corpsFort}>{t('seul PayPal')}</strong> {t('affichera automatiquement le bon prix. Avec Stripe, SumUp ou Lydia, le client devra taper le montant ; pour un prix toujours juste, choisissez un acompte en € et créez des liens de ce montant.')}
-                    </span>
+                    <span>{trans(t, 'En pourcentage, le montant change à chaque réservation : {e0} affichera automatiquement le bon prix. Avec Stripe, SumUp ou Lydia, le client devra taper le montant ; pour un prix toujours juste, choisissez un acompte en € et créez des liens de ce montant.', { e0: <strong className={corpsFort}>{t('seul PayPal')}</strong> })}</span>
                   </p>
                 ) : (
                   <p className={`mt-2.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Créez dans chaque application un lien du même montant ({v0} €).', { v0: b.valeur || '…' })}</p>
@@ -218,9 +217,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                     </div>
                     <div>
                       <p className={ETIQUETTE}>{t('Votre QR code Wero (facultatif)')}</p>
-                      <p className={`mb-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                        {t('Dans l’application de votre banque : Wero › Recevoir › QR code,')} <strong className={corpsFort}>{t('sans montant')}</strong>{t('. Faites une capture d’écran et ajoutez-la ici : WashBoard y lit votre lien Wero.')}
-                      </p>
+                      <p className={`mb-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{trans(t, 'Dans l’application de votre banque : Wero › Recevoir › QR code, {e0}. Faites une capture d’écran et ajoutez-la ici : WashBoard y lit votre lien Wero.', { e0: <strong className={corpsFort}>{t('sans montant')}</strong> })}</p>
                       <div className="flex flex-wrap items-center gap-3">
                         {b.weroLien && <QrDepuisLien lien={b.weroLien} taille={80} alt={t('Votre QR code Wero')} />}
                         <label className={`${BOUTON} cursor-pointer border border-[color:var(--v2-filet-fort)]`} style={PRESSION}>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Formulaire de l'équipe support : on saisit le lien du laveur, le serveur
 // vérifie qu'il a bien ouvert l'accès, et renvoie un lien de connexion.
@@ -63,9 +64,7 @@ export function ResultatAcces({ erreur, resultat }: { erreur: string | null; res
             <li>
               <strong>{t('À usage unique et valable peu de temps')}</strong> {t(': ouvrez-le maintenant. Demander un nouvel accès annule celui-ci.')}
             </li>
-            <li>
-              {t('Ouvrez-le en')} <strong>{t('navigation privée')}</strong> {t(': sinon vous perdez votre propre session et devrez vous reconnecter.')}
-            </li>
+            <li>{trans(t, 'Ouvrez-le en {e0} : sinon vous perdez votre propre session et devrez vous reconnecter.', { e0: <strong>{t('navigation privée')}</strong> })}</li>
           </ul>
           <a
             href={resultat.url}
@@ -107,9 +106,7 @@ export default function SupportAccessForm() {
             required
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
           />
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-            {t('La partie après')} <code>{t('/book/')}</code> {t('dans son lien de réservation.')}
-          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">{trans(t, 'La partie après {e0} dans son lien de réservation.', { e0: <code>{t('/book/')}</code> })}</p>
         </div>
 
         <button

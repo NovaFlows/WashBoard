@@ -58,7 +58,7 @@ describe('dictionnaires', () => {
       // Une traduction peut OMETTRE une variable de pluriel (`{v1}` = « s » ou rien dans la phrase française, inutile
       // en allemand par exemple), jamais en inventer une, ni omettre une vraie valeur.
       for (const v of vars(valeur)) expect(vars(cle).has(v), `${cle} : ${v} inconnue`).toBe(true)
-      for (const v of vars(cle)) if (!vars(valeur).has(v)) expect(/^\{v\d+\}$/.test(v), `${cle} : ${v} omise`).toBe(true)
+      for (const v of vars(cle)) if (!vars(valeur).has(v)) expect(/^\{[ve]\d+\}$/.test(v), `${cle} : ${v} omise`).toBe(true)
     }
   })
 })

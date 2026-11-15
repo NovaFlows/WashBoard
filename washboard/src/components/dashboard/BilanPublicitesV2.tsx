@@ -10,6 +10,7 @@ import {
   type CampagneAffichee,
 } from '@/lib/campagne'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // « Bilan » — la vue qui additionne, quand l'écran des campagnes ne suffit
 // plus.
@@ -169,13 +170,9 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
       />
 
       {totaux.reservations > 0 && totaux.retour !== null && (
-        <p className={`mt-2 border-t border-[color:var(--v2-filet)] pt-3 text-[14px] leading-relaxed ${corps}`}>
-          {t('Pour 1 € de publicité, vous avez encaissé')}{' '}
-          <span className={corpsFort} style={couleur ? { color: couleur } : undefined}>
+        <p className={`mt-2 border-t border-[color:var(--v2-filet)] pt-3 text-[14px] leading-relaxed ${corps}`}>{trans(t, 'Pour 1 € de publicité, vous avez encaissé{e0}{e1}{e2}de lavages.', { e0: ' ', e1: <span className={corpsFort} style={couleur ? { color: couleur } : undefined}>
             {formatEuros(Math.round(totaux.retour * 100) / 100)} €
-          </span>{' '}
-          {t('de lavages.')}
-        </p>
+          </span>, e2: ' ' })}</p>
       )}
     </Carte>
   )

@@ -11,6 +11,7 @@ import { useT } from '@/components/i18n/I18nProvider'
 import {
   BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, Guide, LIEN_DISCRET, SAISIE, TitreEntree,
 } from '@/components/entree/Entree'
+import { trans } from '@/lib/i18n/trans'
 
 export default function SignupPage() {
   const t = useT()
@@ -90,7 +91,7 @@ export default function SignupPage() {
           <Champ id="email" label={t('Email')}>
             <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder={t('toi@exemple.fr')} autoComplete="email" className={SAISIE} />
           </Champ>
-          <Champ id="phone" label={t('Téléphone')} aide={<>{t('Un code de confirmation t’arrive par SMS.')}<br />{t('Il sert aussi à te joindre en cas de souci.')}</>}>
+          <Champ id="phone" label={t('Téléphone')} aide={<>{trans(t, 'Un code de confirmation t’arrive par SMS.{e0}Il sert aussi à te joindre en cas de souci.', { e0: <br /> })}</>}>
             <div className="flex items-center gap-2">
               <SelecteurPays valeur={pays} onChange={setPays} pays={proposes} />
               <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder={choixPays.exemple} autoComplete="tel-national" className={SAISIE} />

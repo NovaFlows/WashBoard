@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { finitAvant, premierJourDeDonnee } from '@/lib/chiffresArgent'
 import type { ChiffresBooking } from '@/components/dashboard/ChiffresV2'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Onglet « Clients » de Chiffres (refonte 2026, passe 5, repris au
 // 2026-09-24). Reprend `listeClients`/`buildClientProfile` (déjà utilisés par
@@ -154,10 +155,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
           <p className={`text-[13.5px] ${corps}`}>{t('Aucune relance n’est partie sur cette période.')}</p>
         ) : (
           <>
-            <p className={`text-[14.5px] ${corpsFort}`}>
-              {nombre.format(relances.revenus)} {t('client')}{relances.revenus > 1 ? 's' : ''} {t('sur')} {nombre.format(relances.envoyees)} {t('relancé')}{relances.envoyees > 1 ? 's' : ''} {relances.revenus > 1 ? 'ont' : 'a'} {t('repris rendez-vous')}
-              <span className="text-[color:var(--v2-color-gris)]"> · {nombre.format(Math.round((relances.revenus / relances.envoyees) * 100))} %</span>
-            </p>
+            <p className={`text-[14.5px] ${corpsFort}`}>{trans(t, '{e0} client{e1} sur {e2} relancé{e3} {e4} repris rendez-vous{e5}', { e0: nombre.format(relances.revenus), e1: relances.revenus > 1 ? 's' : '', e2: nombre.format(relances.envoyees), e3: relances.envoyees > 1 ? 's' : '', e4: relances.revenus > 1 ? 'ont' : 'a', e5: <span className="text-[color:var(--v2-color-gris)]"> · {nombre.format(Math.round((relances.revenus / relances.envoyees) * 100))} %</span> })}</p>
           </>
         )}
         <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed mt-1`}>

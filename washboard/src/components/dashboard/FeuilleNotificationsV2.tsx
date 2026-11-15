@@ -6,6 +6,7 @@ import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { useNotificationsPush, type EtatNotifications } from '@/hooks/useNotificationsPush'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 // Notifications sur le téléphone — feuille du bas de « Plus » (PWA). Même autorisation, même
 // abonnement et mêmes routes que l'écran du site (`NotificationsToggle`) : tout vient du hook
@@ -81,9 +82,7 @@ export default function FeuilleNotificationsV2({ onClose }: { onClose: () => voi
       {/* Le rappel du soir ne part QUE par notification : ni e-mail, ni SMS. Un laveur qui ne les
           a jamais activées ne le recevait jamais et ne pouvait pas le deviner. */}
       {etat !== 'actif' && etat !== 'chargement' && (
-        <p className={`mt-4 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          {t('Sans notifications, vous ne recevrez pas le')} <strong>{t('rappel de 22 h')}</strong> {t('sur les rendez-vous du jour qui ne sont pas encore clôturés : il n’existe ni par e-mail, ni par SMS. Les réservations, elles, vous arrivent toujours par e-mail.')}
-        </p>
+        <p className={`mt-4 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{trans(t, 'Sans notifications, vous ne recevrez pas le {e0} sur les rendez-vous du jour qui ne sont pas encore clôturés : il n’existe ni par e-mail, ni par SMS. Les réservations, elles, vous arrivent toujours par e-mail.', { e0: <strong>{t('rappel de 22 h')}</strong> })}</p>
       )}
 
       {erreur && <div className="mt-4"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}

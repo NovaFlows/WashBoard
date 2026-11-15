@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PLAN_LABELS, PLAN_PRICES, SERVICE_QUOTA, type Plan } from '@/lib/plan'
 import { useT } from '@/components/i18n/I18nProvider'
+import { trans } from '@/lib/i18n/trans'
 
 type PrestationChoisissable = {
   id: string
@@ -223,13 +224,9 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
             <>
               <h2 className={V.titre}>{t('{plafond} prestation{v1} sur {length} seulement sont en ligne', { plafond, v1: plafond > 1 ? 's' : '', length: actives.length })}</h2>
 
-              <p className={`${V.texte} mt-3`}>
-                {t('L’offre')} <strong>{PLAN_LABELS[offre]}</strong> {t('en affiche')} {plafond} {t('au maximum. Faute de décision de votre part,')}{' '}
-                {masqueesAujourdhui.length > 0 && (
+              <p className={`${V.texte} mt-3`}>{trans(t, 'L’offre {e0} en affiche {e1} au maximum. Faute de décision de votre part,{e2}{e3}{e4}{e5} par défaut.', { e0: <strong>{PLAN_LABELS[offre]}</strong>, e1: plafond, e2: ' ', e3: masqueesAujourdhui.length > 0 && (
                   <strong>{masqueesAujourdhui.map(s => `« ${s.name} »`).join(', ')}</strong>
-                )}{' '}
-                {pluriel ? t('ont été masquées') : t('a été masquée')} {t('par défaut.')}
-              </p>
+                ), e4: ' ', e5: pluriel ? t('ont été masquées') : t('a été masquée') })}</p>
 
               <div className="mt-5">
                 <ApercuPage actives={actives} plafond={plafond} habit={V} />
