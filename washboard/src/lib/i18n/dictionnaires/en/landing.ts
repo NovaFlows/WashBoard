@@ -27,7 +27,6 @@ export const landing: Dictionnaire = {
   'Le logiciel des laveurs auto et du detailing à domicile. Tes clients réservent en ligne, ton agenda se remplit tout seul, tes factures partent dès que tu termines, et ta carte de fidélité les fait revenir.': 'The software for mobile car washers and at-home detailing. Your clients book online, your calendar fills itself, your invoices go out as soon as you finish, and your loyalty card brings them back.',
   'Essayer 14 jours gratuits': 'Try 14 days free',
   'Manipuler la démo': 'Play with the demo',
-  'Sans carte bancaire. Ensuite, une offre gratuite sans limite de durée.': 'No credit card. Afterwards, a free plan with no time limit.',
   'Pensé pour le téléphone': 'Designed for your phone',
   'Aussi sur ordinateur': 'Also on desktop',
   'S’installe comme une appli': 'Installs like an app',

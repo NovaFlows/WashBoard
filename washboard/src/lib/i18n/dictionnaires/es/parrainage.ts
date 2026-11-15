@@ -15,7 +15,6 @@ export const parrainage: Dictionnaire = {
   'au lieu de 14.': 'en lugar de 14.',
   'Sans carte bancaire.': 'Sin tarjeta bancaria.',
   '28 jours avec le code d’un collègue.': '28 días con el código de un colega.',
-  'Ensuite, une offre gratuite sans limite de durée.': 'Después, un plan gratuito sin límite de tiempo.',
   'Mets-le à l’inscription : tu passes de': 'Introdúcelo al registrarte: pasas de',
   '14 à 28 jours d’essai': '14 a 28 días de prueba',
   'Tu parraines à ton tour ?': '¿Recomiendas tú también?',

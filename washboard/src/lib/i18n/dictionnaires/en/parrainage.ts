@@ -15,7 +15,6 @@ export const parrainage: Dictionnaire = {
   'au lieu de 14.': 'instead of 14.',
   'Sans carte bancaire.': 'No credit card.',
   '28 jours avec le code d’un collègue.': '28 days with a fellow washer’s code.',
-  'Ensuite, une offre gratuite sans limite de durée.': 'After that, a free plan with no time limit.',
   'Mets-le à l’inscription : tu passes de': 'Enter it when you sign up: you go from',
   '14 à 28 jours d’essai': '14 to 28 trial days',
   'Tu parraines à ton tour ?': 'Referring someone yourself?',
