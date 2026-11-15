@@ -56,3 +56,9 @@ export function lienPageMetier(theme: Theme): { href: string; label: string } {
   const page = metierPageForTheme(theme) ?? HUB
   return { href: `/${page.slug}`, label: `Voir tout ce que WashBoard fait pour ${page.cible}` }
 }
+
+/** Même lien, texte traduit : les articles du blog le passent à `Cta` (le français est la clé du dictionnaire). */
+export function lienPageMetierTraduit(t: (phrase: string) => string, theme: Theme): { href: string; label: string } {
+  const lien = lienPageMetier(theme)
+  return { href: lien.href, label: t(lien.label) }
+}

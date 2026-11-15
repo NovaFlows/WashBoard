@@ -80,8 +80,9 @@ export function Table({ head, rows }: { head: string[]; rows: string[][] }) {
 
 /** Fil d'Ariane visible — doublé en JSON-LD par ArticleJsonLd pour Google. */
 export function Breadcrumb({ current }: { current: string }) {
+  const t = useT()
   return (
-    <FilAriane items={[{ label: 'Accueil', href: '/' }, { label: 'Blog', href: '/blog' }, { label: current }]} />
+    <FilAriane items={[{ label: t('Accueil'), href: '/' }, { label: t('Blog'), href: '/blog' }, { label: t(current) }]} />
   )
 }
 
@@ -104,7 +105,7 @@ export function ArticleHeader({ article, intro }: { article: Article; intro: str
         )}
         {' · '}{article.readingMinutes} {t('min de lecture')}
       </p>
-      <h1 className="pr-h1">{article.title}</h1>
+      <h1 className="pr-h1">{t(article.title)}</h1>
       <p className="pr-intro">{intro}</p>
     </header>
   )

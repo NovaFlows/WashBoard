@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { getArticle, SITE_URL } from '@/lib/blog'
-import { lienPageMetier } from '@/lib/metiers'
+import { lienPageMetierTraduit } from '@/lib/metiers'
 import { requiredPlanLabel } from '@/lib/plan'
 import { H2, H3, P, UL, A, Callout, Table, Summary, Faq, ArticleHeader, Cta, AlsoRead, ArticleJsonLd, type FaqItem } from '@/components/blog/Prose'
+import { getTArticle as getT } from '@/lib/i18n/serveur'
 
 const article = getArticle('entretien-piscine-domicile-lancer-activite')!
 const url = `${SITE_URL}/blog/${article.slug}`
@@ -28,230 +29,179 @@ export const metadata: Metadata = {
   },
 }
 
-const faq: FaqItem[] = [
-  {
-    question: 'Combien coûte un contrat d’entretien de piscine ?',
-    answer:
-      'Un contrat d’entretien régulier se facture le plus souvent 80 à 200 € par mois en saison pour un passage hebdomadaire ou bi-mensuel (analyse et équilibrage de l’eau, nettoyage du bassin, des skimmers et du filtre, vérification du matériel), produits en supplément ou inclus selon la formule. Une mise en route de printemps coûte 150 à 300 €, un hivernage 150 à 350 €, un passage ponctuel 60 à 120 €.',
-  },
-  {
-    question: 'Comment lisser une activité d’entretien de piscine sur l’année ?',
-    answer:
-      'En vendant un abonnement annuel réglé en douze mensualités plutôt que des passages en saison : le client paie la même somme chaque mois, vous avez du revenu en hiver, et l’hivernage et la mise en route sont inclus. En complément, l’hiver sert aux hivernages actifs, aux petites réparations, au remplacement de matériel, et à un second métier comme le nettoyage de terrasses ou le lavage auto.',
-  },
-  {
-    question: 'Quels sont les principaux risques du métier ?',
-    answer:
-      'Un mauvais dosage qui abîme un liner ou rend l’eau impropre à la baignade, un matériel endommagé (pompe qui tourne à sec, filtre mal remonté), et la manipulation de produits chimiques (chlore, acide) qui exige des précautions de stockage, de transport et de mélange. Le compte-rendu écrit de chaque passage (valeurs mesurées, produits ajoutés) est votre meilleure protection en cas de litige.',
-  },
-  {
-    question: 'Combien de piscines peut-on entretenir par jour ?',
-    answer:
-      'Un passage d’entretien courant prend 30 à 60 minutes. Avec des clients regroupés par secteur, un pisciniste d’entretien réalise 8 à 12 passages par jour en saison ; dispersés sur tout un département, il en fait 5 ou 6. Une tournée de 40 à 60 contrats hebdomadaires ou bi-mensuels fait un temps plein d’avril à octobre.',
-  },
-]
 
-export default function Page() {
+export default async function Page() {
+  const t = await getT()
+  const faq: FaqItem[] = [
+    {
+      question: t('Combien coûte un contrat d’entretien de piscine ?'),
+      answer:
+        t('Un contrat d’entretien régulier se facture le plus souvent 80 à 200 € par mois en saison pour un passage hebdomadaire ou bi-mensuel (analyse et équilibrage de l’eau, nettoyage du bassin, des skimmers et du filtre, vérification du matériel), produits en supplément ou inclus selon la formule. Une mise en route de printemps coûte 150 à 300 €, un hivernage 150 à 350 €, un passage ponctuel 60 à 120 €.'),
+    },
+    {
+      question: t('Comment lisser une activité d’entretien de piscine sur l’année ?'),
+      answer:
+        t('En vendant un abonnement annuel réglé en douze mensualités plutôt que des passages en saison : le client paie la même somme chaque mois, vous avez du revenu en hiver, et l’hivernage et la mise en route sont inclus. En complément, l’hiver sert aux hivernages actifs, aux petites réparations, au remplacement de matériel, et à un second métier comme le nettoyage de terrasses ou le lavage auto.'),
+    },
+    {
+      question: t('Quels sont les principaux risques du métier ?'),
+      answer:
+        t('Un mauvais dosage qui abîme un liner ou rend l’eau impropre à la baignade, un matériel endommagé (pompe qui tourne à sec, filtre mal remonté), et la manipulation de produits chimiques (chlore, acide) qui exige des précautions de stockage, de transport et de mélange. Le compte-rendu écrit de chaque passage (valeurs mesurées, produits ajoutés) est votre meilleure protection en cas de litige.'),
+    },
+    {
+      question: t('Combien de piscines peut-on entretenir par jour ?'),
+      answer:
+        t('Un passage d’entretien courant prend 30 à 60 minutes. Avec des clients regroupés par secteur, un pisciniste d’entretien réalise 8 à 12 passages par jour en saison ; dispersés sur tout un département, il en fait 5 ou 6. Une tournée de 40 à 60 contrats hebdomadaires ou bi-mensuels fait un temps plein d’avril à octobre.'),
+    },
+  ]
+
   return (
     <>
       <ArticleJsonLd article={article} siteUrl={SITE_URL} faq={faq} />
       <article>
         <ArticleHeader
           article={article}
-          intro="Plus de trois millions de piscines privées en France, et des propriétaires qui découvrent chaque printemps qu'une eau verte ne se rattrape pas en un week-end. L'entretien de piscine est un métier de contrats réguliers et de tournées — à condition de vendre l'abonnement plutôt que le dépannage."
+          intro={t('Plus de trois millions de piscines privées en France, et des propriétaires qui découvrent chaque printemps qu\'une eau verte ne se rattrape pas en un week-end. L\'entretien de piscine est un métier de contrats réguliers et de tournées — à condition de vendre l\'abonnement plutôt que le dépannage.')}
         />
 
         <Summary
           items={[
-            'Le cœur du métier : un passage hebdomadaire ou bi-mensuel d’avril à octobre — analyse de l’eau, équilibrage, nettoyage, vérification du matériel.',
-            'Tarifs courants : 80 à 200 € par mois en contrat, 150 à 300 € la mise en route, 150 à 350 € l’hivernage.',
-            'Une formation courte sur le traitement de l’eau évite les erreurs de dosage qui coûtent un liner.',
-            'L’activité est saisonnière : l’abonnement annuel en douze mensualités et un second métier d’hiver la lissent.',
-            'Le revenu vient de la densité : 8 à 12 passages par jour en secteur groupé, 5 ou 6 en dispersé.',
+            t('Le cœur du métier : un passage hebdomadaire ou bi-mensuel d’avril à octobre — analyse de l’eau, équilibrage, nettoyage, vérification du matériel.'),
+            t('Tarifs courants : 80 à 200 € par mois en contrat, 150 à 300 € la mise en route, 150 à 350 € l’hivernage.'),
+            t('Une formation courte sur le traitement de l’eau évite les erreurs de dosage qui coûtent un liner.'),
+            t('L’activité est saisonnière : l’abonnement annuel en douze mensualités et un second métier d’hiver la lissent.'),
+            t('Le revenu vient de la densité : 8 à 12 passages par jour en secteur groupé, 5 ou 6 en dispersé.'),
           ]}
         />
 
         <P>
-          Le propriétaire d&apos;une piscine a deux options : y passer deux heures par semaine et
-          gérer lui-même la chimie, ou payer quelqu&apos;un pour ne plus y penser. Le marché de
-          l&apos;entretien existe parce que la seconde option gagne dès que l&apos;eau a tourné une
-          fois. Ce que vous vendez, ce n&apos;est pas du nettoyage : c&apos;est une piscine
-          baignable tout l&apos;été sans qu&apos;on s&apos;en occupe.
+          {t('Le propriétaire d’une piscine a deux options : y passer deux heures par semaine et gérer lui-même la chimie, ou payer quelqu’un pour ne plus y penser. Le marché de l’entretien existe parce que la seconde option gagne dès que l’eau a tourné une fois. Ce que vous vendez, ce n’est pas du nettoyage : c’est une piscine baignable tout l’été sans qu’on s’en occupe.')}
         </P>
 
-        <H2>1. Ce que couvre l&apos;entretien, et ce qu&apos;il ne couvre pas</H2>
-        <P>Un passage d&apos;entretien courant, c&apos;est une liste toujours identique :</P>
+        <H2>{t('1. Ce que couvre l’entretien, et ce qu’il ne couvre pas')}</H2>
+        <P>{t('Un passage d’entretien courant, c’est une liste toujours identique :')}</P>
         <UL>
-          <li><strong>Analyse de l&apos;eau</strong> : pH, désinfectant (chlore, brome ou sel selon le traitement), alcalinité, stabilisant. Les valeurs sont notées à chaque passage.</li>
-          <li><strong>Équilibrage</strong> : ajout des produits nécessaires, dans l&apos;ordre et aux doses adaptées au volume du bassin.</li>
-          <li><strong>Nettoyage</strong> : ligne d&apos;eau, parois et fond (épuisette, balai ou robot), paniers de skimmers et préfiltre de pompe.</li>
-          <li><strong>Filtration</strong> : contravage du filtre à sable, nettoyage de la cartouche, vérification de la pression et du temps de filtration.</li>
-          <li><strong>Contrôle du matériel</strong> : pompe, niveau d&apos;eau, fuites visibles, état du liner ou du revêtement.</li>
-          <li><strong>Compte-rendu</strong> au client : valeurs, produits ajoutés, points d&apos;attention.</li>
+          <li><strong>{t('Analyse de l’eau')}</strong> {t(': pH, désinfectant (chlore, brome ou sel selon le traitement), alcalinité, stabilisant. Les valeurs sont notées à chaque passage.')}</li>
+          <li><strong>{t('Équilibrage')}</strong> {t(': ajout des produits nécessaires, dans l’ordre et aux doses adaptées au volume du bassin.')}</li>
+          <li><strong>{t('Nettoyage')}</strong> {t(': ligne d’eau, parois et fond (épuisette, balai ou robot), paniers de skimmers et préfiltre de pompe.')}</li>
+          <li><strong>{t('Filtration')}</strong> {t(': contravage du filtre à sable, nettoyage de la cartouche, vérification de la pression et du temps de filtration.')}</li>
+          <li><strong>{t('Contrôle du matériel')}</strong> {t(': pompe, niveau d’eau, fuites visibles, état du liner ou du revêtement.')}</li>
+          <li><strong>{t('Compte-rendu')}</strong> {t('au client : valeurs, produits ajoutés, points d’attention.')}</li>
         </UL>
         <P>
-          À cela s&apos;ajoutent les deux prestations saisonnières, la <strong>mise en route</strong>{' '}
-          au printemps (nettoyage après hivernage, remise en filtration, traitement choc, équilibrage
-          complet) et l&apos;<strong>hivernage</strong> à l&apos;automne (passif avec bâche et
-          flotteurs, ou actif avec filtration réduite).
+          {t('À cela s’ajoutent les deux prestations saisonnières, la')} <strong>{t('mise en route')}</strong>{' '}
+          {t('au printemps (nettoyage après hivernage, remise en filtration, traitement choc, équilibrage complet) et l’')}<strong>{t('hivernage')}</strong> {t('à l’automne (passif avec bâche et flotteurs, ou actif avec filtration réduite).')}
         </P>
         <Callout>
           <p>
-            <strong>Ce qui n’est pas de l’entretien</strong> :
-            intervenir sur l&apos;électricité (coffret, pompe à chaleur, électrolyseur), modifier
-            l&apos;hydraulique, réparer une fuite de structure, ou construire. Le bon réflexe est de diagnostiquer,
-            d&apos;orienter vers un pisciniste installateur, et de garder le client pour
-            l&apos;entretien.
+            <strong>{t('Ce qui n’est pas de l’entretien')}</strong> {t(': intervenir sur l’électricité (coffret, pompe à chaleur, électrolyseur), modifier l’hydraulique, réparer une fuite de structure, ou construire. Le bon réflexe est de diagnostiquer, d’orienter vers un pisciniste installateur, et de garder le client pour l’entretien.')}
           </p>
         </Callout>
 
-        <H2>2. Les compétences à acquérir</H2>
+        <H2>{t('2. Les compétences à acquérir')}</H2>
         <P>
-          C&apos;est le métier de la famille des nettoyages à domicile où l&apos;erreur coûte le
-          plus cher : un pH mal corrigé sur un liner, un surdosage de chlore sur un revêtement, un
-          filtre remonté à l&apos;envers. Deux choses à mettre en place avant le premier contrat
-          (pour le statut et les démarches, renseignez-vous auprès des organismes officiels : ici,
-          on parle du métier) :
+          {t('C’est le métier de la famille des nettoyages à domicile où l’erreur coûte le plus cher : un pH mal corrigé sur un liner, un surdosage de chlore sur un revêtement, un filtre remonté à l’envers. Deux choses à mettre en place avant le premier contrat (pour le statut et les démarches, renseignez-vous auprès des organismes officiels : ici, on parle du métier) :')}
         </P>
         <UL>
           <li>
-            <strong>Une formation courte</strong>{' '}sur le traitement de l&apos;eau. Les fabricants
-            de produits et les distributeurs en proposent, parfois gratuitement. Quelques jours
-            qui vous évitent des mois d&apos;apprentissage sur les piscines des clients.
+            <strong>{t('Une formation courte')}</strong>{' '}{t('sur le traitement de l’eau. Les fabricants de produits et les distributeurs en proposent, parfois gratuitement. Quelques jours qui vous évitent des mois d’apprentissage sur les piscines des clients.')}
           </li>
           <li>
-            <strong>Les règles de manipulation des produits</strong>{' '}: jamais de mélange (chlore
-            et acide, en particulier), stockage ventilé et fermé, transport en petites quantités
-            dans des bacs de rétention, équipements de protection. Les fiches de données de
-            sécurité de chaque produit disent précisément quoi faire.
+            <strong>{t('Les règles de manipulation des produits')}</strong>{' '}{t(': jamais de mélange (chlore et acide, en particulier), stockage ventilé et fermé, transport en petites quantités dans des bacs de rétention, équipements de protection. Les fiches de données de sécurité de chaque produit disent précisément quoi faire.')}
           </li>
         </UL>
 
-        <H2>3. Le matériel</H2>
+        <H2>{t('3. Le matériel')}</H2>
         <Table
-          head={['Poste', 'Budget indicatif', 'Remarque']}
+          head={[t('Poste'), t('Budget indicatif'), t('Remarque')]}
           rows={[
-            ['Trousse ou photomètre d’analyse', '30 – 300 €', 'Le photomètre est plus fiable et plus rapide'],
-            ['Épuisettes, balai aspirateur, manche télescopique', '100 – 250 €', ''],
-            ['Brosses (ligne d’eau, parois), éponges', '30 – 80 €', ''],
-            ['Robot électrique (optionnel)', '500 – 1 500 €', 'Fait le fond pendant que vous faites le reste'],
-            ['Stock de produits de départ', '200 – 500 €', 'Refacturés ou inclus dans le contrat'],
-            ['Bacs de rétention, EPI', '50 – 150 €', 'Transport et sécurité'],
-            ['Pompe de relevage, matériel d’hivernage', '100 – 300 €', ''],
+            [t('Trousse ou photomètre d’analyse'), '30 – 300 €', t('Le photomètre est plus fiable et plus rapide')],
+            [t('Épuisettes, balai aspirateur, manche télescopique'), '100 – 250 €', ''],
+            [t('Brosses (ligne d’eau, parois), éponges'), '30 – 80 €', ''],
+            [t('Robot électrique (optionnel)'), '500 – 1 500 €', t('Fait le fond pendant que vous faites le reste')],
+            [t('Stock de produits de départ'), '200 – 500 €', t('Refacturés ou inclus dans le contrat')],
+            [t('Bacs de rétention, EPI'), '50 – 150 €', t('Transport et sécurité')],
+            [t('Pompe de relevage, matériel d’hivernage'), '100 – 300 €', ''],
           ]}
         />
         <P>
-          Un budget de départ de 500 à 1 500 € sans robot, jusqu&apos;à 3 000 € avec. Le robot
-          n&apos;est pas un luxe : sur une tournée de dix passages par jour, il fait le fond de la
-          piscine pendant que vous traitez l&apos;eau et nettoyez les skimmers, et divise le temps
-          par passage.
+          {t('Un budget de départ de 500 à 1 500 € sans robot, jusqu’à 3 000 € avec. Le robot n’est pas un luxe : sur une tournée de dix passages par jour, il fait le fond de la piscine pendant que vous traitez l’eau et nettoyez les skimmers, et divise le temps par passage.')}
         </P>
 
-        <H2>4. Les tarifs, et pourquoi vendre l&apos;abonnement</H2>
+        <H2>{t('4. Les tarifs, et pourquoi vendre l’abonnement')}</H2>
         <Table
-          head={['Prestation', 'Tarif courant', 'Remarque']}
+          head={[t('Prestation'), t('Tarif courant'), t('Remarque')]}
           rows={[
-            ['Contrat d’entretien, passage hebdomadaire', '120 – 200 € / mois', 'En saison, produits inclus ou en sus'],
-            ['Contrat d’entretien, passage bi-mensuel', '80 – 130 € / mois', ''],
-            ['Abonnement annuel (12 mensualités)', '70 – 150 € / mois', 'Mise en route et hivernage inclus'],
-            ['Mise en route de printemps', '150 – 300 €', 'Hors produits de traitement choc'],
-            ['Hivernage', '150 – 350 €', 'Selon passif ou actif, taille du bassin'],
-            ['Passage ponctuel, rattrapage d’eau verte', '60 – 120 € + produits', 'Souvent le premier contact'],
+            [t('Contrat d’entretien, passage hebdomadaire'), t('120 – 200 € / mois'), t('En saison, produits inclus ou en sus')],
+            [t('Contrat d’entretien, passage bi-mensuel'), t('80 – 130 € / mois'), ''],
+            [t('Abonnement annuel (12 mensualités)'), t('70 – 150 € / mois'), t('Mise en route et hivernage inclus')],
+            [t('Mise en route de printemps'), '150 – 300 €', t('Hors produits de traitement choc')],
+            [t('Hivernage'), '150 – 350 €', t('Selon passif ou actif, taille du bassin')],
+            [t('Passage ponctuel, rattrapage d’eau verte'), t('60 – 120 € + produits'), t('Souvent le premier contact')],
           ]}
         />
         <P>
-          Le passage ponctuel est la porte d&apos;entrée : un propriétaire découvre une eau verte
-          fin juin et cherche « entretien piscine » sur Google. Vous rattrapez l&apos;eau en deux
-          passages et vous proposez, sur place, le contrat jusqu&apos;à septembre. Ce
-          rattrapage est votre meilleure démonstration commerciale — pas la peine de le brader.
+          {t('Le passage ponctuel est la porte d’entrée : un propriétaire découvre une eau verte fin juin et cherche « entretien piscine » sur Google. Vous rattrapez l’eau en deux passages et vous proposez, sur place, le contrat jusqu’à septembre. Ce rattrapage est votre meilleure démonstration commerciale — pas la peine de le brader.')}
         </P>
-        <H3>L&apos;abonnement annuel, la clé du métier</H3>
+        <H3>{t('L’abonnement annuel, la clé du métier')}</H3>
         <P>
-          Facturé en saison seulement, l&apos;entretien de piscine est un revenu d&apos;avril à
-          octobre et rien de novembre à mars. Facturé en <strong>douze mensualités</strong>, mise
-          en route et hivernage inclus, c&apos;est un revenu régulier toute l&apos;année : le
-          client paie 100 € par mois au lieu de 170 € pendant sept mois, il ne voit pas de
-          facture d&apos;hivernage, et vous, vous avez de la trésorerie en janvier. La plupart des
-          clients préfèrent cette formule dès qu&apos;on la leur propose.
+          {t('Facturé en saison seulement, l’entretien de piscine est un revenu d’avril à octobre et rien de novembre à mars. Facturé en')} <strong>{t('douze mensualités')}</strong>{t(', mise en route et hivernage inclus, c’est un revenu régulier toute l’année : le client paie 100 € par mois au lieu de 170 € pendant sept mois, il ne voit pas de facture d’hivernage, et vous, vous avez de la trésorerie en janvier. La plupart des clients préfèrent cette formule dès qu’on la leur propose.')}
         </P>
         <P>
-          Le calcul du prix suit la logique de{' '}
-          <A href="/blog/tarifs-lavage-auto-domicile">tous les métiers à domicile</A> — le temps
-          réel trajet compris, les produits, les charges — avec un point spécifique : les produits
-          pèsent lourd (15 à 40 € par mois et par piscine en saison). Inclus dans le contrat, ils
-          simplifient la facture mais vous exposent aux bassins gourmands ; refacturés, ils sont
-          transparents mais génèrent des discussions. Choisissez, écrivez-le, tenez-vous-y.
+          {t('Le calcul du prix suit la logique de')}{' '}
+          <A href="/blog/tarifs-lavage-auto-domicile">{t('tous les métiers à domicile')}</A> {t('— le temps réel trajet compris, les produits, les charges — avec un point spécifique : les produits pèsent lourd (15 à 40 € par mois et par piscine en saison). Inclus dans le contrat, ils simplifient la facture mais vous exposent aux bassins gourmands ; refacturés, ils sont transparents mais génèrent des discussions. Choisissez, écrivez-le, tenez-vous-y.')}
         </P>
 
-        <H2>5. La tournée : le vrai métier</H2>
+        <H2>{t('5. La tournée : le vrai métier')}</H2>
         <P>
-          Une piscine se traite en 30 à 60 minutes. Ce qui fait votre journée, c&apos;est la
-          distance entre deux bassins. Les zones pavillonnaires concentrent les piscines : un
-          lotissement peut en contenir vingt, un quartier résidentiel une centaine. Une tournée se
-          construit par secteur et par jour de la semaine, exactement comme{' '}
-          <A href="/blog/organiser-ses-tournees-lavage-auto">les tournées de lavage auto</A> — avec
-          un avantage : les passages sont fixes et récurrents, le planning ne bouge presque plus
-          une fois construit.
+          {t('Une piscine se traite en 30 à 60 minutes. Ce qui fait votre journée, c’est la distance entre deux bassins. Les zones pavillonnaires concentrent les piscines : un lotissement peut en contenir vingt, un quartier résidentiel une centaine. Une tournée se construit par secteur et par jour de la semaine, exactement comme')}{' '}
+          <A href="/blog/organiser-ses-tournees-lavage-auto">{t('les tournées de lavage auto')}</A> {t('— avec un avantage : les passages sont fixes et récurrents, le planning ne bouge presque plus une fois construit.')}
         </P>
         <UL>
-          <li><strong>Un jour, un secteur</strong>, et les nouveaux contrats prennent le jour de leur secteur.</li>
-          <li><strong>Le compte-rendu après chaque passage</strong>, envoyé au client : valeurs, produits, remarques. C&apos;est ce qui justifie le contrat quand le client ne vous voit jamais (il est au travail), et votre protection en cas de litige.</li>
-          <li><strong>Les alertes</strong> : une pression de filtre qui monte, un niveau qui baisse, une pompe bruyante — signalés tout de suite, c&apos;est une réparation à 100 € ; découverts en août, c&apos;est une pompe à 800 €.</li>
+          <li><strong>{t('Un jour, un secteur')}</strong>{t(', et les nouveaux contrats prennent le jour de leur secteur.')}</li>
+          <li><strong>{t('Le compte-rendu après chaque passage')}</strong>{t(', envoyé au client : valeurs, produits, remarques. C’est ce qui justifie le contrat quand le client ne vous voit jamais (il est au travail), et votre protection en cas de litige.')}</li>
+          <li><strong>{t('Les alertes')}</strong> {t(': une pression de filtre qui monte, un niveau qui baisse, une pompe bruyante — signalés tout de suite, c’est une réparation à 100 € ; découverts en août, c’est une pompe à 800 €.')}</li>
         </UL>
 
-        <H2>6. Trouver les clients</H2>
+        <H2>{t('6. Trouver les clients')}</H2>
         <UL>
           <li>
-            <strong>La fiche Google</strong>, catégorie « Service d&apos;entretien de piscine », avec
-            une zone de service couvrant les communes pavillonnaires. Les recherches explosent en
-            mai-juin : la fiche doit exister en mars. Voir{' '}
-            <A href="/blog/fiche-google-laveur-auto-mobile">notre guide de la fiche Google</A>.
+            <strong>{t('La fiche Google')}</strong>{t(', catégorie « Service d’entretien de piscine », avec une zone de service couvrant les communes pavillonnaires. Les recherches explosent en mai-juin : la fiche doit exister en mars. Voir')}{' '}
+            <A href="/blog/fiche-google-laveur-auto-mobile">{t('notre guide de la fiche Google')}</A>.
           </li>
           <li>
-            <strong>Le voisinage</strong>{' '}: un lotissement, c&apos;est un client qui en amène
-            trois. Un petit panneau ou un flyer sur le portail du client, avec son accord, marche
-            mieux ici que partout ailleurs.
+            <strong>{t('Le voisinage')}</strong>{' '}{t(': un lotissement, c’est un client qui en amène trois. Un petit panneau ou un flyer sur le portail du client, avec son accord, marche mieux ici que partout ailleurs.')}
           </li>
           <li>
-            <strong>Les magasins de piscine et les installateurs</strong>{' '}: ils vendent des
-            bassins et ne veulent pas les entretenir. Un partenariat d&apos;apport d&apos;affaires
-            se négocie en une visite.
+            <strong>{t('Les magasins de piscine et les installateurs')}</strong>{' '}{t(': ils vendent des bassins et ne veulent pas les entretenir. Un partenariat d’apport d’affaires se négocie en une visite.')}
           </li>
           <li>
-            <strong>Les locations saisonnières et les résidences secondaires</strong>{' '}: leurs
-            propriétaires ne sont pas sur place. Ce sont les contrats les plus stables et les
-            moins regardants sur le prix.
+            <strong>{t('Les locations saisonnières et les résidences secondaires')}</strong>{' '}{t(': leurs propriétaires ne sont pas sur place. Ce sont les contrats les plus stables et les moins regardants sur le prix.')}
           </li>
         </UL>
 
-        <H2>7. L&apos;hiver</H2>
+        <H2>{t('7. L’hiver')}</H2>
         <P>
-          Même avec des abonnements annuels, l&apos;hiver est calme. Les piscinistes d&apos;entretien
-          qui tiennent le remplissent avec les hivernages actifs (un passage mensuel), les
-          petites réparations et remplacements de matériel (pompes, robots, bâches — avec marge sur
-          la fourniture), et souvent un second métier de la même famille : le{' '}
-          <A href="/blog/nettoyage-haute-pression-terrasses-facades-toitures">nettoyage de terrasses et de façades</A>{' '}
-          chez les mêmes clients, ou le lavage auto. Même clientèle, même véhicule, un revenu qui
-          ne s&apos;arrête plus en novembre.
+          {t('Même avec des abonnements annuels, l’hiver est calme. Les piscinistes d’entretien qui tiennent le remplissent avec les hivernages actifs (un passage mensuel), les petites réparations et remplacements de matériel (pompes, robots, bâches — avec marge sur la fourniture), et souvent un second métier de la même famille : le')}{' '}
+          <A href="/blog/nettoyage-haute-pression-terrasses-facades-toitures">{t('nettoyage de terrasses et de façades')}</A>{' '}
+          {t('chez les mêmes clients, ou le lavage auto. Même clientèle, même véhicule, un revenu qui ne s’arrête plus en novembre.')}
         </P>
 
         <Faq items={faq} />
 
         <Cta
-          title="Chaque piscine, son historique et sa facture"
-          secondary={lienPageMetier(article.theme)}
+          title={t('Chaque piscine, son historique et sa facture')}
+          secondary={lienPageMetierTraduit(t, article.theme)}
         >
-          Avec WashBoard, chaque client a sa fiche avec l&apos;historique de tous ses passages et
-          leur montant, la facture est créée à la fin de chaque rendez-vous (à partir de la formule{' '}
-          {requiredPlanLabel('facturation')}), et votre chiffre d&apos;affaires se lit par mois pour suivre la saison. Les nouveaux clients réservent
-          leur rattrapage d&apos;eau verte sur votre lien, sans vous appeler.
+          {t('Avec WashBoard, chaque client a sa fiche avec l’historique de tous ses passages et leur montant, la facture est créée à la fin de chaque rendez-vous (à partir de la formule')}{' '}
+          {requiredPlanLabel('facturation')}{t('), et votre chiffre d’affaires se lit par mois pour suivre la saison. Les nouveaux clients réservent leur rattrapage d’eau verte sur votre lien, sans vous appeler.')}
         </Cta>
 
         <AlsoRead
           items={[
-            { href: '/blog/nettoyage-haute-pression-terrasses-facades-toitures', label: 'Nettoyage haute pression à domicile : terrasses, façades, toitures' },
-            { href: '/blog/organiser-ses-tournees-lavage-auto', label: 'Organiser ses tournées pour laver plus de voitures par jour' },
-            { href: '/blog/fiche-google-laveur-auto-mobile', label: 'Fiche Google pour laveur auto mobile : la configurer pour recevoir des appels' },
+            { href: '/blog/nettoyage-haute-pression-terrasses-facades-toitures', label: t('Nettoyage haute pression à domicile : terrasses, façades, toitures') },
+            { href: '/blog/organiser-ses-tournees-lavage-auto', label: t('Organiser ses tournées pour laver plus de voitures par jour') },
+            { href: '/blog/fiche-google-laveur-auto-mobile', label: t('Fiche Google pour laveur auto mobile : la configurer pour recevoir des appels') },
           ]}
         />
       </article>
