@@ -14,7 +14,10 @@ import type { PaysTelephone } from '@/lib/phone'
 // La valeur est lue au DÉPLOIEMENT : après l'avoir changée, il faut redéployer.
 
 export const PAYS_OUVERTS_PAR_DEFAUT: readonly PaysTelephone[] = ['FR', 'BE', 'CH']
-const CONNUS: readonly PaysTelephone[] = ['FR', 'BE', 'CH', 'LU', 'QC']
+// Le Québec est codé (téléphone, facturation) mais PAS ouvrable, même par la variable d'environnement :
+// le fuseau de l'appli est celui de Paris dans une cinquantaine de fichiers (6 h de décalage au Québec :
+// créneaux, rappels et jours qui basculent faux). À ajouter ici quand le fuseau sera par laveur.
+const CONNUS: readonly PaysTelephone[] = ['FR', 'BE', 'CH', 'LU']
 
 /** Les pays ouverts à l'inscription. La France y est toujours : on ne ferme pas le pays d'origine. */
 export function paysOuverts(valeur: string | undefined = process.env.NEXT_PUBLIC_PAYS_INSCRIPTION): PaysTelephone[] {
