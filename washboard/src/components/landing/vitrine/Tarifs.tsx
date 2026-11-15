@@ -6,11 +6,13 @@ import {
   PLAN_CARDS, formatEuros, freeMonthsLabel, lienRendezVousBusiness, rendezVousExterne,
   yearlyMonthlyEquivalent, yearlyPrice, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, RDV_BUSINESS_MINUTES,
 } from '@/lib/plan'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Lignes de PLAN_CARDS marquées « Nouveau » : les trois sorties d'octobre 2026.
 const NOUVEAUTES = ['Acompte à la réservation', 'Promotions avec compte à rebours', 'Carte de fidélité']
 
 export default function Tarifs() {
+  const t = useT()
   const [annuel, setAnnuel] = useState(false)
   const rdv = lienRendezVousBusiness()
   const rdvExterne = rendezVousExterne(rdv)
@@ -20,12 +22,12 @@ export default function Tarifs() {
       <div className="w">
         <div className="tarif-tete">
           <div>
-            <p className="sur-titre"><span className="pt" />Les formules</p>
-            <h2 className="h2">Commence gratuitement. <span className="doux">Tu paies quand ça remplit.</span></h2>
+            <p className="sur-titre"><span className="pt" />{t('Les formules')}</p>
+            <h2 className="h2">{t('Commence gratuitement.')} <span className="doux">{t('Tu paies quand ça remplit.')}</span></h2>
           </div>
-          <div className="segment" role="group" aria-label="Facturation">
-            <button type="button" aria-pressed={!annuel} onClick={() => setAnnuel(false)}>Mensuel</button>
-            <button type="button" aria-pressed={annuel} onClick={() => setAnnuel(true)}>Annuel · {freeMonthsLabel()}</button>
+          <div className="segment" role="group" aria-label={t('Facturation')}>
+            <button type="button" aria-pressed={!annuel} onClick={() => setAnnuel(false)}>{t('Mensuel')}</button>
+            <button type="button" aria-pressed={annuel} onClick={() => setAnnuel(true)}>{t('Annuel · {offre}', { offre: t(freeMonthsLabel()) })}</button>
           </div>
         </div>
 
@@ -34,44 +36,44 @@ export default function Tarifs() {
             const an = annuel && card.price > 0 && !card.surDevis
             return (
               <div className={`offre${card.highlight ? ' phare' : ''}`} key={card.key}>
-                <div className="nm">{card.name}{card.highlight && <span className="pop">Le plus populaire</span>}</div>
-                <p className="tag">{card.tagline}</p>
+                <div className="nm">{card.name}{card.highlight && <span className="pop">{t('Le plus populaire')}</span>}</div>
+                <p className="tag">{t(card.tagline)}</p>
                 <div className="px">
-                  {card.surDevis ? <b className="texte">{LIBELLE_CONTACT}</b> : (
+                  {card.surDevis ? <b className="texte">{t(LIBELLE_CONTACT)}</b> : (
                     <>
-                      {card.from && <span>dès</span>}
+                      {card.from && <span>{t('dès')}</span>}
                       <b className="num">{card.price === 0 ? '0 €' : `${formatEuros(an ? yearlyMonthlyEquivalent(card.price) : card.price)} €`}</b>
-                      <span>{card.price === 0 ? 'pour toujours' : '/mois'}</span>
+                      <span>{card.price === 0 ? t('pour toujours') : t('/mois')}</span>
                     </>
                   )}
                 </div>
                 <p className="an">
                   {card.surDevis
-                    ? `Un échange de ${RDV_BUSINESS_MINUTES} minutes, puis un devis`
+                    ? t('Un échange de {n} minutes, puis un devis', { n: RDV_BUSINESS_MINUTES })
                     : card.price === 0
-                      ? 'Sans carte bancaire, sans limite de durée'
-                      : an ? `Soit ${formatEuros(yearlyPrice(card.price))} € par an, ${freeMonthsLabel()}` : ''}
+                      ? t('Sans carte bancaire, sans limite de durée')
+                      : an ? t('Soit {prix} € par an, {offre}', { prix: formatEuros(yearlyPrice(card.price)), offre: t(freeMonthsLabel()) }) : ''}
                 </p>
                 <ul>
                   {card.features.map(f => (
-                    <li key={f}><span>{f}{NOUVEAUTES.includes(f) && <> <span className="badge badge-new">Nouveau</span></>}</span></li>
+                    <li key={f}><span>{t(f)}{NOUVEAUTES.includes(f) && <> <span className="badge badge-new">{t('Nouveau')}</span></>}</span></li>
                   ))}
                 </ul>
                 {card.surDevis ? (
                   <a
                     className="btn btn-encre" href={rdv}
                     {...(rdvExterne ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                  >{LIBELLE_RDV_BUSINESS}</a>
+                  >{t(LIBELLE_RDV_BUSINESS)}</a>
                 ) : (
                   <Link className={`btn ${card.highlight || card.price === 0 ? 'btn-ligne' : 'btn-encre'}`} href="/signup">
-                    {card.price === 0 ? 'Commencer gratuitement' : 'Essayer 1 mois gratuit'}
+                    {card.price === 0 ? t('Commencer gratuitement') : t('Essayer 1 mois gratuit')}
                   </Link>
                 )}
               </div>
             )
           })}
         </div>
-        <p className="rassure">Un mois d’essai avec tout débloqué, sans carte bancaire. Sans choix de formule, ton compte passe tout seul sur Découverte : on ne coupe rien.</p>
+        <p className="rassure">{t('Un mois d’essai avec tout débloqué, sans carte bancaire. Sans choix de formule, ton compte passe tout seul sur Découverte : on ne coupe rien.')}</p>
       </div>
     </section>
   )

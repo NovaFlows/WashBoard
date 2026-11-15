@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CommandesCarte } from '@/components/fidelite/CarteFidelite3D'
 import { IcEtoile, IcFacture, IcItineraire, IcOk, IcPin, IcRaz, IcTel, Logo, Reseau } from './Icones'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Sous la ligne de flottaison : la carte 3D n'est chargée qu'ici, côté client.
 const CarteFidelite3D = dynamic(() => import('@/components/fidelite/CarteFidelite3D'), { ssr: false })
@@ -23,6 +24,7 @@ const TAMPONS_AVANT = 2
 const REQUIS = 8
 
 function CarteEtape({ actif }: { actif: boolean }) {
+  const t = useT()
   const ref = useRef<CommandesCarte>(null)
   const [tampons, setTampons] = useState(TAMPONS_AVANT)
 
@@ -38,12 +40,13 @@ function CarteEtape({ actif }: { actif: boolean }) {
   return (
     <CarteFidelite3D
       ref={ref} couleur="#306090" finition="holo" nom="Éclat Mobile" numero="4F2A"
-      requis={REQUIS} tampons={tampons} recompense="Lavage complet offert" scenario="apercu" largeur={250}
+      requis={REQUIS} tampons={tampons} recompense={t('Lavage complet offert')} scenario="apercu" largeur={250}
     />
   )
 }
 
 export default function Journee() {
+  const t = useT()
   const [etape, setEtape] = useState(0)
   const [tour, setTour] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -64,7 +67,7 @@ export default function Journee() {
     return () => clearTimeout(id)
   }, [enMarche, etape, tour])
 
-  const aller = useCallback((n: number) => { setEtape(n); setTour(t => t + 1) }, [])
+  const aller = useCallback((n: number) => { setEtape(n); setTour(n => n + 1) }, [])
 
   // La carte 3D n'existe que sur l'étape 4 (et le temps de son fondu) : elle rejoue son intro à chaque passage.
   const carte = etape === 3 || etape === 4
@@ -80,23 +83,23 @@ export default function Journee() {
   return (
     <section className="section" id="journee">
       <div className="w">
-        <p className="sur-titre"><span className="pt" />Une journée avec WashBoard</p>
-        <h2 className="h2">De la réservation à la fidélisation. <span className="doux">Sans rien recopier.</span></h2>
-        <p className="chapo">Sophie a trouvé Éclat Mobile sur Instagram. Voici tout ce qui se passe ensuite, et tout ce que tu n’as plus à faire.</p>
+        <p className="sur-titre"><span className="pt" />{t('Une journée avec WashBoard')}</p>
+        <h2 className="h2">{t('De la réservation à la fidélisation.')} <span className="doux">{t('Sans rien recopier.')}</span></h2>
+        <p className="chapo">{t('Sophie a trouvé Éclat Mobile sur Instagram. Voici tout ce qui se passe ensuite, et tout ce que tu n’as plus à faire.')}</p>
         <div className={`histoire${enMarche ? '' : ' pause'}`} ref={bloc}>
           <div>
             <ol className="h-etapes">
               {ETAPES.map((e, k) => (
                 <li key={e.titre}>
                   <button type="button" aria-current={etape === k ? 'step' : undefined} onClick={() => aller(k)}>
-                    <span className="hh">{e.h}</span>
-                    <span><b>{e.titre}</b><span className="texte">{e.texte}</span></span>
+                    <span className="hh">{t(e.h)}</span>
+                    <span><b>{t(e.titre)}</b><span className="texte">{t(e.texte)}</span></span>
                     {etape === k && <span className="prog" key={tour} style={{ '--duree': `${DUREES[k]}ms` } as React.CSSProperties} />}
                   </button>
                 </li>
               ))}
             </ol>
-            <button type="button" className="h-raz" onClick={() => aller(0)}><IcRaz />Remettre la journée à zéro</button>
+            <button type="button" className="h-raz" onClick={() => aller(0)}><IcRaz />{t('Remettre la journée à zéro')}</button>
           </div>
           <div className="aura h-scene">
             <div className="tel">
@@ -106,60 +109,60 @@ export default function Journee() {
 
                 {scene(0, 'verrou', <>
                   <div className="v-heure num">08:12</div>
-                  <div className="v-date">Mardi 14 octobre</div>
+                  <div className="v-date">{t('Mardi 14 octobre')}</div>
                   <div className="notif">
                     <Logo />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="n-t"><b>WashBoard</b><span>maintenant</span></div>
-                      <b>Nouvelle réservation</b>
-                      <p>Sophie B. · Lavage complet · mar. 14:00 · 45 €</p>
+                      <div className="n-t"><b>{t('WashBoard')}</b><span>{t('maintenant')}</span></div>
+                      <b>{t('Nouvelle réservation')}</b>
+                      <p>{t('Sophie B. · Lavage complet · mar. 14:00 · 45 €')}</p>
                     </div>
                   </div>
                 </>)}
 
                 {scene(1, '', <>
-                  <div className="ecr-tete"><div><p className="ecr-titre">Mardi 14</p><p className="ecr-sous">3 rendez-vous · 155 €</p></div></div>
-                  <div className="creneau"><div className="t"><b>09:30</b><small>10:15</small></div><span className="barre-c" style={{ background: 'var(--vert)' }} /><div className="surf carte-c"><div className="r"><span className="nom">Karim B.</span><span className="prix num">45 €</span></div><div className="det">Intérieur</div></div></div>
-                  <div className="creneau"><div className="t"><b>14:00</b><small>15:30</small></div><span className="barre-c" style={{ background: 'var(--vert)' }} /><div className="surf carte-c neuf"><div className="r"><span className="nom">Sophie B.</span><span className="prix num">45 €</span></div><div className="det">Lavage complet · Citadine</div><div className="bas"><span>Instagram</span><span className="st st-vert">Nouveau</span></div></div></div>
-                  <div className="creneau"><div className="t"><b>16:30</b><small>17:30</small></div><span className="barre-c" style={{ background: 'var(--vert)' }} /><div className="surf carte-c"><div className="r"><span className="nom">Lucas B.</span><span className="prix num">65 €</span></div><div className="det">Lavage complet</div></div></div>
-                  <div className="mini-n" style={{ marginTop: 'auto' }}><Logo /><div><b>Nouvelle réservation</b><br />Sophie B. vient de réserver depuis Instagram.</div></div>
+                  <div className="ecr-tete"><div><p className="ecr-titre">{t('Mardi 14')}</p><p className="ecr-sous">{t('3 rendez-vous · 155 €')}</p></div></div>
+                  <div className="creneau"><div className="t"><b>09:30</b><small>10:15</small></div><span className="barre-c" style={{ background: 'var(--vert)' }} /><div className="surf carte-c"><div className="r"><span className="nom">{t('Karim B.')}</span><span className="prix num">45 €</span></div><div className="det">{t('Intérieur')}</div></div></div>
+                  <div className="creneau"><div className="t"><b>14:00</b><small>15:30</small></div><span className="barre-c" style={{ background: 'var(--vert)' }} /><div className="surf carte-c neuf"><div className="r"><span className="nom">{t('Sophie B.')}</span><span className="prix num">45 €</span></div><div className="det">{t('Lavage complet · Citadine')}</div><div className="bas"><span>{t('Instagram')}</span><span className="st st-vert">{t('Nouveau')}</span></div></div></div>
+                  <div className="creneau"><div className="t"><b>16:30</b><small>17:30</small></div><span className="barre-c" style={{ background: 'var(--vert)' }} /><div className="surf carte-c"><div className="r"><span className="nom">{t('Lucas B.')}</span><span className="prix num">65 €</span></div><div className="det">{t('Lavage complet')}</div></div></div>
+                  <div className="mini-n" style={{ marginTop: 'auto' }}><Logo /><div><b>{t('Nouvelle réservation')}</b><br />{t('Sophie B. vient de réserver depuis Instagram.')}</div></div>
                 </>)}
 
                 {scene(2, '', <>
-                  <div className="ecr-tete"><div><p className="ecr-titre">Mardi 14 octobre</p><p className="ecr-sous">Prochain rendez-vous dans 20 min</p></div></div>
+                  <div className="ecr-tete"><div><p className="ecr-titre">{t('Mardi 14 octobre')}</p><p className="ecr-sous">{t('Prochain rendez-vous dans 20 min')}</p></div></div>
                   <div className="surf prochain">
-                    <div className="haut"><span className="heure">14:00</span><div className="qui"><b>Sophie B.</b><span className="det" style={{ color: 'var(--gris)', fontSize: 13 }}>Lavage complet</span><div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}><span className="st st-vert">Confirmé</span><b className="num" style={{ fontWeight: 550 }}>45 €</b></div></div></div>
-                    <div className="adr"><IcPin /><span>5 rue Sainte-Catherine, Bordeaux</span></div>
-                    <div className="duo"><span className="btn btn-accent pulse"><IcItineraire />Itinéraire</span><span className="btn btn-ligne"><IcTel />Appeler</span></div>
+                    <div className="haut"><span className="heure">14:00</span><div className="qui"><b>{t('Sophie B.')}</b><span className="det" style={{ color: 'var(--gris)', fontSize: 13 }}>{t('Lavage complet')}</span><div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}><span className="st st-vert">{t('Confirmé')}</span><b className="num" style={{ fontWeight: 550 }}>45 €</b></div></div></div>
+                    <div className="adr"><IcPin /><span>{t('5 rue Sainte-Catherine, Bordeaux')}</span></div>
+                    <div className="duo"><span className="btn btn-accent pulse"><IcItineraire />{t('Itinéraire')}</span><span className="btn btn-ligne"><IcTel />{t('Appeler')}</span></div>
                   </div>
-                  <div className="sec-lib"><span>Sa fiche</span></div>
-                  <div className="surf"><div className="ligne"><span className="corps"><span className="nom">3e visite</span><span className="det">Dernière fois : lavage complet en juillet</span></span><span className="prix">90 €</span></div></div>
+                  <div className="sec-lib"><span>{t('Sa fiche')}</span></div>
+                  <div className="surf"><div className="ligne"><span className="corps"><span className="nom">{t('3e visite')}</span><span className="det">{t('Dernière fois : lavage complet en juillet')}</span></span><span className="prix">90 €</span></div></div>
                 </>)}
 
                 {scene(3, '', <>
-                  <div className="ecr-tete"><div><p className="ecr-titre">Terminé</p><p className="ecr-sous">Sophie B. · 45 € encaissés</p></div><span className="rond plein" style={{ background: 'var(--vert)' }}><IcOk /></span></div>
-                  <div className="h-ok"><IcFacture />Facture F-00044 créée</div>
-                  <div className="sec-lib"><span>Sa carte de fidélité</span><span>3 / 8</span></div>
+                  <div className="ecr-tete"><div><p className="ecr-titre">{t('Terminé')}</p><p className="ecr-sous">{t('Sophie B. · 45 € encaissés')}</p></div><span className="rond plein" style={{ background: 'var(--vert)' }}><IcOk /></span></div>
+                  <div className="h-ok"><IcFacture />{t('Facture F-00044 créée')}</div>
+                  <div className="sec-lib"><span>{t('Sa carte de fidélité')}</span><span>3 / 8</span></div>
                   <div style={{ margin: '-14px -6px -30px', minHeight: 190 }}>{carte && <CarteEtape key={tour} actif={etape === 3} />}</div>
-                  <div className="mini-n" style={{ marginTop: 14 }}><Logo /><div>Sophie reçoit « Votre tampon est arrivé » par email.</div></div>
+                  <div className="mini-n" style={{ marginTop: 14 }}><Logo /><div>{t('Sophie reçoit « Votre tampon est arrivé » par email.')}</div></div>
                 </>, false)}
 
                 {scene(4, 'sms', <>
-                  <div className="sms-tete"><span className="av">ÉM</span><b>Éclat Mobile</b>Aujourd’hui 18:10</div>
-                  <div className="bul g">Merci Sophie pour votre confiance ! Si vous avez 30 secondes, votre avis nous aide beaucoup : <u>g.page/eclat-mobile</u></div>
-                  <div className="bul d" style={{ animationDelay: '.5s' }}>Avec plaisir, c’est fait !</div>
+                  <div className="sms-tete"><span className="av">{t('ÉM')}</span><b>{t('Éclat Mobile')}</b>{t('Aujourd’hui 18:10')}</div>
+                  <div className="bul g">{t('Merci Sophie pour votre confiance ! Si vous avez 30 secondes, votre avis nous aide beaucoup :')} <u>{t('g.page/eclat-mobile')}</u></div>
+                  <div className="bul d" style={{ animationDelay: '.5s' }}>{t('Avec plaisir, c’est fait !')}</div>
                   <div className="avis-c" style={{ animationDelay: '.9s' }}>
-                    <b>Sophie B.</b> · Avis Google
+                    <b>{t('Sophie B.')}</b> {t('· Avis Google')}
                     <div className="etoiles">{[0, 1, 2, 3, 4].map(k => <IcEtoile key={k} delai={1.1 + k * 0.12} />)}</div>
-                    Voiture comme neuve, ponctuel et très soigneux. Je recommande.
+                    {t('Voiture comme neuve, ponctuel et très soigneux. Je recommande.')}
                   </div>
                 </>)}
 
                 {scene(5, 'sms', <>
-                  <div className="sms-tete"><span className="av">ÉM</span><b>Éclat Mobile</b>14 janvier · 10:00</div>
-                  <div className="bul g">Bonjour Sophie, ça fait 3 mois depuis votre dernier lavage. Un créneau cette semaine ? Réservez en 1 minute : <u>washboard.fr/book/eclat-mobile</u></div>
-                  <div className="bul d" style={{ animationDelay: '.6s' }}>Oh oui, je réserve pour samedi !</div>
-                  <div className="mini-n" style={{ animationDelay: '1.1s', marginTop: 'auto' }}><Logo /><div><b>Nouvelle réservation</b><br />Sophie B. · samedi 10:00 · 4e visite</div></div>
+                  <div className="sms-tete"><span className="av">{t('ÉM')}</span><b>{t('Éclat Mobile')}</b>{t('14 janvier · 10:00')}</div>
+                  <div className="bul g">{t('Bonjour Sophie, ça fait 3 mois depuis votre dernier lavage. Un créneau cette semaine ? Réservez en 1 minute :')} <u>{t('washboard.fr/book/eclat-mobile')}</u></div>
+                  <div className="bul d" style={{ animationDelay: '.6s' }}>{t('Oh oui, je réserve pour samedi !')}</div>
+                  <div className="mini-n" style={{ animationDelay: '1.1s', marginTop: 'auto' }}><Logo /><div><b>{t('Nouvelle réservation')}</b><br />{t('Sophie B. · samedi 10:00 · 4e visite')}</div></div>
                 </>)}
               </div>
             </div>

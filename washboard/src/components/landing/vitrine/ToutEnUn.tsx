@@ -1,11 +1,12 @@
 import { quotaSmsEnClair, requiredPlan, requiredPlanLabel, type Feature } from '@/lib/plan'
+import { getT } from '@/lib/i18n/serveur'
 
 // `offre` pointe la clé de MIN_PLAN (lib/plan.ts) : le badge en est dérivé, jamais écrit à la
 // main, et reste absent pour ce que l'offre gratuite ouvre. `nouveau` : sorties d'octobre 2026.
 type Item = { titre: string; texte: string; offre?: Feature; nouveau?: boolean }
 type Colonne = { titre: string; sous: string; items: Item[] }
 
-const COLONNES: Colonne[] = [
+export const COLONNES: Colonne[] = [
   {
     titre: 'Remplir ton agenda', sous: 'Les clients te trouvent et réservent seuls.',
     items: [
@@ -36,7 +37,7 @@ const COLONNES: Colonne[] = [
   },
 ]
 
-const ET_AUSSI = [
+export const ET_AUSSI = [
   'Agenda jour, semaine, mois',
   'Congés et absences',
   'Google Agenda synchronisé',
@@ -47,34 +48,35 @@ const ET_AUSSI = [
   `Multi-laveurs (${requiredPlanLabel('multi_laveurs')})`,
 ]
 
-function Badge({ item }: { item: Item }) {
-  if (item.nouveau) return <span className="badge badge-new">Nouveau</span>
+function Badge({ item, t }: { item: Item; t: (fr: string) => string }) {
+  if (item.nouveau) return <span className="badge badge-new">{t('Nouveau')}</span>
   if (item.offre && requiredPlan(item.offre) !== 'decouverte') return <span className="badge">{requiredPlanLabel(item.offre)}</span>
   return null
 }
 
-export default function ToutEnUn() {
+export default async function ToutEnUn() {
+  const t = await getT()
   return (
     <section className="section" id="fonctionnalites">
       <div className="w">
-        <p className="sur-titre"><span className="pt" />Tout-en-un</p>
-        <h2 className="h2">Le logiciel des pros du lavage auto et du detailing. <span className="doux">De la réservation à la fidélisation.</span></h2>
+        <p className="sur-titre"><span className="pt" />{t('Tout-en-un')}</p>
+        <h2 className="h2">{t('Le logiciel des pros du lavage auto et du detailing.')} <span className="doux">{t('De la réservation à la fidélisation.')}</span></h2>
         <div className="fonc">
           {COLONNES.map(col => (
             <div className="fonc-col" key={col.titre}>
-              <h3>{col.titre}</h3>
-              <p>{col.sous}</p>
+              <h3>{t(col.titre)}</h3>
+              <p>{t(col.sous)}</p>
               {col.items.map(it => (
                 <div className="fonc-it" key={it.titre}>
-                  <b>{it.titre} <Badge item={it} /></b>
-                  <p>{it.texte}</p>
+                  <b>{t(it.titre)} <Badge item={it} t={t} /></b>
+                  <p>{t(it.texte)}</p>
                 </div>
               ))}
             </div>
           ))}
           <div className="fonc-aussi">
-            <b>Et aussi :</b>
-            {ET_AUSSI.map(x => <span key={x}>{x}</span>)}
+            <b>{t('Et aussi :')}</b>
+            {ET_AUSSI.map(x => <span key={x}>{t(x)}</span>)}
           </div>
         </div>
       </div>

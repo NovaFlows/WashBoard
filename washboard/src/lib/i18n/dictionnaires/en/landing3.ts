@@ -1,0 +1,17 @@
+import type { Dictionnaire } from '../../traduire'
+
+export const landing3: Dictionnaire = {
+  'Sophie réserve depuis ta bio Instagram': 'Sophie books from your Instagram bio',
+  'Lavage complet, mardi à 14:00, 45 €. Elle a choisi son créneau seule, sans t’écrire.': 'Full wash, Tuesday at 14:00, €45. She picked her slot on her own, without writing to you.',
+  'Le rendez-vous est déjà dans ton agenda': 'The appointment is already in your calendar',
+  'Une notification t’arrive. Rien à recopier, rien à confirmer par message.': 'A notification reaches you. Nothing to retype, nothing to confirm by message.',
+  'Tu pars : l’adresse est là': 'You head out: the address is there',
+  'Itinéraire en un geste. La prestation et le prix viennent de sa réservation.': 'Directions in one tap. The service and the price come from her booking.',
+  'Terminé : la facture part, le tampon tombe': 'Done: the invoice goes out, the stamp drops',
+  'C’est sa 3e visite, 135 € dépensés chez toi. Sa carte de fidélité avance d’une case.': 'It\'s her 3rd visit, €135 spent with you. Her loyalty card moves up one box.',
+  'Elle reçoit la demande d’avis Google': 'She receives the Google review request',
+  'Trois heures après, par SMS ou email. Tu n’as pas eu à y penser.': 'Three hours later, by SMS or email. You didn\'t have to think about it.',
+  '+3 mois': '+3 months',
+  'Pas revenue ? La relance part toute seule': 'Hasn\'t come back? The follow-up goes out by itself',
+  'Un message au bon moment, et elle reprend rendez-vous sur ta page.': 'A message at the right moment, and she books again on your page.',
+}

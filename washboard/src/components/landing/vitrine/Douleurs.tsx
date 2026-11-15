@@ -16,7 +16,7 @@ export default async function Douleurs() {
         <div className="douleurs">
           {DOULEURS.map(d => (
             <div className="douleur" key={d.gros}>
-              <div className="gros num">{d.gros}</div>
+              <div className="gros num">{t(d.gros)}</div>
               <h3>{t(d.titre)}</h3>
               <p>{t(d.texte)}</p>
             </div>
