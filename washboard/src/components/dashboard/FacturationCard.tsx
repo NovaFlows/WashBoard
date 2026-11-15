@@ -6,7 +6,7 @@ import { FileText } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import type { Washer } from '@/types'
 import {
-  paysDuProfil, reglesPays, identifiantValidePour, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, siretValide,
+  paysDuProfil, reglesPays, identifiantValidePour, tauxInitial, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, siretValide,
   type RegimeTva, type StatutJuridique,
 } from '@/lib/facture'
 import { useT } from '@/components/i18n/I18nProvider'
@@ -65,7 +65,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
   const [capital, setCapital] = useState(washer.facture_capital ?? '')
   const [immatriculation, setImmatriculation] = useState(washer.facture_immatriculation ?? '')
   const [regime, setRegime] = useState<RegimeTva>(washer.facture_regime_tva ?? 'franchise')
-  const [taux, setTaux] = useState(String(washer.facture_taux_tva ?? tauxTvaNormal(paysDuProfil({ facture_numero_tva: washer.facture_numero_tva, facture_siret: washer.facture_siret, phone: (washer as { phone?: string | null }).phone }))))
+  const [taux, setTaux] = useState(String(tauxInitial(washer.facture_taux_tva, paysDuProfil({ facture_numero_tva: washer.facture_numero_tva, facture_siret: washer.facture_siret, phone: (washer as { phone?: string | null }).phone }))))
   const [numeroTva, setNumeroTva] = useState(washer.facture_numero_tva ?? '')
   // Taux du pays du laveur (France 20/10/5,5, Belgique 21/12/6, Suisse 8,1/2,6/3,8), plus celui déjà enregistré s'il est ailleurs.
   const pays = paysDuProfil({ facture_numero_tva: numeroTva, facture_siret: siret, phone: (washer as { phone?: string | null }).phone })

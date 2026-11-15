@@ -121,3 +121,15 @@ describe('les pays existants ne bougent pas', () => {
     expect(mentionRetardPaiement('FR')).toMatch(/L441-10/)
   })
 })
+
+describe('taux présélectionné', () => {
+  it('le 20 % enregistré par défaut ne s’impose pas à un laveur allemand ou espagnol', async () => {
+    const { tauxInitial } = await import('./facture')
+    expect(tauxInitial(20, 'DE')).toBe(19)
+    expect(tauxInitial(20, 'ES')).toBe(21)
+    expect(tauxInitial(7, 'DE')).toBe(7)
+    expect(tauxInitial(null, 'DE')).toBe(19)
+    expect(tauxInitial(20, 'FR')).toBe(20)
+    expect(tauxInitial(5.5, 'FR')).toBe(5.5)
+  })
+})
