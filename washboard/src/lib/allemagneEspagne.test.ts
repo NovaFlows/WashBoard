@@ -60,9 +60,9 @@ describe('SMS et ouverture', () => {
     expect(phraseMobileRequis(ouvert)).toMatch(/Allemagne.*Espagne/)
     expect(paysOuverts('DE,ES')).toEqual(['FR', 'DE', 'ES'])
   })
-  it('fermés par défaut (facturation à faire relire)', () => {
-    expect(paysOuverts(undefined)).not.toContain('DE')
-    expect(paysOuverts(undefined)).not.toContain('ES')
+  it('ouverts par défaut', () => {
+    expect(paysOuverts(undefined)).toContain('DE')
+    expect(paysOuverts(undefined)).toContain('ES')
   })
 })
 
