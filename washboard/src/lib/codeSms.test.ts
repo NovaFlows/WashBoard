@@ -60,13 +60,14 @@ describe('numéro et texte', () => {
     expect(estMobileFrancais('0712345678')).toBe(true)
     for (const n of ['0123456789', '0912345678', '+33612345678', '061234567', null]) expect(estMobileFrancais(n), String(n)).toBe(false)
   })
-  it('Luxembourg et Québec : refusés tant que leur pays n’est pas ouvert, acceptés une fois ouvert', () => {
+  it('Luxembourg : refusé tant que son pays n’est pas ouvert, accepté une fois ouvert ; le Québec reste refusé même demandé', () => {
     const ferme = {} as Record<string, string | undefined>
     const ouvert = { NEXT_PUBLIC_PAYS_INSCRIPTION: 'FR,BE,CH,LU,QC' }
     expect(estMobileFrancais('+352621123456', ferme)).toBe(false)
     expect(estMobileFrancais('+15142345678', ferme)).toBe(false)
     expect(estMobileFrancais('+352621123456', ouvert)).toBe(true)
-    expect(estMobileFrancais('+15142345678', ouvert)).toBe(true)
+    // Le Québec n'est pas ouvrable (fuseau de Paris en dur) : refusé même si la variable le demande.
+    expect(estMobileFrancais('+15142345678', ouvert)).toBe(false)
     // Un fixe luxembourgeois ou un numéro américain n'est jamais accepté.
     expect(estMobileFrancais('+35226123456', ouvert)).toBe(false)
     expect(estMobileFrancais('+14162345678', ouvert)).toBe(false)
@@ -81,7 +82,8 @@ describe('numéro et texte', () => {
   })
   it('la phrase du refus cite les pays ouverts', () => {
     expect(phraseMobileRequis({})).not.toMatch(/Luxembourg|québécois/)
-    expect(phraseMobileRequis({ NEXT_PUBLIC_PAYS_INSCRIPTION: 'FR,LU,QC' })).toMatch(/Luxembourg.*québécois/)
+    expect(phraseMobileRequis({ NEXT_PUBLIC_PAYS_INSCRIPTION: 'FR,LU' })).toMatch(/Luxembourg/)
+    expect(phraseMobileRequis({ NEXT_PUBLIC_PAYS_INSCRIPTION: 'FR,LU,QC' })).not.toMatch(/québécois/)
   })
   it('masque aussi un numéro luxembourgeois ou québécois', () => {
     expect(telephoneMasque('+352621123456')).toBe('+352 6•• ••• 56')
