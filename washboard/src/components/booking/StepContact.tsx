@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
 import { normalizePhone, PAYS_TELEPHONE, type PaysTelephone } from '@/lib/phone'
 import EncartAcompte from './EncartAcompte'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type Props = {
   isProfessional: boolean
@@ -33,6 +34,7 @@ type Props = {
 }
 
 export default function StepContact({ isProfessional, loading, error, onSubmit, onBack, accent = '#2563eb', acompte = null, onCoordonnees, fidelite = null, pays }: Props) {
+  const t = useT()
   const [name,           setName]           = useState('')
   const [email,          setEmail]          = useState('')
   const [phone,          setPhone]          = useState('')
@@ -92,28 +94,28 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
 
   return (
     <div>
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Vos coordonnées</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Pour vous confirmer le rendez-vous</p>
+      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">{t('Vos coordonnées')}</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">{t('Pour vous confirmer le rendez-vous')}</p>
 
       {/* Infos professionnelles */}
       {isProfessional && (
         <div className="mb-5 space-y-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Informations société</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{t('Informations société')}</p>
 
           <div>
-            <label className={labelClass}>Raison sociale <span className="text-red-500">*</span></label>
+            <label className={labelClass}>{t('Raison sociale')} <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={companyName}
               onChange={e => setCompanyName(e.target.value)}
-              placeholder="ACME SAS"
+              placeholder={t('ACME SAS')}
               className={inputClass}
               style={{ '--tw-ring-color': accent } as React.CSSProperties}
             />
           </div>
 
           <div>
-            <label className={labelClass}>Numéro SIRET (ou BCE, IDE) <span className="text-red-500">*</span></label>
+            <label className={labelClass}>{t('Numéro SIRET (ou BCE, IDE)')} <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={siret}
@@ -130,21 +132,21 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
                   <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
                 </svg>
                 {estIde
-                  ? 'Numéro IDE : CHE suivi de 9 chiffres (CHE-123.456.789)'
-                  : siretDigits.length < 14 ? `Numéro incomplet (${siretDigits.length} chiffres : 10 pour un n° BCE, 14 pour un SIRET)` : 'Numéro trop long — 14 chiffres attendus'}
+                  ? t('Numéro IDE : CHE suivi de 9 chiffres (CHE-123.456.789)')
+                  : siretDigits.length < 14 ? `Numéro incomplet (${siretDigits.length} chiffres : 10 pour un n° BCE, 14 pour un SIRET)` : t('Numéro trop long — 14 chiffres attendus')}
               </p>
             ) : (
-              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">14 chiffres sans espaces (Suisse : CHE-123.456.789)</p>
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t('14 chiffres sans espaces (Suisse : CHE-123.456.789)')}</p>
             )}
           </div>
 
           <div>
-            <label className={labelClass}>Adresse de facturation <span className="text-slate-400 font-normal">(optionnel)</span></label>
+            <label className={labelClass}>{t('Adresse de facturation')} <span className="text-slate-400 font-normal">{t('(optionnel)')}</span></label>
             <input
               type="text"
               value={billingAddress}
               onChange={e => setBillingAddress(e.target.value)}
-              placeholder="Identique à l'adresse d'intervention si vide"
+              placeholder={t('Identique à l\'adresse d\'intervention si vide')}
               className={inputClass}
               style={{ '--tw-ring-color': accent } as React.CSSProperties}
             />
@@ -159,7 +161,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
           vrais clients pour des bots et perdait silencieusement leur réservation.
           Les attributs data-* ci-dessous demandent à 1Password/LastPass de passer. */}
       <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
-        <label>Ne pas remplir ce champ
+        <label>{t('Ne pas remplir ce champ')}
           <input
             type="text"
             name="wb-confirm-c7f3"
@@ -177,7 +179,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
       {/* Infos contact */}
       <div className="space-y-4 mb-6">
         <div>
-          <label className={labelClass}>{isProfessional ? 'Nom du contact' : 'Prénom et nom'}</label>
+          <label className={labelClass}>{isProfessional ? t('Nom du contact') : t('Prénom et nom')}</label>
           <input
             type="text"
             value={name}
@@ -188,18 +190,18 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
           />
         </div>
         <div>
-          <label className={labelClass}>Email</label>
+          <label className={labelClass}>{t('Email')}</label>
           <input
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="jean@email.com"
+            placeholder={t('jean@email.com')}
             className={inputClass}
             style={{ '--tw-ring-color': accent } as React.CSSProperties}
           />
         </div>
         <div>
-          <label className={labelClass}>Téléphone</label>
+          <label className={labelClass}>{t('Téléphone')}</label>
           <input
             type="tel"
             value={phone}
@@ -214,18 +216,18 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
               </svg>
-              {phoneDigits.length < 10 ? `Numéro trop court (${phoneDigits.length}/10 chiffres)` : 'Numéro trop long — 10 chiffres attendus'}
+              {phoneDigits.length < 10 ? `Numéro trop court (${phoneDigits.length}/10 chiffres)` : t('Numéro trop long — 10 chiffres attendus')}
             </p>
           )}
         </div>
         <div>
           <label className={labelClass}>
-            Note pour le laveur <span className="text-slate-400 font-normal">(optionnel)</span>
+            {t('Note pour le laveur')} <span className="text-slate-400 font-normal">{t('(optionnel)')}</span>
           </label>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="N° d'appartement, code portail, couleur du véhicule, accès particulier…"
+            placeholder={t('N° d\'appartement, code portail, couleur du véhicule, accès particulier…')}
             rows={3}
             className={`${inputClass} resize-none`}
             style={{ '--tw-ring-color': accent } as React.CSSProperties}
@@ -247,7 +249,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
         <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} moyens={acompte.moyens} />
         <label className="mt-3 flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
           <input type="checkbox" checked={acompteAccepte} onChange={e => setAcompteAccepte(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300" />
-          <span>J’ai lu et j’accepte les conditions de l’acompte.</span>
+          <span>{t('J’ai lu et j’accepte les conditions de l’acompte.')}</span>
         </label>
       </div>}
 
@@ -257,7 +259,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
           disabled={loading}
           className="flex-1 py-3 px-4 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 text-sm"
         >
-          Retour
+          {t('Retour')}
         </button>
         <button
           onClick={handleSubmit}
@@ -268,9 +270,9 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
           {loading ? (
             <span className="flex items-center justify-center gap-2">
               <Spinner />
-              Envoi en cours...
+              {t('Envoi en cours...')}
             </span>
-          ) : 'Confirmer la réservation'}
+          ) : t('Confirmer la réservation')}
         </button>
       </div>
     </div>

@@ -33,6 +33,7 @@ import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
 import { semainesDuMois, compterActifsParJour, pointsRendezVous } from '@/lib/vueMois'
 import { adresseAvecLieu } from '@/lib/centreAuto'
 import { openGmail, openWhatsapp } from '@/lib/contact'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // Agenda, présentation v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboard.tsx, le point de branchement ; décision
@@ -216,11 +217,12 @@ function lignePrestation(b: Booking): string {
 
 /** Détail du prix d'un rendez-vous : la prestation, celles ajoutées, les options, le déplacement. */
 function DetailPrixV2({ b, className }: { b: Booking; className: string }) {
+  const tr = useT()
   const lignes = lignesDetailPrix(b)
   if (!detailUtile(lignes)) return null
   return (
     <div className={className}>
-      <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>Détail du prix</p>
+      <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Détail du prix')}</p>
       {lignes.map(l => (
         <div key={l.cle} className={`flex items-center justify-between text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>
           <span>{l.libelle}</span>
@@ -281,6 +283,8 @@ function plageHeuresSemaine(joursActifs: Booking[][]): { debut: number; fin: num
 }
 
 export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, centreAuto = null, facturationPrete, googleAgendaConnecte, joursMasques = [], masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
+  const loc = useLocale()
+  const tr = useT()
   // Passe « bureau » (2026-10-06, Alexandre, 2026-10-03) : au-delà de `SEUIL_GRAND_ECRAN_PX`
   // (1024px, `grandEcran.ts`), même hook que ClientsViewV2.tsx/AccueilV2.tsx — pas un seuil
   // inventé en double. `false` au rendu serveur et jusqu'à l'hydratation : l'écran démarre donc
@@ -499,8 +503,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 
   const estAujourdhui = dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate()
   const sousTitre = estAujourdhui
-    ? `Aujourd’hui · ${dayDate.toLocaleDateString('fr-FR', { day: 'numeric' })}`
-    : dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })
+    ? `Aujourd’hui · ${dayDate.toLocaleDateString(loc, { day: 'numeric' })}`
+    : dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric' })
 
   // ── Passe bureau (2026-10-06) ───────────────────────────────────────────────────────────────
   //
@@ -517,17 +521,17 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
       0,
     )
     const sousTitreBureau = vueBureau === 'jour'
-      ? `${actifs.length} rendez-vous ${estAujourdhui ? 'aujourd’hui' : dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })}${totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}`
+      ? `${actifs.length} rendez-vous ${estAujourdhui ? tr('aujourd’hui') : dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric' })}${totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}`
       : vueBureau === 'semaine'
-        ? `${semaineBureau[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – ${semaineBureau[6].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} · ${nbRdvSemaine} rendez-vous cette semaine`
-        : `${MOIS[dayDate.getMonth()]} ${dayDate.getFullYear()} · ${dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })} sélectionné · ${actifs.length} rendez-vous${totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}`
+        ? `${semaineBureau[0].toLocaleDateString(loc, { day: 'numeric', month: 'short' })} – ${semaineBureau[6].toLocaleDateString(loc, { day: 'numeric', month: 'short' })} · ${nbRdvSemaine} rendez-vous cette semaine`
+        : `${MOIS[dayDate.getMonth()]} ${dayDate.getFullYear()} · ${dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric' })} sélectionné · ${actifs.length} rendez-vous${totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}`
 
     return (
       <>
       <div className={`space-y-5 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className={`text-[22px] ${titre}`}>Agenda</h1>
+            <h1 className={`text-[22px] ${titre}`}>{tr('Agenda')}</h1>
             <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{sousTitreBureau}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -542,7 +546,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                 <button
                   type="button"
                   onClick={() => naviguerBureau(-1)}
-                  aria-label={vueBureau === 'semaine' ? 'Semaine précédente' : 'Jour précédent'}
+                  aria-label={vueBureau === 'semaine' ? tr('Semaine précédente') : tr('Jour précédent')}
                   className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:text-[color:var(--v2-color-encre)]"
                 >
                   <ChevronLeft size={16} strokeWidth={2} />
@@ -554,13 +558,13 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                     className={`h-9 rounded-[var(--v2-radius-pilule)] px-2.5 text-[12.5px] ${corpsFort}`}
                     style={{ color: 'var(--v2-color-accent)' }}
                   >
-                    Aujourd’hui
+                    {tr('Aujourd’hui')}
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => naviguerBureau(1)}
-                  aria-label={vueBureau === 'semaine' ? 'Semaine suivante' : 'Jour suivant'}
+                  aria-label={vueBureau === 'semaine' ? 'Semaine suivante' : tr('Jour suivant')}
                   className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:text-[color:var(--v2-color-encre)]"
                 >
                   <ChevronRight size={16} strokeWidth={2} />
@@ -590,7 +594,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
               style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
             >
               <Plus size={16} strokeWidth={2.25} aria-hidden />
-              Ajouter
+              {tr('Ajouter')}
             </button>
           </div>
         </div>
@@ -630,9 +634,9 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                     <div className="flex h-full flex-col items-center justify-center gap-3 px-5 text-center">
                       <CalendarX2 size={22} strokeWidth={1.8} className="text-[color:var(--v2-color-gris)]" aria-hidden />
                       <div>
-                        <p className={`text-[14px] ${corpsFort}`}>Aucun rendez-vous ce jour</p>
+                        <p className={`text-[14px] ${corpsFort}`}>{tr('Aucun rendez-vous ce jour')}</p>
                         <p className={`mt-1 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                          Vos créneaux restent réservables sur votre page.
+                          {tr('Vos créneaux restent réservables sur votre page.')}
                         </p>
                       </div>
                       <button
@@ -642,7 +646,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                         style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
                       >
                         <Plus size={15} strokeWidth={2.25} aria-hidden />
-                        Nouveau rendez-vous
+                        {tr('Nouveau rendez-vous')}
                       </button>
                     </div>
                   ) : (
@@ -665,7 +669,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                             {gapMin !== null && gapMin >= SEUIL_LIBRE_MIN && suivant && (
                               <div className="flex items-center justify-between gap-2 border-t border-dashed border-[color:var(--v2-filet-fort)] px-3.5 py-2">
                                 <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-                                  {dureeLisible(gapMin)} de libre{villeTrou ? ` à ${villeTrou}` : ''}
+                                  {dureeLisible(gapMin)} {tr('de libre')}{villeTrou ? ` à ${villeTrou}` : ''}
                                 </span>
                                 <button
                                   type="button"
@@ -674,14 +678,14 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                                   className={`text-[12px] ${corpsFort}`}
                                   style={{ color: 'var(--v2-color-accent)' }}
                                 >
-                                  Proposer
+                                  {tr('Proposer')}
                                 </button>
                               </div>
                             )}
                             {suivant && trajet && (
                               <div className={`flex items-center gap-1.5 border-t border-[color:var(--v2-filet)] px-3.5 py-1.5 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                                 <IconeRoute />
-                                {trajet.minutes} min de route · {km(trajet.km)} km
+                                {trajet.minutes} {tr('min de route ·')} {km(trajet.km)} {tr('km')}
                               </div>
                             )}
                           </li>
@@ -726,7 +730,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                   <div className="flex h-full flex-col items-center justify-center gap-2.5 px-6 text-center">
                     <Users2 size={22} strokeWidth={1.8} className="text-[color:var(--v2-color-gris)]" aria-hidden />
                     <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                      {jour.length === 0 ? 'Créez un rendez-vous, ou choisissez un autre jour.' : 'Sélectionnez un rendez-vous pour voir sa fiche.'}
+                      {jour.length === 0 ? tr('Créez un rendez-vous, ou choisissez un autre jour.') : tr('Sélectionnez un rendez-vous pour voir sa fiche.')}
                     </p>
                   </div>
                 )}
@@ -756,7 +760,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
               className="flex min-h-14 w-full items-center gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-2.5 text-left"
             >
               <span className="min-w-0 flex-1">
-                <span className={`block text-[15px] ${corpsFort}`}>Google Agenda</span>
+                <span className={`block text-[15px] ${corpsFort}`}>{tr('Google Agenda')}</span>
                 <span className="mt-0.5 flex items-center gap-2">
                   <span
                     className="h-[7px] w-[7px] shrink-0 rounded-full"
@@ -764,7 +768,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                     aria-hidden
                   />
                   <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                    {googleAgendaConnecte ? 'Connecté · vos rendez-vous s’y ajoutent' : 'Pas connecté'}
+                    {googleAgendaConnecte ? tr('Connecté · vos rendez-vous s’y ajoutent') : tr('Pas connecté')}
                   </span>
                 </span>
               </span>
@@ -818,7 +822,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
       )}
 
       {menuAjout && (
-        <Feuille titre="Ajouter" onClose={() => setMenuAjout(false)}>
+        <Feuille titre={tr('Ajouter')} onClose={() => setMenuAjout(false)}>
           <ul>
             <li>
               <button
@@ -826,8 +830,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                 onClick={() => { setMenuAjout(false); openManualModal(dayDate) }}
                 className="flex min-h-14 w-full flex-col items-start justify-center py-2.5 text-left"
               >
-                <span className={`text-[16px] ${nom}`}>Nouveau rendez-vous</span>
-                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Un client qui a appelé ou écrit</span>
+                <span className={`text-[16px] ${nom}`}>{tr('Nouveau rendez-vous')}</span>
+                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Un client qui a appelé ou écrit')}</span>
               </button>
             </li>
             <li className="border-t border-[color:var(--v2-filet)]">
@@ -836,8 +840,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                 onClick={() => { setMenuAjout(false); openAddModal(dayDate) }}
                 className="flex min-h-14 w-full flex-col items-start justify-center py-2.5 text-left"
               >
-                <span className={`text-[16px] ${nom}`}>Bloquer une période</span>
-                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Congés, formation, jour férié</span>
+                <span className={`text-[16px] ${nom}`}>{tr('Bloquer une période')}</span>
+                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Congés, formation, jour férié')}</span>
               </button>
             </li>
           </ul>
@@ -924,7 +928,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           <button
             type="button"
             onClick={() => setVue('mois')}
-            aria-label="Voir le mois"
+            aria-label={tr('Voir le mois')}
             aria-haspopup="dialog"
             className="flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]"
             style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
@@ -934,7 +938,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           <button
             type="button"
             onClick={() => setMenuAjout(true)}
-            aria-label="Ajouter un rendez-vous ou bloquer une période"
+            aria-label={tr('Ajouter un rendez-vous ou bloquer une période')}
             aria-haspopup="dialog"
             className="flex h-11 w-11 items-center justify-center rounded-full text-white transition-transform active:scale-[.97]"
             style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
@@ -950,7 +954,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         <button
           type="button"
           onClick={() => allerSemaine(-1)}
-          aria-label="Semaine précédente"
+          aria-label={tr('Semaine précédente')}
           className="shrink-0 flex h-11 w-8 items-center justify-center text-[color:var(--v2-color-gris)] hover:text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={18} strokeWidth={2} />
@@ -966,7 +970,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                 type="button"
                 onClick={() => { decalageBandeau.current = i - 3; setDayDate(d) }}
                 aria-current={actif ? 'date' : undefined}
-                aria-label={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (enConge ? ', indisponible' : '')}
+                aria-label={d.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' }) + (enConge ? ', indisponible' : '')}
                 className={`relative flex h-14 w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-[var(--v2-radius-bouton)] ${
                   actif ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)]' : 'text-[color:var(--v2-color-encre)]'
                 }`}
@@ -989,7 +993,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         <button
           type="button"
           onClick={() => allerSemaine(1)}
-          aria-label="Semaine suivante"
+          aria-label={tr('Semaine suivante')}
           className="shrink-0 flex h-11 w-8 items-center justify-center text-[color:var(--v2-color-gris)] hover:text-[color:var(--v2-color-encre)]"
         >
           <ChevronRight size={18} strokeWidth={2} />
@@ -1002,7 +1006,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           onClick={() => setDayDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()))}
           className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
         >
-          Revenir à aujourd’hui
+          {tr('Revenir à aujourd’hui')}
         </button>
       )}
 
@@ -1018,7 +1022,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 
       {jour.length === 0 && masqueesDuJour.length === 0 ? (
         <p className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)] text-center py-10`}>
-          Aucun rendez-vous ce jour.
+          {tr('Aucun rendez-vous ce jour.')}
         </p>
       ) : (
         <div className="flex flex-col">
@@ -1043,7 +1047,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                     </span>
                     <span className="flex flex-1 items-center justify-between gap-2 rounded-[var(--v2-radius-carte)] border border-dashed border-[color:var(--v2-filet-fort)] px-3.5 py-2.5">
                       <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-                        {dureeLisible(gapMin)} de libre{villeTrou ? ` à ${villeTrou}` : ''}
+                        {dureeLisible(gapMin)} {tr('de libre')}{villeTrou ? ` à ${villeTrou}` : ''}
                       </span>
                       <button
                         type="button"
@@ -1052,7 +1056,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                         className={`-my-2.5 -mr-1.5 flex h-11 shrink-0 items-center px-2.5 text-[13px] ${corpsFort}`}
                         style={{ color: 'var(--v2-color-accent)' }}
                       >
-                        Proposer
+                        {tr('Proposer')}
                       </button>
                     </span>
                   </div>
@@ -1071,7 +1075,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                     {trajet && (
                       <span className={`flex items-center gap-1.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
                         <IconeRoute />
-                        {trajet.minutes} min de route · {km(trajet.km)} km
+                        {trajet.minutes} {tr('min de route ·')} {km(trajet.km)} {tr('km')}
                       </span>
                     )}
                   </div>
@@ -1108,7 +1112,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
         className="flex min-h-14 w-full items-center gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-2.5 text-left"
       >
         <span className="min-w-0 flex-1">
-          <span className={`block text-[15px] ${corpsFort}`}>Google Agenda</span>
+          <span className={`block text-[15px] ${corpsFort}`}>{tr('Google Agenda')}</span>
           <span className="mt-0.5 flex items-center gap-2">
             <span
               className="h-[7px] w-[7px] shrink-0 rounded-full"
@@ -1116,7 +1120,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
               aria-hidden
             />
             <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {googleAgendaConnecte ? 'Connecté · vos rendez-vous s’y ajoutent' : 'Pas connecté'}
+              {googleAgendaConnecte ? tr('Connecté · vos rendez-vous s’y ajoutent') : tr('Pas connecté')}
             </span>
           </span>
         </span>
@@ -1135,7 +1139,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
       )}
 
       {menuAjout && (
-        <Feuille titre="Ajouter" onClose={() => setMenuAjout(false)}>
+        <Feuille titre={tr('Ajouter')} onClose={() => setMenuAjout(false)}>
           <ul>
             <li>
               <button
@@ -1143,8 +1147,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                 onClick={() => { setMenuAjout(false); openManualModal(dayDate) }}
                 className="flex min-h-14 w-full flex-col items-start justify-center py-2.5 text-left"
               >
-                <span className={`text-[16px] ${nom}`}>Nouveau rendez-vous</span>
-                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Un client qui a appelé ou écrit</span>
+                <span className={`text-[16px] ${nom}`}>{tr('Nouveau rendez-vous')}</span>
+                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Un client qui a appelé ou écrit')}</span>
               </button>
             </li>
             <li className="border-t border-[color:var(--v2-filet)]">
@@ -1153,8 +1157,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                 onClick={() => { setMenuAjout(false); openAddModal(dayDate) }}
                 className="flex min-h-14 w-full flex-col items-start justify-center py-2.5 text-left"
               >
-                <span className={`text-[16px] ${nom}`}>Bloquer une période</span>
-                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Congés, formation, jour férié</span>
+                <span className={`text-[16px] ${nom}`}>{tr('Bloquer une période')}</span>
+                <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Congés, formation, jour férié')}</span>
               </button>
             </li>
           </ul>
@@ -1361,6 +1365,8 @@ function DetailRendezVous({
   factureMsg: { id: string; texte: string; completer: boolean } | null
   emettreFactureManuelle: (id: string) => void
 }) {
+  const loc = useLocale()
+  const tr = useT()
   const [visible, setVisible] = useState(false)
   // Même choix d'application (Plans, Waze, Google Maps) que le héros d'Aujourd'hui et la fiche
   // bureau — il manquait ici, sur téléphone, où l'itinéraire sert le plus (audit du 2026-10-10).
@@ -1444,14 +1450,14 @@ function DetailRendezVous({
                     type="date"
                     value={editDate}
                     onChange={e => setEditDate(e.target.value)}
-                    aria-label="Date du rendez-vous"
+                    aria-label={tr('Date du rendez-vous')}
                     className={`flex-1 h-11 px-3 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[16px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
                   />
                   <input
                     type="time"
                     value={editTime}
                     onChange={e => setEditTime(e.target.value)}
-                    aria-label="Heure du rendez-vous"
+                    aria-label={tr('Heure du rendez-vous')}
                     className={`w-28 h-11 px-3 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[16px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
                   />
                 </div>
@@ -1473,14 +1479,14 @@ function DetailRendezVous({
                     onClick={() => setRescheduling(false)}
                     className={`px-4 h-10 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
                   >
-                    Annuler
+                    {tr('Annuler')}
                   </button>
                 </div>
               </div>
             ) : (
               <p className={`mt-1 flex items-center justify-between gap-2 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                 <span>
-                  {new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at))}–{formatHeure(finRendezVous(b))}
+                  {new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at))}–{formatHeure(finRendezVous(b))}
                 </span>
                 {modifiable && (
                   <button
@@ -1489,7 +1495,7 @@ function DetailRendezVous({
                     className={`shrink-0 text-[12.5px] ${corpsFort}`}
                     style={{ color: 'var(--v2-color-accent)' }}
                   >
-                    Modifier
+                    {tr('Modifier')}
                   </button>
                 )}
               </p>
@@ -1498,7 +1504,7 @@ function DetailRendezVous({
           <button
             ref={closeRef}
             onClick={onClose}
-            aria-label="Fermer"
+            aria-label={tr('Fermer')}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:bg-[color:var(--v2-filet)] hover:text-[color:var(--v2-color-encre)]"
           >
             <X size={20} strokeWidth={2} />
@@ -1527,25 +1533,25 @@ function DetailRendezVous({
               style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
             >
               <Navigation size={16} strokeWidth={2} aria-hidden />
-              Itinéraire
+              {tr('Itinéraire')}
             </button>
           )}
 
           <div className="mt-4">
             <label htmlFor="rdv-notes" className={`mb-1.5 block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Notes internes
+              {tr('Notes internes')}
             </label>
             <textarea
               id="rdv-notes"
               value={editNotes}
               onChange={e => setEditNotes(e.target.value)}
               onBlur={saveNotes}
-              placeholder="Code portail, instructions particulières…"
+              placeholder={tr('Code portail, instructions particulières…')}
               rows={2}
               className={`w-full rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3.5 py-2.5 text-[15px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40 resize-none`}
             />
             {notesSaving && (
-              <p className={`mt-1 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Enregistrement…</p>
+              <p className={`mt-1 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Enregistrement…')}</p>
             )}
           </div>
 
@@ -1559,7 +1565,7 @@ function DetailRendezVous({
                   className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border text-[15px] ${corpsFort} disabled:opacity-50 transition-transform active:scale-[.97]`}
                   style={{ borderColor: 'var(--v2-color-vert)', color: 'var(--v2-color-vert)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
                 >
-                  Confirmer
+                  {tr('Confirmer')}
                 </button>
               )}
               {/* Aussi sur un rendez-vous resté « en attente », même repli
@@ -1572,7 +1578,7 @@ function DetailRendezVous({
                 className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border text-[15px] ${corpsFort} disabled:opacity-50 transition-transform active:scale-[.97]`}
                 style={{ borderColor: 'var(--v2-color-accent)', color: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                {b.status === 'pending' ? 'Terminé' : 'Marquer terminé'}
+                {b.status === 'pending' ? tr('Terminé') : tr('Marquer terminé')}
               </button>
               <button
                 type="button"
@@ -1581,7 +1587,7 @@ function DetailRendezVous({
                 className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border text-[15px] ${corpsFort} disabled:opacity-50 transition-transform active:scale-[.97]`}
                 style={{ borderColor: 'var(--v2-color-rouge)', color: 'var(--v2-color-rouge)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                Annuler
+                {tr('Annuler')}
               </button>
             </div>
           )}
@@ -1589,7 +1595,7 @@ function DetailRendezVous({
           {clotureDemandee && (
             <ConfirmerClotureV2
               clientName={b.client_name}
-              quand={`${new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
+              quand={`${new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
               professionnel={!!b.is_professional}
               facturationPrete={facturationPrete}
               montantPrevu={montantPrevu(b)}
@@ -1612,7 +1618,7 @@ function DetailRendezVous({
                   className={`flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                   style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
                 >
-                  Télécharger la facture {b.facture_numero}
+                  {tr('Télécharger la facture')} {b.facture_numero}
                 </a>
               ) : (
                 <button
@@ -1622,7 +1628,7 @@ function DetailRendezVous({
                   className={`flex h-11 w-full items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] disabled:opacity-50 transition-transform active:scale-[.97]`}
                   style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
                 >
-                  {factureEnCours ? 'Émission…' : 'Émettre la facture'}
+                  {factureEnCours ? 'Émission…' : tr('Émettre la facture')}
                 </button>
               )}
               {factureMsg?.id === b.id && (
@@ -1630,7 +1636,7 @@ function DetailRendezVous({
                   {factureMsg.texte}{' '}
                   {factureMsg.completer && (
                     <a href="/dashboard/parametres/profil#facturation" className={`${corpsFort} underline`}>
-                      Compléter mes informations
+                      {tr('Compléter mes informations')}
                     </a>
                   )}
                 </p>
@@ -1645,7 +1651,7 @@ function DetailRendezVous({
             </a>
             {/* Gmail prérempli (prestation, date, adresse), repris de l'ancien agenda. */}
             <button type="button" onClick={() => openGmail(b)} className={`${corpsFort} text-[color:var(--v2-color-accent)] hover:underline`}>
-              Écrire sur Gmail (message prérempli)
+              {tr('Écrire sur Gmail (message prérempli)')}
             </button>
           </div>}
 
@@ -1657,15 +1663,15 @@ function DetailRendezVous({
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
                 <Phone size={16} strokeWidth={2} aria-hidden />
-                Appeler
+                {tr('Appeler')}
               </a>
               <a
                 href={`sms:${b.client_phone}`}
-                onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `À ${b.client_name}` })}
+                onClick={() => annoncerApresRetour({ titre: tr('Message envoyé'), detail: `À ${b.client_name}` })}
                 className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                Message
+                {tr('Message')}
               </a>
               {/* WhatsApp prérempli (prestation, date, adresse), repris de l'ancien agenda. */}
               <button
@@ -1674,7 +1680,7 @@ function DetailRendezVous({
                 className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                WhatsApp
+                {tr('WhatsApp')}
               </button>
             </div>
           )}
@@ -1717,6 +1723,7 @@ function BandeauSemaineBureauV2({
   bandeauRef: RefObject<HTMLDivElement | null>
   decalageBandeau: MutableRefObject<number>
 }) {
+  const loc = useLocale()
   return (
     <div ref={bandeauRef} className="flex items-center gap-1.5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-1.5">
       {weekDays.map((d, i) => {
@@ -1729,12 +1736,12 @@ function BandeauSemaineBureauV2({
             type="button"
             onClick={() => { decalageBandeau.current = i - 3; onChoisir(d) }}
             aria-current={actif ? 'date' : undefined}
-            aria-label={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (enConge ? ', indisponible' : '')}
+            aria-label={d.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' }) + (enConge ? ', indisponible' : '')}
             className={`relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-[var(--v2-radius-bouton)] transition-colors motion-reduce:transition-none ${
               actif ? 'bg-[color:var(--v2-color-encre)] text-[color:var(--v2-color-surface)]' : 'text-[color:var(--v2-color-encre)] hover:bg-[color:var(--v2-filet)]'
             }`}
           >
-            <span className={`text-[11px] ${corps} capitalize opacity-70`}>{d.toLocaleDateString('fr-FR', { weekday: 'short' })}</span>
+            <span className={`text-[11px] ${corps} capitalize opacity-70`}>{d.toLocaleDateString(loc, { weekday: 'short' })}</span>
             <span className={`text-[16px] ${corpsFort} tabular-nums ${!actif && estJourReel ? 'text-[color:var(--v2-color-accent)]' : ''}`}>
               {d.getDate()}
             </span>
@@ -1836,6 +1843,8 @@ function FicheRdvBureauV2({
   factureMsg: { id: string; texte: string; completer: boolean } | null
   emettreFactureManuelle: (id: string) => void
 }) {
+  const loc = useLocale()
+  const tr = useT()
   const [choixItineraire, setChoixItineraire] = useState(false)
   const prix = montant(b)
   const remise = b.is_smart_slot && Number(b.smart_discount) > 0
@@ -1855,14 +1864,14 @@ function FicheRdvBureauV2({
                     type="date"
                     value={editDate}
                     onChange={e => setEditDate(e.target.value)}
-                    aria-label="Date du rendez-vous"
+                    aria-label={tr('Date du rendez-vous')}
                     className={`h-10 flex-1 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[14px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
                   />
                   <input
                     type="time"
                     value={editTime}
                     onChange={e => setEditTime(e.target.value)}
-                    aria-label="Heure du rendez-vous"
+                    aria-label={tr('Heure du rendez-vous')}
                     className={`h-10 w-28 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[14px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
                   />
                 </div>
@@ -1884,14 +1893,14 @@ function FicheRdvBureauV2({
                     onClick={() => setRescheduling(false)}
                     className={`h-9 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] px-3 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
                   >
-                    Annuler
+                    {tr('Annuler')}
                   </button>
                 </div>
               </div>
             ) : (
               <p className={`mt-1 flex items-center gap-2 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
                 <span>
-                  {new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at))}–{formatHeure(finRendezVous(b))} · {lignePrestation(b)} · {remise ? formatPrice(prix) : `${prix} €`}
+                  {new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at))}–{formatHeure(finRendezVous(b))} · {lignePrestation(b)} · {remise ? formatPrice(prix) : `${prix} €`}
                 </span>
                 {modifiable && (
                   <button
@@ -1900,7 +1909,7 @@ function FicheRdvBureauV2({
                     className={`shrink-0 text-[12.5px] ${corpsFort}`}
                     style={{ color: 'var(--v2-color-accent)' }}
                   >
-                    Modifier
+                    {tr('Modifier')}
                   </button>
                 )}
               </p>
@@ -1912,7 +1921,7 @@ function FicheRdvBureauV2({
         {/* Statuts en pilules (planche Système : « point plein + le mot ») — lecture directe du
             statut réel, jamais de retour vers « En attente » (aucune action ne l'autorise). */}
         <div className="mt-4 flex gap-2">
-          {([['pending', 'En attente'], ['confirmed', 'Confirmé'], ['done', 'Terminé'], ['cancelled', 'Annulé']] as const).map(([valeur, libelle]) => {
+          {([['pending', 'En attente'], ['confirmed', tr('Confirmé')], ['done', tr('Terminé')], ['cancelled', tr('Annulé')]] as const).map(([valeur, libelle]) => {
             const actif = b.status === valeur
             const peutCliquer = modifiable && (valeur === 'done' || valeur === 'cancelled' || (valeur === 'confirmed' && b.status === 'pending'))
             return (
@@ -1955,7 +1964,7 @@ function FicheRdvBureauV2({
                 style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
                 <Navigation size={15} strokeWidth={2} aria-hidden />
-                Itinéraire
+                {tr('Itinéraire')}
               </button>
             )}
             {b.client_phone && (
@@ -1965,17 +1974,17 @@ function FicheRdvBureauV2({
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
                 <Phone size={14} strokeWidth={2} aria-hidden />
-                Appeler
+                {tr('Appeler')}
               </a>
             )}
             {b.client_phone && (
               <a
                 href={`sms:${b.client_phone}`}
-                onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `À ${b.client_name}` })}
+                onClick={() => annoncerApresRetour({ titre: tr('Message envoyé'), detail: `À ${b.client_name}` })}
                 className={`flex h-10 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                Message
+                {tr('Message')}
               </a>
             )}
             {/* WhatsApp prérempli (prestation, date, adresse), repris de l'ancien agenda. */}
@@ -1986,7 +1995,7 @@ function FicheRdvBureauV2({
                 className={`flex h-10 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                WhatsApp
+                {tr('WhatsApp')}
               </button>
             )}
           </div>
@@ -2004,19 +2013,19 @@ function FicheRdvBureauV2({
 
         <div className="mt-4">
           <label htmlFor="rdv-notes-bureau" className={`mb-1.5 block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Notes internes
+            {tr('Notes internes')}
           </label>
           <textarea
             id="rdv-notes-bureau"
             value={editNotes}
             onChange={e => setEditNotes(e.target.value)}
             onBlur={saveNotes}
-            placeholder="Code portail, instructions particulières…"
+            placeholder={tr('Code portail, instructions particulières…')}
             rows={3}
             className={`w-full resize-none rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3.5 py-2.5 text-[14px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
           />
           {notesSaving && (
-            <p className={`mt-1 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Enregistrement…</p>
+            <p className={`mt-1 text-[11.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Enregistrement…')}</p>
           )}
         </div>
 
@@ -2024,7 +2033,7 @@ function FicheRdvBureauV2({
           <div className="mt-4">
             <ConfirmerClotureV2
               clientName={b.client_name}
-              quand={`${new Date(b.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
+              quand={`${new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
               professionnel={!!b.is_professional}
               facturationPrete={facturationPrete}
               montantPrevu={montantPrevu(b)}
@@ -2047,7 +2056,7 @@ function FicheRdvBureauV2({
                 className={`flex h-10 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                Télécharger la facture {b.facture_numero}
+                {tr('Télécharger la facture')} {b.facture_numero}
               </a>
             ) : (
               <button
@@ -2057,7 +2066,7 @@ function FicheRdvBureauV2({
                 className={`flex h-10 w-full items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] disabled:opacity-50 transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                {factureEnCours ? 'Émission…' : 'Émettre la facture'}
+                {factureEnCours ? 'Émission…' : tr('Émettre la facture')}
               </button>
             )}
             {factureMsg?.id === b.id && (
@@ -2065,7 +2074,7 @@ function FicheRdvBureauV2({
                 {factureMsg.texte}{' '}
                 {factureMsg.completer && (
                   <a href="/dashboard/parametres/profil#facturation" className={`${corpsFort} underline`}>
-                    Compléter mes informations
+                    {tr('Compléter mes informations')}
                   </a>
                 )}
               </p>
@@ -2078,7 +2087,7 @@ function FicheRdvBureauV2({
             <span className="truncate">{b.client_email}</span>
             {/* Gmail prérempli (prestation, date, adresse), repris de l'ancien agenda. */}
             <button type="button" onClick={() => openGmail(b)} className={`shrink-0 ${corpsFort} text-[color:var(--v2-color-accent)] hover:underline`}>
-              Écrire sur Gmail (message prérempli)
+              {tr('Écrire sur Gmail (message prérempli)')}
             </button>
           </div>
         )}
@@ -2114,6 +2123,8 @@ function GrilleSemaineV2({
   onOuvrirJour: (d: Date) => void
   onOuvrirRdv: (b: Booking, d: Date) => void
 }) {
+  const loc = useLocale()
+  const tr = useT()
   const joursActifs = useMemo(
     () => weekDays.map(d => (byDate.get(dayKey(d)) ?? []).filter(b => b.status !== 'cancelled').sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))),
     [weekDays, byDate],
@@ -2160,7 +2171,7 @@ function GrilleSemaineV2({
                 }`}
               >
                 <span className={`text-[11px] ${corps} capitalize text-[color:var(--v2-color-gris)]`}>
-                  {d.toLocaleDateString('fr-FR', { weekday: 'short' })}
+                  {d.toLocaleDateString(loc, { weekday: 'short' })}
                 </span>
                 <span className={`flex items-center gap-1 text-[14px] ${corpsFort} tabular-nums ${!estAffiche && estAujourdhui ? 'text-[color:var(--v2-color-accent)]' : ''}`}>
                   {d.getDate()}
@@ -2195,7 +2206,7 @@ function GrilleSemaineV2({
                   })}
                 {ferme ? (
                   <span className={`absolute inset-0 flex items-center justify-center text-[11px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-                    Fermé
+                    {tr('Fermé')}
                   </span>
                 ) : (
                   actifsJour.map((b, idx) => {
@@ -2224,7 +2235,7 @@ function GrilleSemaineV2({
                             aria-hidden
                             className={`absolute left-1 top-full z-10 mt-0.5 whitespace-nowrap rounded-[4px] bg-[color:var(--v2-color-surface)] px-1 text-[9.5px] ${corpsFort} text-[color:var(--v2-color-gris)] shadow-sm`}
                           >
-                            {trajet.minutes} min
+                            {trajet.minutes} {tr('min')}
                           </span>
                         )}
                       </span>
@@ -2264,6 +2275,8 @@ function MoisBureauV2({
   onChangerMois: (delta: number) => void
   onOuvrirRdv: (b: Booking) => void
 }) {
+  const loc = useLocale()
+  const tr = useT()
   const annee = dayDate.getFullYear()
   const mois = dayDate.getMonth()
   const semaines = useMemo(() => semainesDuMois(annee, mois), [annee, mois])
@@ -2276,7 +2289,7 @@ function MoisBureauV2({
           <button
             type="button"
             onClick={() => onChangerMois(-1)}
-            aria-label="Mois précédent"
+            aria-label={tr('Mois précédent')}
             className="flex h-9 w-9 items-center justify-center text-[color:var(--v2-color-gris)] transition-colors hover:text-[color:var(--v2-color-encre)]"
           >
             <ChevronLeft size={18} strokeWidth={2} />
@@ -2285,7 +2298,7 @@ function MoisBureauV2({
           <button
             type="button"
             onClick={() => onChangerMois(1)}
-            aria-label="Mois suivant"
+            aria-label={tr('Mois suivant')}
             className="flex h-9 w-9 items-center justify-center text-[color:var(--v2-color-gris)] transition-colors hover:text-[color:var(--v2-color-encre)]"
           >
             <ChevronRight size={18} strokeWidth={2} />
@@ -2314,7 +2327,7 @@ function MoisBureauV2({
                     type="button"
                     onClick={() => onChoisirJour(j)}
                     aria-current={estAffiche ? 'date' : undefined}
-                    aria-label={j.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (ferme ? ', fermé' : conge ? ', congé partiel' : '')}
+                    aria-label={j.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' }) + (ferme ? tr(', fermé') : conge ? tr(', congé partiel') : '')}
                     className="flex min-h-[72px] flex-col items-center gap-1 border-r border-[color:var(--v2-filet)] py-2 text-center transition-colors last:border-r-0 hover:bg-[color:var(--v2-filet)] motion-reduce:transition-none"
                     style={ferme ? { background: 'color-mix(in srgb, var(--v2-color-ambre) 6%, transparent)' } : undefined}
                   >
@@ -2354,7 +2367,7 @@ function MoisBureauV2({
       <div className="flex flex-col overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
         <div className="shrink-0 border-b border-[color:var(--v2-filet)] px-4 py-3">
           <p className={`text-[15px] ${corpsFort} capitalize`}>
-            {dayDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
           <p className={`mt-0.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
             {actifs.length} rendez-vous{actifs.length > 0 ? ` · ${totalPrix} €` : ''}{totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}
@@ -2363,7 +2376,7 @@ function MoisBureauV2({
         <div className="flex-1 overflow-y-auto">
           {jour.length === 0 ? (
             <p className={`px-4 py-6 text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Aucun rendez-vous ce jour.
+              {tr('Aucun rendez-vous ce jour.')}
             </p>
           ) : (
             <ul className="divide-y divide-[color:var(--v2-filet)]">

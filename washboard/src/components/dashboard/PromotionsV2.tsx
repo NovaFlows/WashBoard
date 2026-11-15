@@ -10,6 +10,7 @@ import BandeauPromotion from '@/components/booking/BandeauPromotion'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import { COULEURS_BANDEAU, libelleRemise, type Promotion, type TypeRemise } from '@/lib/promotion'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // « Promotions » — demande d'Alexandre, 2026-10-17 : « que le laveur puisse mettre une
 // promotion pendant un temps, par exemple pour la Saint-Valentin, et que sur sa page de
@@ -68,9 +69,11 @@ function etat(p: Pick<Promotion, 'debut' | 'fin'>, maintenant: number): { mot: s
   return { mot: 'En cours', couleur: 'var(--v2-color-vert)' }
 }
 
-const dateCourte = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+const dateCourte = (iso: string, loc = 'fr-FR') => new Date(iso).toLocaleDateString(loc, { day: 'numeric', month: 'short' })
 
 export default function PromotionsV2({ slug, services, liste }: { slug: string; services: { id: string; name: string }[]; liste: ReglagesListeProps }) {
+  const loc = useLocale()
+  const t = useT()
   const grandEcran = useGrandEcran()
   const [promotions, setPromotions] = useState<Promotion[] | null>(null)
   const [enAttente, setEnAttente] = useState(false)
@@ -88,11 +91,11 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
     try {
       const res = await fetch('/api/washer/promotions')
       const json = await res.json().catch(() => null)
-      if (!res.ok) { setChargementErreur(json?.error ?? 'Impossible de charger vos promotions.'); return }
+      if (!res.ok) { setChargementErreur(json?.error ?? t('Impossible de charger vos promotions.')); return }
       setPromotions(json.promotions ?? [])
       setEnAttente(json.enAttente === true)
     } catch {
-      setChargementErreur('Impossible de charger vos promotions. Vérifiez votre connexion.')
+      setChargementErreur(t('Impossible de charger vos promotions. Vérifiez votre connexion.'))
     }
   }, [])
   // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement des données au montage
@@ -104,10 +107,10 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
     if (!brouillon || enregistrement) return
     setErreur(null)
     const valeur = Number(brouillon.valeur.replace(',', '.'))
-    if (!brouillon.nom.trim()) { setErreur('Donnez un nom à la promotion.'); return }
-    if (!(valeur > 0)) { setErreur('Indiquez le montant de la remise.'); return }
-    if (!brouillon.debut || !brouillon.fin) { setErreur('Indiquez le début et la fin.'); return }
-    if (!brouillon.toutes && !brouillon.service_ids.length) { setErreur('Choisissez au moins une prestation, ou « Toutes ».'); return }
+    if (!brouillon.nom.trim()) { setErreur(t('Donnez un nom à la promotion.')); return }
+    if (!(valeur > 0)) { setErreur(t('Indiquez le montant de la remise.')); return }
+    if (!brouillon.debut || !brouillon.fin) { setErreur(t('Indiquez le début et la fin.')); return }
+    if (!brouillon.toutes && !brouillon.service_ids.length) { setErreur(t('Choisissez au moins une prestation, ou « Toutes ».')); return }
     setEnregistrement(true)
     const corpsRequete = {
       nom: brouillon.nom.trim(),
@@ -128,11 +131,11 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
         body: JSON.stringify(corpsRequete),
       })
       const json = await res.json().catch(() => null)
-      if (!res.ok) { setErreur(json?.error ?? 'Enregistrement impossible. Réessayez.'); return }
+      if (!res.ok) { setErreur(json?.error ?? t('Enregistrement impossible. Réessayez.')); return }
       setBrouillon(null)
       await charger()
     } catch {
-      setErreur('Enregistrement impossible. Vérifiez votre connexion.')
+      setErreur(t('Enregistrement impossible. Vérifiez votre connexion.'))
     } finally {
       setEnregistrement(false)
     }
@@ -145,12 +148,12 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
     try {
       const res = await fetch(`/api/washer/promotions/${brouillon.id}`, { method: 'DELETE' })
       const json = await res.json().catch(() => null)
-      if (!res.ok) { setErreur(json?.error ?? 'Suppression impossible. Réessayez.'); return }
+      if (!res.ok) { setErreur(json?.error ?? t('Suppression impossible. Réessayez.')); return }
       setSuppression(false)
       setBrouillon(null)
       await charger()
     } catch {
-      setErreur('Suppression impossible. Vérifiez votre connexion.')
+      setErreur(t('Suppression impossible. Vérifiez votre connexion.'))
     } finally {
       setSuppressionEnCours(false)
     }
@@ -159,11 +162,11 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
   const enTete = (intitule: string, sousTitre: string, retour: () => void, lienRetour?: string) => (
     <div className="flex items-center gap-1 pb-3">
       {lienRetour ? (
-        <Link href={lienRetour} aria-label="Retour à Prestations et prix" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
+        <Link href={lienRetour} aria-label={t('Retour à Prestations et prix')} className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
       ) : (
-        <button type="button" onClick={retour} aria-label="Retour aux promotions" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
+        <button type="button" onClick={retour} aria-label={t('Retour aux promotions')} className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
           <ChevronLeft size={22} strokeWidth={2} />
         </button>
       )}
@@ -177,10 +180,10 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
   // ── Vue liste ──────────────────────────────────────────────────────────
   const vueListe = (
     <>
-      {enTete('Promotions', 'Une remise pendant une période, annoncée sur votre page', () => {}, '/dashboard/parametres/prestations')}
+      {enTete('Promotions', t('Une remise pendant une période, annoncée sur votre page'), () => {}, '/dashboard/parametres/prestations')}
 
       {chargementErreur && <Constat>{chargementErreur}</Constat>}
-      {enAttente && <Constat>Les promotions arrivent très bientôt sur votre compte. Réessayez dans quelques minutes.</Constat>}
+      {enAttente && <Constat>{t('Les promotions arrivent très bientôt sur votre compte. Réessayez dans quelques minutes.')}</Constat>}
 
       {promotions && promotions.length > 0 && (
         <CarteListe>
@@ -192,7 +195,7 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
                   <button type="button" onClick={() => { setErreur(null); setBrouillon(depuisPromotion(p)) }} className="flex min-h-[60px] w-full items-center gap-3 py-2.5 text-left">
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className={`truncate text-[15.5px] ${policeNom}`}>{p.nom} <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>{libelleRemise({ ...p, valeur: Number(p.valeur) })}</span></span>
-                      <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Du {dateCourte(p.debut)} au {dateCourte(p.fin)}</span>
+                      <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Du')} {dateCourte(p.debut, loc)} {t('au')} {dateCourte(p.fin, loc)}</span>
                     </span>
                     <span className={`flex shrink-0 items-center gap-1.5 text-[13px] ${corpsFort}`} style={{ color: e.couleur }}>
                       <span className="h-[7px] w-[7px] rounded-full" style={{ background: e.couleur }} aria-hidden />{e.mot}
@@ -207,13 +210,13 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
 
       {promotions && promotions.length === 0 && !enAttente && (
         <p className={`px-0.5 pb-4 text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Aucune promotion pour l’instant. Préparez-en une à l’avance : elle s’affichera toute seule le jour venu, et disparaîtra à la fin.
+          {t('Aucune promotion pour l’instant. Préparez-en une à l’avance : elle s’affichera toute seule le jour venu, et disparaîtra à la fin.')}
         </p>
       )}
 
       {promotions && !enAttente && (
         <button type="button" onClick={() => { setErreur(null); setBrouillon(nouveauBrouillon()) }} className={`${BOUTON} mt-4 w-full `} style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)', ...PRESSION }}>
-          Nouvelle promotion
+          {t('Nouvelle promotion')}
         </button>
       )}
     </>
@@ -236,44 +239,44 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
 
   const vueFormulaire = b && (
     <>
-      {enTete(b.id ? 'Modifier la promotion' : 'Nouvelle promotion', 'Elle s’applique aux réservations prises pendant la période', () => setBrouillon(null))}
+      {enTete(b.id ? t('Modifier la promotion') : 'Nouvelle promotion', t('Elle s’applique aux réservations prises pendant la période'), () => setBrouillon(null))}
 
       <div className="flex flex-col gap-[22px]">
         <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
-          <label htmlFor="promo-nom" className={ETIQUETTE}>Pourquoi cette promotion ?</label>
-          <input id="promo-nom" className={CHAMP} value={b.nom} maxLength={60} placeholder="Saint-Valentin" onChange={e => maj({ nom: e.target.value })} />
+          <label htmlFor="promo-nom" className={ETIQUETTE}>{t('Pourquoi cette promotion ?')}</label>
+          <input id="promo-nom" className={CHAMP} value={b.nom} maxLength={60} placeholder={t('Saint-Valentin')} onChange={e => maj({ nom: e.target.value })} />
           <div className="-mx-1 mt-2.5 flex gap-2 overflow-x-auto px-1 pb-1">
             {IDEES.map(i => (
               <button key={i} type="button" onClick={() => maj({ nom: i })} className={puce(b.nom === i)}>{i}</button>
             ))}
           </div>
 
-          <p className={`${ETIQUETTE} mt-5`}>Remise</p>
+          <p className={`${ETIQUETTE} mt-5`}>{t('Remise')}</p>
           <div className="flex gap-2.5">
             <div className="flex shrink-0 gap-2">
-              <button type="button" onClick={() => maj({ type_remise: 'pourcentage' })} className={puce(b.type_remise === 'pourcentage')}>En %</button>
-              <button type="button" onClick={() => maj({ type_remise: 'montant' })} className={puce(b.type_remise === 'montant')}>En €</button>
+              <button type="button" onClick={() => maj({ type_remise: 'pourcentage' })} className={puce(b.type_remise === 'pourcentage')}>{t('En %')}</button>
+              <button type="button" onClick={() => maj({ type_remise: 'montant' })} className={puce(b.type_remise === 'montant')}>{t('En €')}</button>
             </div>
             <input aria-label={b.type_remise === 'pourcentage' ? 'Remise en pourcentage' : 'Remise en euros'} className={CHAMP} inputMode="decimal" value={b.valeur} onChange={e => maj({ valeur: e.target.value.replace(/[^\d.,]/g, '') })} />
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="promo-debut" className={ETIQUETTE}>Début</label>
+              <label htmlFor="promo-debut" className={ETIQUETTE}>{t('Début')}</label>
               <input id="promo-debut" type="datetime-local" className={CHAMP} value={b.debut} onChange={e => maj({ debut: e.target.value })} />
             </div>
             <div>
-              <label htmlFor="promo-fin" className={ETIQUETTE}>Fin</label>
+              <label htmlFor="promo-fin" className={ETIQUETTE}>{t('Fin')}</label>
               <input id="promo-fin" type="datetime-local" className={CHAMP} value={b.fin} onChange={e => maj({ fin: e.target.value })} />
             </div>
           </div>
         </section>
 
         <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
-          <p className={ETIQUETTE}>Prestations concernées</p>
+          <p className={ETIQUETTE}>{t('Prestations concernées')}</p>
           <div className="flex gap-2">
-            <button type="button" onClick={() => maj({ toutes: true })} className={puce(b.toutes)}>Toutes</button>
-            <button type="button" onClick={() => maj({ toutes: false })} className={puce(!b.toutes)}>Certaines</button>
+            <button type="button" onClick={() => maj({ toutes: true })} className={puce(b.toutes)}>{t('Toutes')}</button>
+            <button type="button" onClick={() => maj({ toutes: false })} className={puce(!b.toutes)}>{t('Certaines')}</button>
           </div>
           {!b.toutes && (
             <ul className="mt-3 divide-y divide-[color:var(--v2-filet)]">
@@ -289,29 +292,29 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
                   </li>
                 )
               })}
-              {!services.length && <li className={`py-2 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Aucune prestation créée.</li>}
+              {!services.length && <li className={`py-2 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Aucune prestation créée.')}</li>}
             </ul>
           )}
           <p className={`mt-3 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            La remise porte sur la prestation et ses options, pas sur les frais de déplacement.
+            {t('La remise porte sur la prestation et ses options, pas sur les frais de déplacement.')}
           </p>
         </section>
 
         <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <p className={`text-[15px] ${corpsFort}`}>Bandeau sur ma page</p>
-              <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>En haut de votre page de réservation</p>
+              <p className={`text-[15px] ${corpsFort}`}>{t('Bandeau sur ma page')}</p>
+              <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('En haut de votre page de réservation')}</p>
             </div>
-            <Interrupteur actif={b.bandeau_actif} enCours={false} libelle="Afficher le bandeau" onClick={() => maj({ bandeau_actif: !b.bandeau_actif })} />
+            <Interrupteur actif={b.bandeau_actif} enCours={false} libelle={t('Afficher le bandeau')} onClick={() => maj({ bandeau_actif: !b.bandeau_actif })} />
           </div>
 
           {b.bandeau_actif && (
             <>
-              <label htmlFor="promo-texte" className={`${ETIQUETTE} mt-4`}>Message (facultatif)</label>
-              <input id="promo-texte" className={CHAMP} value={b.bandeau_texte} maxLength={140} placeholder="Offrez un lavage à votre moitié" onChange={e => maj({ bandeau_texte: e.target.value })} />
+              <label htmlFor="promo-texte" className={`${ETIQUETTE} mt-4`}>{t('Message (facultatif)')}</label>
+              <input id="promo-texte" className={CHAMP} value={b.bandeau_texte} maxLength={140} placeholder={t('Offrez un lavage à votre moitié')} onChange={e => maj({ bandeau_texte: e.target.value })} />
 
-              <p className={`${ETIQUETTE} mt-4`}>Couleur</p>
+              <p className={`${ETIQUETTE} mt-4`}>{t('Couleur')}</p>
               <div className="flex flex-wrap items-center gap-2.5">
                 {COULEURS_BANDEAU.map(c => (
                   <button key={c} type="button" onClick={() => maj({ bandeau_couleur: c })} aria-label={`Couleur ${c}`} aria-pressed={b.bandeau_couleur === c}
@@ -319,16 +322,16 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
                 ))}
                 <label className={`flex h-9 cursor-pointer items-center gap-2 rounded-full border border-[color:var(--v2-filet-fort)] px-3 text-[13px] ${corpsFort}`}>
                   <input type="color" value={b.bandeau_couleur} onChange={e => maj({ bandeau_couleur: e.target.value.toUpperCase() })} className="h-5 w-5 cursor-pointer border-0 bg-transparent p-0" />
-                  Autre
+                  {t('Autre')}
                 </label>
               </div>
 
               <div className="mt-3 flex items-center gap-3">
-                <p className={`min-w-0 flex-1 text-[15px] ${corps}`}>Compte à rebours</p>
-                <Interrupteur actif={b.bandeau_compteur} enCours={false} libelle="Afficher le compte à rebours" onClick={() => maj({ bandeau_compteur: !b.bandeau_compteur })} />
+                <p className={`min-w-0 flex-1 text-[15px] ${corps}`}>{t('Compte à rebours')}</p>
+                <Interrupteur actif={b.bandeau_compteur} enCours={false} libelle={t('Afficher le compte à rebours')} onClick={() => maj({ bandeau_compteur: !b.bandeau_compteur })} />
               </div>
 
-              <p className={`${ETIQUETTE} mt-3`}>Aperçu</p>
+              <p className={`${ETIQUETTE} mt-3`}>{t('Aperçu')}</p>
               <div className="overflow-hidden rounded-[12px] border border-[color:var(--v2-filet)]">
                 {apercu && <BandeauPromotion promo={apercu} />}
               </div>
@@ -340,23 +343,23 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
 
         <div className="flex flex-col gap-2">
           <button type="button" onClick={enregistrer} disabled={enregistrement} className={`${BOUTON} w-full `} style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)', ...PRESSION }}>
-            {enregistrement ? 'Enregistrement…' : b.id ? 'Enregistrer' : 'Créer la promotion'}
+            {enregistrement ? 'Enregistrement…' : b.id ? 'Enregistrer' : t('Créer la promotion')}
           </button>
           {b.id && (
             <button type="button" onClick={() => setSuppression(true)} className={`${BOUTON} w-full`} style={{ color: 'var(--v2-color-rouge)', ...PRESSION }}>
-              Supprimer la promotion
+              {t('Supprimer la promotion')}
             </button>
           )}
           <a href={`/book/${slug}`} target="_blank" rel="noopener" className={`mt-1 self-center text-[13.5px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}>
-            Voir ma page de réservation
+            {t('Voir ma page de réservation')}
           </a>
         </div>
       </div>
 
       {suppression && (
         <ConfirmationSuppression
-          titre="Supprimer cette promotion ?"
-          texte="Le bandeau disparaît de votre page et la remise ne s’applique plus aux nouvelles réservations. Les réservations déjà prises gardent leur prix."
+          titre={t('Supprimer cette promotion ?')}
+          texte={t('Le bandeau disparaît de votre page et la remise ne s’applique plus aux nouvelles réservations. Les réservations déjà prises gardent leur prix.')}
           enCours={suppressionEnCours}
           erreur={erreur}
           onConfirmer={supprimer}

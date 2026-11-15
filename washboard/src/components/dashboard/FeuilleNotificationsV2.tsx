@@ -5,6 +5,7 @@ import { Feuille } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { useNotificationsPush, type EtatNotifications } from '@/hooks/useNotificationsPush'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Notifications sur le téléphone — feuille du bas de « Plus » (PWA). Même autorisation, même
 // abonnement et mêmes routes que l'écran du site (`NotificationsToggle`) : tout vient du hook
@@ -24,33 +25,32 @@ export function resumeNotifications(etat: EtatNotifications, mobile = true): { t
 }
 
 export default function FeuilleNotificationsV2({ onClose }: { onClose: () => void }) {
+  const t = useT()
   const { etat, occupe, erreur, activer, desactiver } = useNotificationsPush()
   const actif = etat === 'actif'
   const mobile = useDesignMobile()
 
   return (
     <Feuille
-      titre="Notifications"
-      sousTitre={`Être prévenu sur ${mobile ? 'ce téléphone' : 'cet ordinateur'} dès qu’un client réserve, sans attendre l’e-mail.`}
+      titre={t('Notifications')}
+      sousTitre={`Être prévenu sur ${mobile ? t('ce téléphone') : 'cet ordinateur'} dès qu’un client réserve, sans attendre l’e-mail.`}
       onClose={onClose}
     >
       {etat === 'ios-non-installe' && (
         <Constat ton="ambre" role="status">
-          Sur iPhone, ajoutez d’abord WashBoard à votre écran d’accueil : bouton Partager dans Safari,
-          puis « Sur l’écran d’accueil ». Revenez ensuite ici depuis l’icône WashBoard.
+          {t('Sur iPhone, ajoutez d’abord WashBoard à votre écran d’accueil : bouton Partager dans Safari, puis « Sur l’écran d’accueil ». Revenez ensuite ici depuis l’icône WashBoard.')}
         </Constat>
       )}
 
       {etat === 'non-supporte' && (
         <p className={`text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Cet appareil ne gère pas les notifications. Vous continuez à recevoir les réservations par e-mail.
+          {t('Cet appareil ne gère pas les notifications. Vous continuez à recevoir les réservations par e-mail.')}
         </p>
       )}
 
       {etat === 'refuse' && (
         <Constat ton="ambre" role="status">
-          Les notifications ont été refusées pour WashBoard. Pour les rétablir, autorisez-les dans les
-          réglages de votre {mobile ? 'téléphone' : 'navigateur'}, puis revenez ici.
+          {t('Les notifications ont été refusées pour WashBoard. Pour les rétablir, autorisez-les dans les réglages de votre')} {mobile ? t('téléphone') : 'navigateur'}{t(', puis revenez ici.')}
         </Constat>
       )}
 
@@ -63,7 +63,7 @@ export default function FeuilleNotificationsV2({ onClose }: { onClose: () => voi
               aria-hidden
             />
             <span className={`text-[14px] leading-snug ${corps}`}>
-              {actif ? 'Activées sur cet appareil.' : 'Désactivées sur cet appareil.'}
+              {actif ? t('Activées sur cet appareil.') : t('Désactivées sur cet appareil.')}
             </span>
           </p>
           <button
@@ -75,7 +75,7 @@ export default function FeuilleNotificationsV2({ onClose }: { onClose: () => voi
             }`}
             style={actif ? PRESSION : { background: 'var(--v2-color-accent)', ...PRESSION }}
           >
-            {occupe ? 'Un instant…' : actif ? 'Désactiver sur cet appareil' : 'Activer les notifications'}
+            {occupe ? 'Un instant…' : actif ? t('Désactiver sur cet appareil') : t('Activer les notifications')}
           </button>
         </>
       )}
@@ -84,9 +84,7 @@ export default function FeuilleNotificationsV2({ onClose }: { onClose: () => voi
           a jamais activées ne le recevait jamais et ne pouvait pas le deviner. */}
       {etat !== 'actif' && etat !== 'chargement' && (
         <p className={`mt-4 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Sans notifications, vous ne recevrez pas le <strong>rappel de 22 h</strong> sur les rendez-vous
-          du jour qui ne sont pas encore clôturés : il n’existe ni par e-mail, ni par SMS. Les réservations,
-          elles, vous arrivent toujours par e-mail.
+          {t('Sans notifications, vous ne recevrez pas le')} <strong>{t('rappel de 22 h')}</strong> {t('sur les rendez-vous du jour qui ne sont pas encore clôturés : il n’existe ni par e-mail, ni par SMS. Les réservations, elles, vous arrivent toujours par e-mail.')}
         </p>
       )}
 

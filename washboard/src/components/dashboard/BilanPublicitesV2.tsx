@@ -9,6 +9,7 @@ import {
   labelPlateforme, synthese, toutesLesCreations, parPlateforme, estFiable,
   type CampagneAffichee,
 } from '@/lib/campagne'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Bilan » — la vue qui additionne, quand l'écran des campagnes ne suffit
 // plus.
@@ -116,6 +117,7 @@ function LigneRang({ rang, titre: intitule, sousTitre, valeur, aide, couleur }: 
 export type BilanPublicitesProps = { campagnes: CampagneAffichee[] }
 
 export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
+  const t = useT()
   const grandEcran = useGrandEcran()
   const totaux = useMemo(
     () => synthese(campagnes.map(c => c.bilan), campagnes.map(c => c.budget)),
@@ -141,17 +143,17 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
   // Chaque carte construite UNE fois, en variable : la grille bureau et la colonne mobile
   // affichent exactement le même JSX, seule la façon de les ranger change plus bas.
   const carteTotaux = (
-    <Carte titre="Tout additionné">
-      <Mesure label="Dépensé" valeur={`${formatEuros(totaux.budget)} €`} />
-      <Mesure label="Encaissé" valeur={`${formatEuros(totaux.chiffreAffaires)} €`} />
+    <Carte titre={t('Tout additionné')}>
+      <Mesure label={t('Dépensé')} valeur={`${formatEuros(totaux.budget)} €`} />
+      <Mesure label={t('Encaissé')} valeur={`${formatEuros(totaux.chiffreAffaires)} €`} />
       <Mesure
-        label="Retour"
+        label={t('Retour')}
         valeur={totaux.reservations > 0 ? multiple(totaux.retour) : '—'}
         couleur={couleur}
       />
-      <Mesure label="Visites" valeur={String(totaux.visites)} />
+      <Mesure label={t('Visites')} valeur={String(totaux.visites)} />
       <Mesure
-        label="Clients"
+        label={t('Clients')}
         valeur={String(totaux.reservations)}
         aide={totaux.coutParReservation === null
           ? undefined
@@ -161,18 +163,18 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
           ne veut rien dire, et le montrer ferait tirer des conclusions
           d'une poignée de clics. */}
       <Mesure
-        label="Transformation"
-        valeur={estFiable(totaux.visites) ? pourcent(tauxGlobal) : 'Peu de données'}
+        label={t('Transformation')}
+        valeur={estFiable(totaux.visites) ? pourcent(tauxGlobal) : t('Peu de données')}
         pale={!estFiable(totaux.visites)}
       />
 
       {totaux.reservations > 0 && totaux.retour !== null && (
         <p className={`mt-2 border-t border-[color:var(--v2-filet)] pt-3 text-[14px] leading-relaxed ${corps}`}>
-          Pour 1 € de publicité, vous avez encaissé{' '}
+          {t('Pour 1 € de publicité, vous avez encaissé')}{' '}
           <span className={corpsFort} style={couleur ? { color: couleur } : undefined}>
             {formatEuros(Math.round(totaux.retour * 100) / 100)} €
           </span>{' '}
-          de lavages.
+          {t('de lavages.')}
         </p>
       )}
     </Carte>
@@ -181,7 +183,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
   // Toutes les vidéos ensemble : c'est la seule vue qui permet de voir que la
   // meilleure vidéo d'une petite campagne bat celle d'une grosse.
   const carteVideos = videos.length > 0 ? (
-    <Carte titre="Vos vidéos, toutes campagnes confondues">
+    <Carte titre={t('Vos vidéos, toutes campagnes confondues')}>
       <ul>
         {videos.slice(0, 10).map((v, i) => (
           <LigneRang
@@ -196,7 +198,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
       </ul>
       {videos.length > 10 && (
         <p className={`mt-3 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          Les 10 premières sur {videos.length}.
+          {t('Les 10 premières sur')} {videos.length}.
         </p>
       )}
     </Carte>
@@ -205,7 +207,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
   // Deux plateformes ou plus seulement : « 100 % sur Meta » n'apprend rien à
   // qui n'a jamais lancé ailleurs.
   const cartePlateformes = plateformes.length > 1 ? (
-    <Carte titre="Par plateforme">
+    <Carte titre={t('Par plateforme')}>
       <ul>
         {plateformes.map((p, i) => (
           <LigneRang
@@ -223,7 +225,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
   ) : null
 
   const carteCampagnes = (
-    <Carte titre="Vos campagnes">
+    <Carte titre={t('Vos campagnes')}>
       <ul>
         {classement.map((c, i) => (
           <LigneRang
@@ -245,8 +247,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
   // savoir pourquoi les deux peuvent différer.
   const note = (
     <p className={`px-1 text-[12px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-      Les montants dépensés sont ceux que vous avez saisis. Les visites et les clients sont
-      comptés par WashBoard, à partir des liens de vos campagnes.
+      {t('Les montants dépensés sont ceux que vous avez saisis. Les visites et les clients sont comptés par WashBoard, à partir des liens de vos campagnes.')}
     </p>
   )
 
@@ -257,15 +258,15 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
       <div className="flex items-center gap-1 pb-3">
         <Link
           href="/dashboard/clients/publicites"
-          aria-label="Retour aux publicités"
+          aria-label={t('Retour aux publicités')}
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
         <div className="min-w-0">
-          <h1 className={`text-[21px] leading-none ${titre}`}>Bilan</h1>
+          <h1 className={`text-[21px] leading-none ${titre}`}>{t('Bilan')}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {campagnes.length} campagne{campagnes.length > 1 ? 's' : ''} depuis le début
+            {campagnes.length} {t('campagne')}{campagnes.length > 1 ? 's' : ''} {t('depuis le début')}
           </p>
         </div>
       </div>

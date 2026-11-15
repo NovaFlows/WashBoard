@@ -444,7 +444,7 @@ export default function ClientsViewV2({
           {affiches.length === 0
             ? recherche.trim()
               ? `Aucun client ne correspond à « ${recherche.trim()} ».`
-              : 'Aucun client professionnel pour l’instant.'
+              : t('Aucun client professionnel pour l’instant.')
             : `${affiches.length} client${affiches.length > 1 ? 's' : ''} trouvé${affiches.length > 1 ? 's' : ''}`}
         </p>
       )}
@@ -526,7 +526,7 @@ export default function ClientsViewV2({
           ) : filtre === 'entreprises' ? (
             <span className="tabular-nums">{entreprisesAffichees.length} {t('entreprise')}{entreprisesAffichees.length > 1 ? 's' : ''}</span>
           ) : clients.length === 0 ? (
-            'Vos clients apparaîtront ici dès leur première réservation.'
+            t('Vos clients apparaîtront ici dès leur première réservation.')
           ) : pros > 0 ? (
             <span className="tabular-nums">{clients.length} {t('client')}{clients.length > 1 ? 's' : ''} · {pros} {t('pro')}{pros > 1 ? 's' : ''}</span>
           ) : (

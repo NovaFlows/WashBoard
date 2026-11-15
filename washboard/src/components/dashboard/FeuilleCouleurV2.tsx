@@ -6,6 +6,7 @@ import { ANNEAU_CHOIX } from '@/components/dashboard/ApparenceUiV2'
 import EchantillonCouleurV2 from '@/components/dashboard/EchantillonCouleurV2'
 import { PALETTE } from '@/lib/themes'
 import { COULEUR_PAR_DEFAUT, contrasteInsuffisant, estHorsNuancier } from '@/lib/apparence'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Couleur de la marque — feuille du bas de l'écran « Apparence de ma page » (PWA).
 // Les couleurs du nuancier (`lib/themes.ts`), enregistrées au tap (comme
@@ -36,6 +37,7 @@ type Props = {
 }
 
 export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, onChoisir, onClose, panneau }: Props) {
+  const t = useT()
   const affichee = enAttente ?? couleur ?? COULEUR_PAR_DEFAUT
   const tuiles = couleur && estHorsNuancier(couleur) ? [...PALETTE, couleur] : PALETTE
 
@@ -52,13 +54,13 @@ export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, on
 
   return (
     <Feuille
-      titre="Couleur de ma marque"
+      titre={t('Couleur de ma marque')}
       verrou="page_personnalisee"
-      sousTitre="Elle colore les boutons et les choix sur votre page."
+      sousTitre={t('Elle colore les boutons et les choix sur votre page.')}
       onClose={onClose}
       panneau={panneau}
     >
-      <div role="group" aria-label="Couleurs proposées" className={`grid ${colonnes} justify-items-center ${espacement} pb-1`}>
+      <div role="group" aria-label={t('Couleurs proposées')} className={`grid ${colonnes} justify-items-center ${espacement} pb-1`}>
         {tuiles.map(hex => {
           const choisie = hex.toLowerCase() === affichee.toLowerCase()
           return (
@@ -85,19 +87,19 @@ export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, on
       <div className="mt-5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
         <EchantillonCouleurV2 couleur={affichee} libelle={null} />
         <p className={`mt-3 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Sur votre page, cette couleur colore la barre des étapes, les choix cochés et les boutons.
+          {t('Sur votre page, cette couleur colore la barre des étapes, les choix cochés et les boutons.')}
         </p>
       </div>
 
       <div className="mt-4 space-y-2 pb-2" aria-live="polite">
         {contrasteInsuffisant(affichee) && (
           <Constat ton="ambre" role="status">
-            Sur cette couleur, le texte blanc des boutons se lit mal. Une teinte plus foncée sera plus lisible pour vos clients.
+            {t('Sur cette couleur, le texte blanc des boutons se lit mal. Une teinte plus foncée sera plus lisible pour vos clients.')}
           </Constat>
         )}
         {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
         {(enAttente || (faite && !erreur)) && (
-          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{enAttente ? 'Enregistrement…' : 'Enregistré.'}</p>
+          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{enAttente ? 'Enregistrement…' : t('Enregistré.')}</p>
         )}
       </div>
     </Feuille>

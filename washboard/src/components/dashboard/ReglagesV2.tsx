@@ -109,7 +109,7 @@ export default function ReglagesV2({ liste, progress }: Props) {
           {/* Le seul chemin pour faire revenir la carte de configuration une fois masquée. */}
           <Ligne
             label={t('Barre de configuration')}
-            valeur={carteCachee === '1' ? 'Masquée' : 'Affichée'}
+            valeur={carteCachee === '1' ? t('Masquée') : t('Affichée')}
             onClick={() => setCarteCachee(carteCachee === '1' ? null : '1')}
             chevron={false}
           />

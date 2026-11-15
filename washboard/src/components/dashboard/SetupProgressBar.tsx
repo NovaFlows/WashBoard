@@ -7,6 +7,7 @@ import {
   peutEtreMasque, phraseMasques, reglagesAffiches,
 } from '@/lib/reglagesMasques'
 import type { SetupProgress } from '@/lib/setupProgress'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Avancement de la configuration, en tête des réglages.
 //
@@ -48,6 +49,7 @@ const STYLE_V2 = {
 }
 
 export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
+  const t = useT()
   const c = STYLE_V2
   const [brutMasques, setMasques] = usePreferenceLocale(CLE_MASQUES)
   const [cachee, setCachee] = usePreferenceLocale(CLE_CARTE_CACHEE)
@@ -72,10 +74,10 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
     <div className={c.carte}>
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <h3 className={c.titre}>
-          Configuration de votre compte
+          {t('Configuration de votre compte')}
         </h3>
         <span className={`${c.titre} tabular-nums`}>
-          {progress.percent}&nbsp;%
+          {progress.percent}{t(' %')}
         </span>
       </div>
 
@@ -90,18 +92,18 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
 
       <p className={c.phrase}>
         {progress.complete
-          ? 'Tout est configuré. Vos clients ont toutes les informations pour réserver sereinement.'
+          ? t('Tout est configuré. Vos clients ont toutes les informations pour réserver sereinement.')
           : progress.missing.some(m => m.blocking)
             // Tant qu'un point bloquant manque, la page ne peut pas encaisser
             // de réservation : le dire franchement vaut mieux qu'un
             // encouragement, quelle que soit la couleur de la barre.
-            ? 'Il manque encore de quoi permettre à vos clients de réserver.'
+            ? t('Il manque encore de quoi permettre à vos clients de réserver.')
             : progress.essentialsDone
               // L'essentiel est fait : on ne réclame plus rien, on explique ce
               // que le reste apporte. Ces réglages sont facultatifs, le ton
               // doit le refléter.
-              ? 'Votre page fonctionne. Ces réglages vous feront gagner du temps et rassureront vos clients.'
-              : 'Un compte complet inspire confiance et évite les allers-retours avec vos clients.'}
+              ? t('Votre page fonctionne. Ces réglages vous feront gagner du temps et rassureront vos clients.')
+              : t('Un compte complet inspire confiance et évite les allers-retours avec vos clients.')}
       </p>
 
       {affiches.length > 0 && (
@@ -135,7 +137,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
 
       {reste > 0 && (
         <p className={`${c.discret} mt-2.5`}>
-          et {reste} autre{reste > 1 ? 's' : ''} réglage{reste > 1 ? 's' : ''} facultatif{reste > 1 ? 's' : ''}
+          {t('et')} {reste} {t('autre')}{reste > 1 ? 's' : ''} {t('réglage')}{reste > 1 ? 's' : ''} {t('facultatif')}{reste > 1 ? 's' : ''}
         </p>
       )}
 
@@ -147,7 +149,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
           onClick={() => setMasques(null)}
           className={`mt-2.5 underline underline-offset-2 ${c.discret}`}
         >
-          {phraseMasques(ecartes)} · revoir
+          {phraseMasques(ecartes)} {t('· revoir')}
         </button>
       )}
 
@@ -157,7 +159,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
           onClick={() => setCachee('1')}
           className={c.discret}
         >
-          Masquer
+          {t('Masquer')}
         </button>
       </div>
     </div>

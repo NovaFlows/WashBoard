@@ -11,6 +11,7 @@ import {
   fermerPourLInstant, lireEtat, lireVisite, serialiserEtat, terminerVisite,
   type Appareil, type EtapeVisite, type VisitesAFaire,
 } from '@/lib/visiteGuidee'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Carte de la visite guidée, montée par DashboardShell sur toutes les pages du
 // tableau de bord (voir lib/visiteGuidee.ts pour la logique et la liste des arrêts).
@@ -274,6 +275,7 @@ function BarreProgres({ etape, total }: { etape: number; total: number }) {
  *  téléphone (carte en verre collée à la cible, découpe, arrêts interactifs), seules la
  *  liste (`etapesPour('bureau')`) et la largeur de la carte changent. */
 export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bureau = false }: { aFaire?: VisitesAFaire; avancement?: Avancement; bureau?: boolean }) {
+  const t = useT()
   const router = useRouter()
   const pathname = usePathname()
   const isPwa = useDesignMobile()
@@ -576,7 +578,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
     const vientDeReussir = etatInteractif === 'vient_de_reussir'
     const dejaFaitAffiche = etatInteractif === 'deja_fait'
     return (
-      <div className="fixed inset-0 z-[70] pointer-events-none" role="status" aria-label="Visite guidée">
+      <div className="fixed inset-0 z-[70] pointer-events-none" role="status" aria-label={t('Visite guidée')}>
         {rect && !reduite && (
           <div
             aria-hidden
@@ -596,7 +598,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
             className={`wb-visite-verre pointer-events-auto absolute right-3 h-11 px-3.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
             style={styleCarte}
           >
-            Visite {etape + 1}/{etapes.length} ‹
+            {t('Visite')} {etape + 1}/{etapes.length} ‹
           </button>
         ) : (
           <div
@@ -614,19 +616,19 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
                 <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
-                  Étape {etape + 1}/{etapes.length}
+                  {t('Étape')} {etape + 1}/{etapes.length}
                 </p>
-                {dejaFaitAffiche && <span className={`wb-visite-badge-fait text-[11px] ${corpsFort}`}>✓ Déjà fait</span>}
+                {dejaFaitAffiche && <span className={`wb-visite-badge-fait text-[11px] ${corpsFort}`}>{t('✓ Déjà fait')}</span>}
               </div>
               <div className="flex items-center -my-2 -mr-2">
                 {!vientDeReussir && (
                   <button
                     type="button"
                     onClick={() => setReduite(true)}
-                    aria-label="Réduire la visite guidée sur le côté, pour libérer l'écran"
+                    aria-label={t('Réduire la visite guidée sur le côté, pour libérer l\'écran')}
                     className={`px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
                   >
-                    Réduire
+                    {t('Réduire')}
                   </button>
                 )}
                 <button
@@ -634,7 +636,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
                   onClick={fermer}
                   className={`px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
                 >
-                  Passer
+                  {t('Passer')}
                 </button>
               </div>
             </div>
@@ -651,8 +653,8 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
                 {vientDeReussir
                   ? 'On continue…'
                   : dejaFaitAffiche
-                    ? 'Déjà configuré — tu peux continuer.'
-                    : "L'écran reste à toi — la visite avance dès que c'est fait."}
+                    ? t('Déjà configuré — tu peux continuer.')
+                    : t('L\'écran reste à toi — la visite avance dès que c\'est fait.')}
               </p>
               <button
                 type="button"
@@ -670,7 +672,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
   }
 
   return (
-    <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Visite guidée">
+    <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label={t('Visite guidée')}>
       {rect ? (
         <div
           aria-hidden
@@ -702,14 +704,14 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
         )}
         <div className="flex items-center justify-between gap-3">
           <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
-            Étape {etape + 1}/{etapes.length}
+            {t('Étape')} {etape + 1}/{etapes.length}
           </p>
           <button
             type="button"
             onClick={fermer}
             className={`-my-2 -mr-2 px-2 py-2 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
           >
-            Passer
+            {t('Passer')}
           </button>
         </div>
         <BarreProgres etape={etape} total={etapes.length} />
@@ -729,8 +731,8 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
             className={`h-10 px-5 rounded-[var(--v2-radius-bouton)] text-[15px] ${corpsFort} text-white bg-[color:var(--v2-color-accent)] disabled:opacity-50 transition-opacity`}
           >
             {navigation ? (
-              <span className="flex items-center justify-center gap-2"><Spinner />Chargement…</span>
-            ) : suivante === null ? 'Terminé' : 'Suivant'}
+              <span className="flex items-center justify-center gap-2"><Spinner />{t('Chargement…')}</span>
+            ) : suivante === null ? t('Terminé') : 'Suivant'}
           </button>
         </div>
       </div>

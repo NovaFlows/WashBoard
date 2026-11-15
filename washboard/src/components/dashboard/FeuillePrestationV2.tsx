@@ -15,6 +15,7 @@ import {
   resumeDescription, resumeOptions, resumePrixParType, retirerOrphelins, sansCategorieDe, typesOrphelins,
   type BrouillonOption, type FormulairePrestation,
 } from '@/lib/prestationForm'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Édition d'une prestation, en feuille du bas — refonte 2026, réservée à la PWA
 // installée (ouverte par PrestationsV2.tsx uniquement ; le site garde
@@ -81,6 +82,7 @@ function Champ({ id, label, children }: { id: string; label: string; children: R
 export default function FeuillePrestationV2({
   service, formulaireInitial, categories, services, availabilities, onEnregistrer, onSupprimer, veille, typeDemande = true, lieuxMixtes = false, centresProposes = [], onClose,
 }: Props) {
+  const tr = useT()
   const [form, setForm] = useState(formulaireInitial)
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -151,7 +153,7 @@ export default function FeuillePrestationV2({
       {avertissementsDuree.length > 0 && (
         <div className="mb-3 space-y-1">
           <Constat ton="ambre" role="status">
-            Trop long pour certains de vos jours d’ouverture. Vous pouvez enregistrer quand même.
+            {tr('Trop long pour certains de vos jours d’ouverture. Vous pouvez enregistrer quand même.')}
           </Constat>
           {avertissementsDuree.map(p => (
             <p key={p} className={`pl-[15px] text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{p}</p>
@@ -175,7 +177,7 @@ export default function FeuillePrestationV2({
           className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
           style={PRESSION}
         >
-          Annuler
+          {tr('Annuler')}
         </button>
         <button
           type="button"
@@ -192,19 +194,19 @@ export default function FeuillePrestationV2({
 
   return (
     <Feuille
-      titre={service ? 'Modifier la prestation' : 'Nouvelle prestation'}
+      titre={service ? tr('Modifier la prestation') : 'Nouvelle prestation'}
       onClose={onClose}
       pied={pied}
     >
       <div>
         <div className="space-y-3 pb-5">
-          <Champ id="presta-nom" label="Nom de la prestation">
+          <Champ id="presta-nom" label={tr('Nom de la prestation')}>
             <input
               id="presta-nom"
               type="text"
               autoComplete="off"
               enterKeyHint="next"
-              placeholder="Lavage intérieur + extérieur"
+              placeholder={tr('Lavage intérieur + extérieur')}
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               className={CHAMP}
@@ -212,7 +214,7 @@ export default function FeuillePrestationV2({
           </Champ>
           <div className="flex gap-3">
             <div className="min-w-0 flex-1">
-              <Champ id="presta-prix" label="Prix (€)">
+              <Champ id="presta-prix" label={tr('Prix (€)')}>
                 <input
                   id="presta-prix"
                   type="number"
@@ -226,7 +228,7 @@ export default function FeuillePrestationV2({
               </Champ>
             </div>
             <div className="min-w-0 flex-1">
-              <Champ id="presta-duree" label="Durée (min)">
+              <Champ id="presta-duree" label={tr('Durée (min)')}>
                 <input
                   id="presta-duree"
                   type="number"
@@ -243,28 +245,28 @@ export default function FeuillePrestationV2({
             </div>
           </div>
           <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Durée par tranches de 15 minutes, 8 h au plus.
+            {tr('Durée par tranches de 15 minutes, 8 h au plus.')}
           </p>
           {!typeDemande && (
             <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Vous ne demandez pas le type de véhicule : vos clients paient ce prix, quel que soit leur véhicule.
+              {tr('Vous ne demandez pas le type de véhicule : vos clients paient ce prix, quel que soit leur véhicule.')}
             </p>
           )}
         </div>
 
         <section className="space-y-3 border-t border-[color:var(--v2-filet)] py-5">
-          <Titre>Pour quels types</Titre>
+          <Titre>{tr('Pour quels types')}</Titre>
           {categories.length === 0 ? (
-            <Constat ton="rouge">Créez d’abord une catégorie (retour à la liste, « Ajouter une catégorie »).</Constat>
+            <Constat ton="rouge">{tr('Créez d’abord une catégorie (retour à la liste, « Ajouter une catégorie »).')}</Constat>
           ) : (
-            <Champ id="presta-categorie" label="Catégorie">
+            <Champ id="presta-categorie" label={tr('Catégorie')}>
               <select
                 id="presta-categorie"
                 value={form.category_id}
                 onChange={e => setForm(f => changerCategorie(f, e.target.value, categories, sansCategorie))}
                 className={CHAMP}
               >
-                {sansCategorie && <option value="">— Sans catégorie —</option>}
+                {sansCategorie && <option value="">{tr('— Sans catégorie —')}</option>}
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </Champ>
@@ -273,16 +275,16 @@ export default function FeuillePrestationV2({
           {!categorie ? (
             form.vehicle_types.length > 0 ? (
               <p className={`text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                Cette prestation garde ses types actuels. Choisissez une catégorie pour les modifier.
+                {tr('Cette prestation garde ses types actuels. Choisissez une catégorie pour les modifier.')}
               </p>
             ) : categories.length > 0 ? (
-              <Constat ton="rouge">Choisissez une catégorie puis cochez au moins un type : sans type, vos clients ne peuvent pas réserver cette prestation.</Constat>
+              <Constat ton="rouge">{tr('Choisissez une catégorie puis cochez au moins un type : sans type, vos clients ne peuvent pas réserver cette prestation.')}</Constat>
             ) : null
           ) : typesDispos.length === 0 ? (
-            <Constat ton="rouge">Cette catégorie n’a aucun type : vos clients n’auraient rien à choisir. Ajoutez-en depuis « Modifier », sur le titre de la catégorie.</Constat>
+            <Constat ton="rouge">{tr('Cette catégorie n’a aucun type : vos clients n’auraient rien à choisir. Ajoutez-en depuis « Modifier », sur le titre de la catégorie.')}</Constat>
           ) : (
             <>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Types proposés">
+              <div className="flex flex-wrap gap-2" role="group" aria-label={tr('Types proposés')}>
                 {typesDispos.map(t => {
                   const actif = form.vehicle_types.includes(t.id)
                   return (
@@ -307,8 +309,7 @@ export default function FeuillePrestationV2({
           {orphelins.length > 0 && (
             <div className="space-y-1">
               <Constat ton="ambre">
-                {orphelins.length === 1 ? 'Un type coché n’existe plus' : `${orphelins.length} types cochés n’existent plus`} dans « {categorie?.name} » :
-                vos clients {orphelins.length === 1 ? 'le' : 'les'} voient sous un nom brut.
+                {orphelins.length === 1 ? tr('Un type coché n’existe plus') : `${orphelins.length} types cochés n’existent plus`} {tr('dans «')} {categorie?.name} {tr('» : vos clients')} {orphelins.length === 1 ? 'le' : 'les'} {tr('voient sous un nom brut.')}
               </Constat>
               <button
                 type="button"
@@ -321,18 +322,18 @@ export default function FeuillePrestationV2({
           )}
         </section>
 
-        <Repliable id="presta-prix-type" titre="Prix par type" resume={resumePrixParType(form)} ouvert={ouvert.prix} onBascule={() => basculer('prix')}>
+        <Repliable id="presta-prix-type" titre={tr('Prix par type')} resume={resumePrixParType(form)} ouvert={ouvert.prix} onBascule={() => basculer('prix')}>
           {!typeDemande && (
             <p className={`mb-2 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              Pas utilisés tant que vous ne demandez pas le type de véhicule. Ils reviennent si vous le redemandez.
+              {tr('Pas utilisés tant que vous ne demandez pas le type de véhicule. Ils reviennent si vous le redemandez.')}
             </p>
           )}
           {form.vehicle_types.length === 0 ? (
-            <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Cochez d’abord au moins un type.</p>
+            <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Cochez d’abord au moins un type.')}</p>
           ) : (
             <div className="space-y-2">
               <p className={`text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                Laissez vide pour appliquer le prix de base.
+                {tr('Laissez vide pour appliquer le prix de base.')}
               </p>
               {form.vehicle_types.map(id => (
                 <div key={id} className="flex items-center gap-3">
@@ -356,9 +357,9 @@ export default function FeuillePrestationV2({
           )}
         </Repliable>
 
-        <Repliable id="presta-options" titre="Options et suppléments" resume={resumeOptions(form)} ouvert={ouvert.options} onBascule={() => basculer('options')}>
+        <Repliable id="presta-options" titre={tr('Options et suppléments')} resume={resumeOptions(form)} ouvert={ouvert.options} onBascule={() => basculer('options')}>
           <p className={`text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Proposées à votre client pendant la réservation, en plus du prix de base.
+            {tr('Proposées à votre client pendant la réservation, en plus du prix de base.')}
           </p>
 
           {form.addons.length > 0 && (
@@ -370,7 +371,7 @@ export default function FeuillePrestationV2({
                     <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{a.category}</span>
                   </span>
                   <span className={`shrink-0 text-right text-[13.5px] ${corps} tabular-nums`}>
-                    +{a.price} €{a.duration_minutes ? <span className="text-[color:var(--v2-color-gris)]"> · +{a.duration_minutes} min</span> : null}
+                    +{a.price} €{a.duration_minutes ? <span className="text-[color:var(--v2-color-gris)]"> · +{a.duration_minutes} {tr('min')}</span> : null}
                   </span>
                   <button
                     type="button"
@@ -387,8 +388,8 @@ export default function FeuillePrestationV2({
 
           <div className="mt-4 space-y-3">
             <div>
-              <p className={ETIQUETTE}>Rubrique de la nouvelle option</p>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Rubrique de l’option">
+              <p className={ETIQUETTE}>{tr('Rubrique de la nouvelle option')}</p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label={tr('Rubrique de l’option')}>
                 {puces.map(c => (
                   <button
                     key={c}
@@ -408,15 +409,15 @@ export default function FeuillePrestationV2({
                   className={puce(choixCategorie === NOUVELLE)}
                   style={PRESSION}
                 >
-                  Nouvelle rubrique
+                  {tr('Nouvelle rubrique')}
                 </button>
               </div>
               {choixCategorie === NOUVELLE && (
                 <input
                   type="text"
                   autoComplete="off"
-                  aria-label="Nom de la nouvelle rubrique"
-                  placeholder="Ex : Extras"
+                  aria-label={tr('Nom de la nouvelle rubrique')}
+                  placeholder={tr('Ex : Extras')}
                   value={categorieSaisie}
                   onChange={e => setCategorieSaisie(e.target.value)}
                   className={`${CHAMP} mt-2.5`}
@@ -428,8 +429,8 @@ export default function FeuillePrestationV2({
               type="text"
               autoComplete="off"
               enterKeyHint="next"
-              aria-label="Libellé de l’option"
-              placeholder="Ex : Poils d’animaux"
+              aria-label={tr('Libellé de l’option')}
+              placeholder={tr('Ex : Poils d’animaux')}
               value={brouillon.label}
               onChange={e => majBrouillon('label', e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouterOption() } }}
@@ -440,8 +441,8 @@ export default function FeuillePrestationV2({
                 type="number"
                 inputMode="decimal"
                 min="0"
-                aria-label="Prix de l’option en euros"
-                placeholder="Prix €"
+                aria-label={tr('Prix de l’option en euros')}
+                placeholder={tr('Prix €')}
                 value={brouillon.price}
                 onChange={e => majBrouillon('price', e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouterOption() } }}
@@ -452,8 +453,8 @@ export default function FeuillePrestationV2({
                 inputMode="numeric"
                 min="5"
                 step="5"
-                aria-label="Durée supplémentaire de l’option en minutes"
-                placeholder="+ min"
+                aria-label={tr('Durée supplémentaire de l’option en minutes')}
+                placeholder={tr('+ min')}
                 value={brouillon.duration_minutes}
                 onChange={e => majBrouillon('duration_minutes', e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouterOption() } }}
@@ -466,18 +467,18 @@ export default function FeuillePrestationV2({
                 className={`${BOUTON} min-w-0 flex-1 border border-[color:var(--v2-color-encre)] text-[color:var(--v2-color-encre)]`}
                 style={PRESSION}
               >
-                Ajouter
+                {tr('Ajouter')}
               </button>
             </div>
           </div>
         </Repliable>
 
-        <Repliable id="presta-description" titre="Description" resume={resumeDescription(form.description)} ouvert={ouvert.description} onBascule={() => basculer('description')}>
-          <label htmlFor="presta-desc" className={ETIQUETTE}>Visible par votre client, 250 caractères au plus.</label>
+        <Repliable id="presta-description" titre={tr('Description')} resume={resumeDescription(form.description)} ouvert={ouvert.description} onBascule={() => basculer('description')}>
+          <label htmlFor="presta-desc" className={ETIQUETTE}>{tr('Visible par votre client, 250 caractères au plus.')}</label>
           <textarea
             id="presta-desc"
             rows={3}
-            placeholder="Ex : Lavage complet intérieur et extérieur, aspiration, nettoyage des vitres…"
+            placeholder={tr('Ex : Lavage complet intérieur et extérieur, aspiration, nettoyage des vitres…')}
             value={form.description}
             onChange={e => setForm(f => ({ ...f, description: e.target.value.slice(0, 250) }))}
             className={`${CHAMP} h-auto resize-none py-2.5 leading-[1.5]`}
@@ -485,9 +486,9 @@ export default function FeuillePrestationV2({
           <p className={`mt-1 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{form.description.length}/250</p>
         </Repliable>
 
-        <Repliable id="presta-heures" titre="Heures de début" resume={resumeHeures(form.heures_debut)} ouvert={ouvert.heures} onBascule={() => basculer('heures')}>
+        <Repliable id="presta-heures" titre={tr('Heures de début')} resume={resumeHeures(form.heures_debut)} ouvert={ouvert.heures} onBascule={() => basculer('heures')}>
           <p className={`mb-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Pour regrouper vos journées, proposez cette prestation seulement à certaines heures. Vos horaires, congés et rendez-vous déjà pris restent respectés. Sans heure choisie, toutes les heures de vos horaires sont proposées.
+            {tr('Pour regrouper vos journées, proposez cette prestation seulement à certaines heures. Vos horaires, congés et rendez-vous déjà pris restent respectés. Sans heure choisie, toutes les heures de vos horaires sont proposées.')}
           </p>
           {(heuresDebutValides(form.heures_debut) ?? []).length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
@@ -507,7 +508,7 @@ export default function FeuillePrestationV2({
           )}
           <div className="flex gap-2">
             <select
-              aria-label="Ajouter une heure de début"
+              aria-label={tr('Ajouter une heure de début')}
               value=""
               onChange={e => {
                 const h = e.target.value
@@ -517,7 +518,7 @@ export default function FeuillePrestationV2({
               disabled={(heuresDebutValides(form.heures_debut) ?? []).length >= MAX_HEURES_DEBUT}
               className={CHAMP}
             >
-              <option value="">+ Ajouter une heure</option>
+              <option value="">{tr('+ Ajouter une heure')}</option>
               {HEURES_PROPOSEES.filter(h => !(heuresDebutValides(form.heures_debut) ?? []).includes(h)).map(h => (
                 <option key={h} value={h}>{libelleHeure(h)}</option>
               ))}
@@ -529,7 +530,7 @@ export default function FeuillePrestationV2({
                 className={`${BOUTON} shrink-0 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-gris)]`}
                 style={PRESSION}
               >
-                Toutes
+                {tr('Toutes')}
               </button>
             )}
           </div>
@@ -539,8 +540,8 @@ export default function FeuillePrestationV2({
           const choisis = identifiantsCentresValides(form.centres_ids) ?? centresProposes.map(c => c.id)
           return (
             <div className="border-t border-[color:var(--v2-filet)] pt-3">
-              <Titre>Dans quels centres ?</Titre>
-              <div className="mt-2 flex flex-col gap-2" role="group" aria-label="Centres de la prestation">
+              <Titre>{tr('Dans quels centres ?')}</Titre>
+              <div className="mt-2 flex flex-col gap-2" role="group" aria-label={tr('Centres de la prestation')}>
                 {centresProposes.map(c => {
                   const coche = choisis.includes(c.id)
                   return (
@@ -579,7 +580,7 @@ export default function FeuillePrestationV2({
                 })}
               </div>
               <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                Le client ne peut réserver cette prestation que dans les centres cochés.
+                {tr('Le client ne peut réserver cette prestation que dans les centres cochés.')}
               </p>
             </div>
           )
@@ -587,8 +588,8 @@ export default function FeuillePrestationV2({
 
         {lieuxMixtes && (
           <div className="border-t border-[color:var(--v2-filet)] pt-3">
-            <Titre>Où se fait-elle ?</Titre>
-            <div className="mt-2 flex gap-2" role="group" aria-label="Lieu de la prestation">
+            <Titre>{tr('Où se fait-elle ?')}</Titre>
+            <div className="mt-2 flex gap-2" role="group" aria-label={tr('Lieu de la prestation')}>
               {CHOIX_LIEU_PRESTATION.map(c => {
                 const choisi = lieuRestreintValide(form.lieu_restreint) === c.valeur
                 return (
@@ -610,31 +611,31 @@ export default function FeuillePrestationV2({
               })}
             </div>
             <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              « Les deux » : le client choisit. Sinon la prestation n’est proposée que pour ce lieu.
+              {tr('« Les deux » : le client choisit. Sinon la prestation n’est proposée que pour ce lieu.')}
             </p>
           </div>
         )}
 
         <div className="flex items-center gap-3 border-t border-[color:var(--v2-filet)] pt-3">
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className={`text-[15px] ${corpsFort}`}>Prévenir le client</span>
+            <span className={`text-[15px] ${corpsFort}`}>{tr('Prévenir le client')}</span>
             <span className={`text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{MESSAGE_LIEU_ADAPTE}</span>
           </span>
           <Interrupteur
             actif={form.lieu_adapte === true}
             enCours={false}
-            libelle="Prévenir le client"
+            libelle={tr('Prévenir le client')}
             onClick={() => setForm(f => ({ ...f, lieu_adapte: f.lieu_adapte !== true }))}
           />
         </div>
 
         {service && veille && (
           <div className="border-t border-[color:var(--v2-filet)] pt-3">
-            <Titre>Sur votre page de réservation</Titre>
+            <Titre>{tr('Sur votre page de réservation')}</Titre>
             <p className={`mt-1 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
               {veille.enVeille
-                ? 'En veille : vos clients ne la voient pas et ne peuvent pas la réserver. Rien n’est effacé — ses rendez-vous et ses factures restent.'
-                : 'En ligne : vos clients la voient et peuvent la réserver.'}
+                ? tr('En veille : vos clients ne la voient pas et ne peuvent pas la réserver. Rien n’est effacé — ses rendez-vous et ses factures restent.')
+                : tr('En ligne : vos clients la voient et peuvent la réserver.')}
             </p>
             {veille.refus && (
               <p className={`mt-2 text-[13px] leading-snug ${corpsFort}`} style={{ color: 'var(--v2-color-ambre)' }}>
@@ -663,7 +664,7 @@ export default function FeuillePrestationV2({
               className={`flex min-h-11 items-center text-[15px] ${corpsFort}`}
               style={{ color: TEXTE_ROUGE }}
             >
-              Supprimer cette prestation
+              {tr('Supprimer cette prestation')}
             </button>
           </div>
         )}

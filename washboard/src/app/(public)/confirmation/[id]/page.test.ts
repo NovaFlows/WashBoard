@@ -28,6 +28,8 @@ const fauxSupabase = {
 }
 
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => fauxSupabase }))
+// La langue vient du cookie de la requête : hors requête, `cookies()` échoue. Les tests restent en français.
+vi.mock('@/lib/i18n/serveur', () => ({ getLangue: async () => 'fr', getT: async () => (fr: string) => fr }))
 vi.mock('next/navigation', () => ({
   notFound: () => { throw new Error('NEXT_NOT_FOUND') },
 }))

@@ -6,6 +6,7 @@ import type { ServiceFull } from '@/components/dashboard/calendrierTypes'
 import { VEHICLE_TYPES, type ManualBooking } from '@/hooks/useRendezVousManuel'
 import { centreParAdresse, centresDe, type CentreAutoPublic } from '@/lib/centreAuto'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Ajout d'un rendez-vous à la main, présentation v2 — réservée à la PWA
 // installée (voir CalendrierDashboardV2.tsx). Passe 7, sous-lot 3. Toute la
@@ -67,6 +68,7 @@ export default function RendezVousManuelV2({
   onSubmit: () => void
   onClose: () => void
 }) {
+  const tr = useT()
   const typesDuService = serviceTypes(form.service_id)
   const optionsType = typesDuService.length > 0
     ? typesDuService.map(t => ({ value: t.id, label: t.name }))
@@ -76,10 +78,10 @@ export default function RendezVousManuelV2({
     <div>
       <p className="flex items-start gap-2">
         <span className="mt-[7px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
-        <span className={`text-[14.5px] ${corpsFort}`}>Problème de faisabilité détecté</span>
+        <span className={`text-[14.5px] ${corpsFort}`}>{tr('Problème de faisabilité détecté')}</span>
       </p>
       <p role="alert" className={`mt-1 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>{feasibilityWarn}</p>
-      <p className={`mt-2 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Créer ce rendez-vous quand même ?</p>
+      <p className={`mt-2 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Créer ce rendez-vous quand même ?')}</p>
       <div className="mt-3 flex gap-2.5">
         <button
           type="button"
@@ -87,7 +89,7 @@ export default function RendezVousManuelV2({
           className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
           style={PRESSION}
         >
-          Annuler
+          {tr('Annuler')}
         </button>
         <button
           type="button"
@@ -96,7 +98,7 @@ export default function RendezVousManuelV2({
           className={`${BOUTON} flex-1 text-white`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          {saving ? 'Création…' : 'Créer quand même'}
+          {saving ? tr('Création…') : tr('Créer quand même')}
         </button>
       </div>
     </div>
@@ -115,7 +117,7 @@ export default function RendezVousManuelV2({
           className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
           style={PRESSION}
         >
-          Annuler
+          {tr('Annuler')}
         </button>
         <button
           type="button"
@@ -124,25 +126,25 @@ export default function RendezVousManuelV2({
           className={`${BOUTON} flex-[1.6] text-white`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          {saving ? 'Création…' : 'Créer le rendez-vous'}
+          {saving ? tr('Création…') : tr('Créer le rendez-vous')}
         </button>
       </div>
     </div>
   )
 
   return (
-    <Feuille titre="Nouveau rendez-vous" onClose={onClose} pied={pied}>
+    <Feuille titre={tr('Nouveau rendez-vous')} onClose={onClose} pied={pied}>
       <div className="space-y-6">
         <section className="space-y-3">
-          <Titre>Quand</Titre>
+          <Titre>{tr('Quand')}</Titre>
           <div className="flex gap-3">
             <div className="min-w-0 flex-1">
-              <Champ id="rdvm-date" label="Date">
+              <Champ id="rdvm-date" label={tr('Date')}>
                 <input id="rdvm-date" type="date" value={form.date} onChange={e => updateManual('date', e.target.value)} className={CHAMP} />
               </Champ>
             </div>
             <div className="w-32 shrink-0">
-              <Champ id="rdvm-heure" label="Heure">
+              <Champ id="rdvm-heure" label={tr('Heure')}>
                 <input id="rdvm-heure" type="time" value={form.time} onChange={e => updateManual('time', e.target.value)} className={CHAMP} />
               </Champ>
             </div>
@@ -150,22 +152,22 @@ export default function RendezVousManuelV2({
         </section>
 
         <section className="space-y-3 border-t border-[color:var(--v2-filet)] pt-5">
-          <Titre>Prestation</Titre>
-          <Champ id="rdvm-service" label="Service">
+          <Titre>{tr('Prestation')}</Titre>
+          <Champ id="rdvm-service" label={tr('Service')}>
             <select id="rdvm-service" value={form.service_id} onChange={e => updateManual('service_id', e.target.value)} className={CHAMP}>
               {services.map(s => <option key={s.id} value={s.id}>{s.name} — {s.price}€</option>)}
             </select>
           </Champ>
           <div className="flex gap-3">
             <div className="min-w-0 flex-1">
-              <Champ id="rdvm-type" label="Type">
+              <Champ id="rdvm-type" label={tr('Type')}>
                 <select id="rdvm-type" value={form.vehicle_type} onChange={e => updateManual('vehicle_type', e.target.value)} className={CHAMP}>
                   {optionsType.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
                 </select>
               </Champ>
             </div>
             <div className="w-24 shrink-0">
-              <Champ id="rdvm-qte" label="Quantité">
+              <Champ id="rdvm-qte" label={tr('Quantité')}>
                 <input
                   id="rdvm-qte"
                   type="number"
@@ -179,7 +181,7 @@ export default function RendezVousManuelV2({
               </Champ>
             </div>
           </div>
-          <Champ id="rdvm-prix" label="Prix total (€)">
+          <Champ id="rdvm-prix" label={tr('Prix total (€)')}>
             <input
               id="rdvm-prix"
               type="number"
@@ -190,36 +192,36 @@ export default function RendezVousManuelV2({
               onChange={e => updateManual('booked_price', parseFloat(e.target.value) || 0)}
               className={CHAMP}
             />
-            <p className={`mt-1.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>Calculé automatiquement, modifiable.</p>
+            <p className={`mt-1.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Calculé automatiquement, modifiable.')}</p>
           </Champ>
         </section>
 
         <section className="space-y-3 border-t border-[color:var(--v2-filet)] pt-5">
-          <Titre>Client</Titre>
-          <Champ id="rdvm-nom" label="Nom complet *">
+          <Titre>{tr('Client')}</Titre>
+          <Champ id="rdvm-nom" label={tr('Nom complet *')}>
             <input
               id="rdvm-nom"
               type="text"
               autoComplete="off"
-              placeholder="Jean Dupont"
+              placeholder={tr('Jean Dupont')}
               value={form.client_name}
               onChange={e => updateManual('client_name', e.target.value)}
               className={CHAMP}
             />
           </Champ>
-          <Champ id="rdvm-email" label="Email (facultatif)">
+          <Champ id="rdvm-email" label={tr('Email (facultatif)')}>
             <input
               id="rdvm-email"
               type="email"
               inputMode="email"
               autoComplete="off"
-              placeholder="jean@exemple.com"
+              placeholder={tr('jean@exemple.com')}
               value={form.client_email}
               onChange={e => updateManual('client_email', e.target.value)}
               className={CHAMP}
             />
           </Champ>
-          <Champ id="rdvm-tel" label="Téléphone *">
+          <Champ id="rdvm-tel" label={tr('Téléphone *')}>
             <input
               id="rdvm-tel"
               type="tel"
@@ -232,7 +234,7 @@ export default function RendezVousManuelV2({
           </Champ>
           {centreAuto && (
             <div>
-              <p className={ETIQUETTE} id="rdvm-lieu-label">Lieu</p>
+              <p className={ETIQUETTE} id="rdvm-lieu-label">{tr('Lieu')}</p>
               <div className="flex gap-2.5" role="group" aria-labelledby="rdvm-lieu-label">
                 {(['domicile', 'centre'] as const).map(l => {
                   const actif = form.lieu === l
@@ -258,7 +260,7 @@ export default function RendezVousManuelV2({
           )}
           {centreAuto && form.lieu === 'centre' ? (
             centresDe(centreAuto).length > 1 ? (
-              <div role="radiogroup" aria-label="Centre auto" className="flex flex-col gap-2">
+              <div role="radiogroup" aria-label={tr('Centre auto')} className="flex flex-col gap-2">
                 {centresDe(centreAuto).map(c => {
                   const choisi = centreParAdresse(centreAuto, form.centre).adresse === c.adresse
                   return (
@@ -282,16 +284,16 @@ export default function RendezVousManuelV2({
                 })}
               </div>
             ) : (
-              <p className={`text-[14px] ${corps} text-[color:var(--v2-color-encre)]`}>Au centre auto · {centreAuto.adresse}</p>
+              <p className={`text-[14px] ${corps} text-[color:var(--v2-color-encre)]`}>{tr('Au centre auto ·')} {centreAuto.adresse}</p>
             )
           ) : (
             <div role="group" aria-labelledby="rdvm-adresse-label">
-              <p id="rdvm-adresse-label" className={ETIQUETTE}>Adresse d’intervention *</p>
+              <p id="rdvm-adresse-label" className={ETIQUETTE}>{tr('Adresse d’intervention *')}</p>
               <AddressAutocomplete
                 value={form.address}
                 onChange={v => updateManual('address', v)}
                 onSelectWithCoords={(label, lat, lng) => setForm(m => (m ? { ...m, address: label, lat, lng } : m))}
-                placeholder="12 rue de la Paix, 75001 Paris"
+                placeholder={tr('12 rue de la Paix, 75001 Paris')}
                 className={CHAMP}
               />
             </div>
@@ -306,7 +308,7 @@ export default function RendezVousManuelV2({
             onClick={() => updateManual('is_professional', !form.is_professional)}
             className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
           >
-            <span className={`text-[15px] ${corpsFort}`}>Client professionnel</span>
+            <span className={`text-[15px] ${corpsFort}`}>{tr('Client professionnel')}</span>
             <span
               aria-hidden
               className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
@@ -328,17 +330,17 @@ export default function RendezVousManuelV2({
           </button>
           {form.is_professional && (
             <div className="mt-2 space-y-3">
-              <Champ id="rdvm-societe" label="Nom de l’entreprise">
+              <Champ id="rdvm-societe" label={tr('Nom de l’entreprise')}>
                 <input
                   id="rdvm-societe"
                   type="text"
-                  placeholder="Ma Société SAS"
+                  placeholder={tr('Ma Société SAS')}
                   value={form.company_name}
                   onChange={e => updateManual('company_name', e.target.value)}
                   className={CHAMP}
                 />
               </Champ>
-              <Champ id="rdvm-siret" label="SIRET (14 chiffres)">
+              <Champ id="rdvm-siret" label={tr('SIRET (14 chiffres)')}>
                 <input
                   id="rdvm-siret"
                   type="text"
@@ -349,11 +351,11 @@ export default function RendezVousManuelV2({
                   className={`${CHAMP} tabular-nums`}
                 />
               </Champ>
-              <Champ id="rdvm-facturation" label="Adresse de facturation">
+              <Champ id="rdvm-facturation" label={tr('Adresse de facturation')}>
                 <input
                   id="rdvm-facturation"
                   type="text"
-                  placeholder="Identique à l’adresse d’intervention si vide"
+                  placeholder={tr('Identique à l’adresse d’intervention si vide')}
                   value={form.billing_address}
                   onChange={e => updateManual('billing_address', e.target.value)}
                   className={CHAMP}
@@ -364,9 +366,9 @@ export default function RendezVousManuelV2({
         </section>
 
         <section className="space-y-3 border-t border-[color:var(--v2-filet)] pt-5">
-          <Titre>Statut et notes</Titre>
+          <Titre>{tr('Statut et notes')}</Titre>
           <div>
-            <p className={ETIQUETTE} id="rdvm-statut-label">Statut initial</p>
+            <p className={ETIQUETTE} id="rdvm-statut-label">{tr('Statut initial')}</p>
             <div className="flex gap-2.5" role="radiogroup" aria-labelledby="rdvm-statut-label">
               {(['confirmed', 'pending'] as const).map(s => {
                 const actif = form.status === s
@@ -386,17 +388,17 @@ export default function RendezVousManuelV2({
                     style={PRESSION}
                   >
                     <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: couleur }} aria-hidden />
-                    {s === 'confirmed' ? 'Confirmé' : 'En attente'}
+                    {s === 'confirmed' ? tr('Confirmé') : 'En attente'}
                   </button>
                 )
               })}
             </div>
           </div>
-          <Champ id="rdvm-notes" label="Notes internes">
+          <Champ id="rdvm-notes" label={tr('Notes internes')}>
             <textarea
               id="rdvm-notes"
               rows={2}
-              placeholder="Code portail, instructions particulières…"
+              placeholder={tr('Code portail, instructions particulières…')}
               value={form.notes}
               onChange={e => updateManual('notes', e.target.value)}
               className={`${CHAMP} h-auto py-2.5 resize-none`}

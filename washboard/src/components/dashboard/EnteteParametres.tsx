@@ -1,5 +1,7 @@
 'use client'
 
+import { useT } from '@/components/i18n/I18nProvider'
+
 // En-tête de l'écran des réglages — deux versions, comme le reste.
 //
 // Le site garde « Paramètres · Gérez vos informations et votre page client ». L'application,
@@ -9,9 +11,10 @@
 // Rendu ici plutôt que dans ParametresFormV2 : l'en-tête précède la carte de configuration,
 // qui est posée par la page. Le mettre dans le formulaire l'aurait fait passer dessous.
 export function EnteteParametres() {
+  const t = useT()
   return (
       <h1 className="text-[24px] leading-none pb-1 [font-family:var(--font-archivo)] [font-weight:var(--v2-type-titre-poids)] [font-stretch:var(--v2-type-titre-largeur)] tracking-[var(--v2-type-titre-tracking)] text-[color:var(--v2-color-encre)]">
-        Plus
+        {t('Plus')}
       </h1>
   )
 }

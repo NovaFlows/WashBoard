@@ -149,7 +149,7 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
     if (fichier) envoyer(fichier)
   }
 
-  const valeurLogo = aLogo ? 'Ajouté' : 'Pas encore : votre initiale s’affiche'
+  const valeurLogo = aLogo ? t('Ajouté') : t('Pas encore : votre initiale s’affiche')
   const valeurMessage = h.message ?? `Pas encore : « ${MESSAGE_PAR_DEFAUT} » s’affiche`
 
   // Bloc des réglages (boutons + liste de 5 lignes) et bloc de l'aperçu : deux fragments
@@ -198,14 +198,14 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
             />
             <Ligne
               label={t('Avis Google')}
-              valeur={h.avisGoogle ? 'Renseigné' : 'Pas encore : note de votre site affichée'}
+              valeur={h.avisGoogle ? t('Renseigné') : t('Pas encore : note de votre site affichée')}
               onClick={() => setFeuille('avisGoogle')}
             />
             {pageMode === 'custom' && <>
             <Ligne label={t('Fond de la page')} valeur={libelleFond(h.fond)} onClick={() => setFeuille('fond')} />
             <Ligne label={t('Message d’accueil')} valeur={valeurMessage} tronquer onClick={() => setFeuille('message')} />
             </>}
-            <Ligne label={t('Mon site web')} valeur={h.site ? h.site.replace(/^https?:\/\//i, '') : 'Pas encore : aucun avis affiché'} tronquer onClick={() => setFeuille('site')} />
+            <Ligne label={t('Mon site web')} valeur={h.site ? h.site.replace(/^https?:\/\//i, '') : t('Pas encore : aucun avis affiché')} tronquer onClick={() => setFeuille('site')} />
           </ul>
         </CarteListe>
       </section>
@@ -336,7 +336,7 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
         <ConfirmationSuppression
           titre={t('Retirer votre logo ?')}
           texte={t('Vos clients verront la première lettre de votre nom à la place.')}
-          remarque="Vous pourrez en ajouter un autre quand vous voulez."
+          remarque={t('Vous pourrez en ajouter un autre quand vous voulez.')}
           enCours={retraitEnCours}
           erreur={retraitErreur}
           libelleAction="Retirer"
@@ -349,7 +349,7 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
         <ConfirmationSuppression
           titre={t('Retirer votre photo de fond ?')}
           texte={t('Votre page reprend le fond « Original » : clair ou sombre, au choix de vos clients.')}
-          remarque="Pour la remettre, il faudra la choisir de nouveau."
+          remarque={t('Pour la remettre, il faudra la choisir de nouveau.')}
           enCours={retraitEnCours}
           erreur={retraitErreur}
           libelleAction="Retirer"

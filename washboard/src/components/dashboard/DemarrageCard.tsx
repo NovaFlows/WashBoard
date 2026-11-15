@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { etapeDemarrage, type SetupProgress } from '@/lib/setupProgress'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Carte d'accueil d'un compte qui ne peut pas encore prendre de réservation.
 //
@@ -26,6 +27,7 @@ const CORPS_FORT = `${POLICE} [font-weight:var(--v2-type-corps-fort-poids)] [fon
 const TITRE = `${POLICE} [font-weight:var(--v2-type-titre-poids)] [font-stretch:var(--v2-type-titre-largeur)] tracking-[var(--v2-type-titre-tracking)]`
 
 export function DemarrageCard({ progress }: { progress: SetupProgress }) {
+  const t = useT()
   const etape = etapeDemarrage(progress)
   if (!etape) return null
   const indispensables = progress.items.filter(i => i.blocking)
@@ -36,9 +38,9 @@ export function DemarrageCard({ progress }: { progress: SetupProgress }) {
       aria-labelledby="demarrage-titre"
       className={`mb-6 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-5 text-[color:var(--v2-color-encre)] ${POLICE}`}
     >
-      <h2 id="demarrage-titre" className={`text-[17px] ${TITRE}`}>Configurer mon compte et mes prestations</h2>
+      <h2 id="demarrage-titre" className={`text-[17px] ${TITRE}`}>{t('Configurer mon compte et mes prestations')}</h2>
       <p className={`mt-1 text-[13.5px] ${CORPS} text-[color:var(--v2-color-gris)]`}>
-        Votre page de réservation ne peut pas encore prendre de rendez-vous. Il reste {restantes === 1 ? 'une étape' : `${restantes} étapes`}.
+        {t('Votre page de réservation ne peut pas encore prendre de rendez-vous. Il reste')} {restantes === 1 ? t('une étape') : `${restantes} étapes`}.
       </p>
       <ol className="mt-4 space-y-2.5">
         {indispensables.map(item => (
@@ -55,7 +57,7 @@ export function DemarrageCard({ progress }: { progress: SetupProgress }) {
               />
             )}
             <span className={item.done ? 'text-[color:var(--v2-color-gris)] line-through' : ''}>{item.label}</span>
-            <span className="sr-only">{item.done ? '(fait)' : '(à faire)'}</span>
+            <span className="sr-only">{item.done ? '(fait)' : t('(à faire)')}</span>
           </li>
         ))}
       </ol>
@@ -64,7 +66,7 @@ export function DemarrageCard({ progress }: { progress: SetupProgress }) {
         className={`mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[var(--v2-radius-bouton)] px-5 text-[15px] ${CORPS_FORT} sm:w-auto`}
         style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)' }}
       >
-        {BOUTON[etape.key] ?? 'Continuer la configuration'}
+        {BOUTON[etape.key] ?? t('Continuer la configuration')}
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>

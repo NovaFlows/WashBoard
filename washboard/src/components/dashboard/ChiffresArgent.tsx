@@ -13,6 +13,7 @@ import {
   type FactureManuelle, type ReservationArgent,
 } from '@/lib/chiffresArgent'
 import { ecartRelatif } from '@/lib/crmStats'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // Onglet « Argent » de Chiffres (refonte 2026, passe 5, repris au 2026-09-24
 // pour que le graphique suive la période) — fusion visuelle de la Comptabilité
@@ -107,13 +108,14 @@ async function lireFrais(debut: string, fin: string): Promise<Expense[] | null> 
 /** La comptabilité vue depuis Starter : la silhouette des dépenses et des factures, floue et
  *  inerte, sous une pastille qui dit quelle offre l'ouvre. */
 function ComptaVerrouillee() {
+  const t = useT()
   const offre = requiredPlanLabel('compta')
   const barre = 'rounded-full bg-[color:var(--v2-filet-fort)]'
   return (
     <div className="relative">
       <div aria-hidden className="select-none blur-[5px]">
         <div className="pb-2 px-0.5">
-          <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Dépenses</span>
+          <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Dépenses')}</span>
         </div>
         <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
           {[0, 1, 2].map(i => (
@@ -137,10 +139,10 @@ function ComptaVerrouillee() {
           className={`inline-flex items-center gap-2 rounded-full border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-4 py-2.5 text-[13.5px] shadow-lg ${corpsFort}`}
         >
           <Lock size={14} strokeWidth={2.4} aria-hidden />
-          Inclus dans l’offre {offre}
+          {t('Inclus dans l’offre')} {offre}
         </Link>
         <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>
-          Dépenses, résultat et factures — la comptabilité complète.
+          {t('Dépenses, résultat et factures — la comptabilité complète.')}
         </p>
       </div>
     </div>
@@ -168,6 +170,8 @@ export default function ChiffresArgent({
    *  7 de la maquette (260px détail à gauche, graphique + dépenses à droite). */
   grandEcran?: boolean
 }) {
+  const loc = useLocale()
+  const t = useT()
   const plage = plageDe(periode)
   const precedente: PeriodeChiffres = useMemo(
     // On recule depuis `ref`, qui n'est jamais après aujourd'hui : le plafond
@@ -240,10 +244,10 @@ export default function ChiffresArgent({
   if (!hasCa) {
     return (
       <OffreVerrouilleeV2
-        titre="Suivez votre chiffre d’affaires"
-        description="Ce que vous encaissez, jour après jour et mois après mois."
+        titre={t('Suivez votre chiffre d’affaires')}
+        description={t('Ce que vous encaissez, jour après jour et mois après mois.')}
         feature="ca_simple"
-        rassurance="Vos encaissements sont déjà comptés en coulisse : rien n’est perdu en attendant, seul l’affichage est fermé."
+        rassurance={t('Vos encaissements sont déjà comptés en coulisse : rien n’est perdu en attendant, seul l’affichage est fermé.')}
       />
     )
   }
@@ -258,9 +262,9 @@ export default function ChiffresArgent({
   const meilleur = points.filter(p => !p.futur).reduce<PointBarre | null>((m, p) => (!m || p.valeur > m.valeur ? p : m), null)
   const parResultat = enResultat && !!serie?.fraisParCreneau
   const resume = serie && !serie.vide
-    ? `${enResultat ? titreGraphique(periode.type) : titreGraphiqueCa(periode.type)}, ${plage.label}. ${parResultat ? 'Résultat' : 'Encaissé'} total ${euros(parResultat ? serie.resultat : serie.encaisse)}.`
+    ? `${enResultat ? titreGraphique(periode.type) : titreGraphiqueCa(periode.type)}, ${plage.label}. ${parResultat ? t('Résultat') : t('Encaissé')} total ${euros(parResultat ? serie.resultat : serie.encaisse)}.`
       + (meilleur ? ` Meilleur créneau : ${meilleur.libelleLong}, ${euros(meilleur.valeur)}.` : '')
-      + ' Flèches gauche et droite pour parcourir les barres.'
+      + t(' Flèches gauche et droite pour parcourir les barres.')
     : ''
 
   // Les blocs ci-dessous sont partagés par les deux dispositions : mobile les empile tous dans
@@ -287,16 +291,16 @@ export default function ChiffresArgent({
   const blocDetailBureau = enResultat && (
     <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] divide-y divide-[color:var(--v2-filet)] px-4">
       <div className="flex items-center justify-between py-2.5">
-        <span className={`text-[13px] ${corps} flex-1`}>Chiffre d’affaires</span>
+        <span className={`text-[13px] ${corps} flex-1`}>{t('Chiffre d’affaires')}</span>
         <span className={`text-[14.5px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.encaisse) : '—'}</span>
       </div>
       <div className="flex items-center justify-between py-2.5">
-        <span className={`text-[13px] ${corps} flex-1`}>Dépenses</span>
+        <span className={`text-[13px] ${corps} flex-1`}>{t('Dépenses')}</span>
         <span className={`text-[14.5px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.depense) : '—'}</span>
       </div>
       {facturesImpayees !== undefined && (
         <div className="flex items-center justify-between py-2.5">
-          <span className={`text-[13px] ${corps} flex-1`}>Factures impayées</span>
+          <span className={`text-[13px] ${corps} flex-1`}>{t('Factures impayées')}</span>
           <span
             className={`text-[14.5px] ${corpsFort} tabular-nums`}
             style={facturesImpayees > 0 ? { color: 'var(--v2-color-ambre)' } : undefined}
@@ -314,11 +318,11 @@ export default function ChiffresArgent({
     <>
       <div className="flex justify-between px-4 py-3.5">
         <span className="flex flex-col gap-0.5">
-          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Encaissé</span>
+          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Encaissé')}</span>
           <span className={`text-[19px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.encaisse) : '—'}</span>
         </span>
         <span className="flex flex-col gap-0.5 items-end">
-          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Dépensé</span>
+          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Dépensé')}</span>
           <span className={`text-[19px] ${corpsFort} tabular-nums`}>{serie ? euros(serie.depense) : '—'}</span>
         </span>
       </div>
@@ -327,14 +331,14 @@ export default function ChiffresArgent({
   )
 
   const blocGrapheContenu = !serie ? (
-    <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-12`}>Chargement…</p>
+    <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-12`}>{t('Chargement…')}</p>
   ) : serie.vide || points.every(p => p.valeur === 0) ? (
     <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-12 leading-relaxed`}>
       {serie.vide && finitAvant(periode, premierJour)
         ? `Pas de données avant le ${formaterJour(premierJour!)}, date de votre premier rendez-vous.`
         : serie.vide
-          ? (enResultat ? 'Aucun rendez-vous terminé ni frais sur cette période.' : 'Aucun rendez-vous terminé sur cette période.')
-          : 'Aucun encaissement à tracer sur cette période.'}
+          ? (enResultat ? t('Aucun rendez-vous terminé ni frais sur cette période.') : t('Aucun rendez-vous terminé sur cette période.'))
+          : t('Aucun encaissement à tracer sur cette période.')}
     </p>
   ) : (
     <GraphiqueBarres
@@ -350,18 +354,18 @@ export default function ChiffresArgent({
   const blocDepenses = !hasCompta ? <ComptaVerrouillee /> : (
     <div>
       <div className="flex items-baseline justify-between px-0.5 pb-2">
-        <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Dépenses</span>
+        <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Dépenses')}</span>
         {/* Écran v2 (2026-09-26) : « + Ajouter un frais » tombait sur l'ancienne page de
             comptabilité, en plein milieu de la PWA refaite. */}
         <Link href="/dashboard/chiffres/depenses" className={`text-[12.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
-          + Ajouter un frais
+          {t('+ Ajouter un frais')}
         </Link>
       </div>
       <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] overflow-hidden">
         {chargement ? (
-          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-6`}>Chargement…</p>
+          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-6`}>{t('Chargement…')}</p>
         ) : recentes.length === 0 ? (
-          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-6`}>Aucun frais sur cette période</p>
+          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-6`}>{t('Aucun frais sur cette période')}</p>
         ) : (
           <ul className="px-4 divide-y divide-[color:var(--v2-filet)]">
             {recentes.map(e => (
@@ -369,7 +373,7 @@ export default function ChiffresArgent({
                 <span className="flex-1 min-w-0 flex flex-col gap-px">
                   <span className={`text-[14.5px] ${corpsFort} truncate`}>{e.label}</span>
                   <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                    {libelleCategorie(e.category)} · {new Date(e.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    {libelleCategorie(e.category)} · {new Date(e.date + 'T12:00:00').toLocaleDateString(loc, { day: 'numeric', month: 'short' })}
                   </span>
                 </span>
                 <span className={`text-[14.5px] ${corpsFort} tabular-nums shrink-0`}>{euros(Number(e.amount))}</span>
@@ -388,7 +392,7 @@ export default function ChiffresArgent({
     <>
       {([
         { href: '/dashboard/factures', texte: `Factures · ${nombre.format(facturesCount)} émise${facturesCount > 1 ? 's' : ''}` },
-        { href: '/dashboard/chiffres/documents', texte: 'Devis et factures à la main' },
+        { href: '/dashboard/chiffres/documents', texte: t('Devis et factures à la main') },
       ] as const).map(l => (
         <Link key={l.href} href={l.href} className="flex items-center justify-between px-1 h-11">
           <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{l.texte}</span>
@@ -404,13 +408,13 @@ export default function ChiffresArgent({
     <div className="space-y-5">
       {reservationsIncompletes && (
         <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)]`} role="status">
-          Une partie de vos rendez-vous n’a pas pu être chargée : ces chiffres peuvent être incomplets.
+          {t('Une partie de vos rendez-vous n’a pas pu être chargée : ces chiffres peuvent être incomplets.')}
         </p>
       )}
 
       {erreur ? (
         <p className={`text-[13px] ${corps} text-[color:var(--v2-color-rouge)]`}>
-          Impossible de charger vos chiffres pour le moment. Rechargez la page dans un instant.
+          {t('Impossible de charger vos chiffres pour le moment. Rechargez la page dans un instant.')}
         </p>
       ) : grandEcran ? (
         // Grand écran (écran 7 de la maquette) : colonne étroite à gauche (héros + détail),

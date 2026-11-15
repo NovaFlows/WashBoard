@@ -9,6 +9,7 @@ import {
   paysDuProfil, reglesPays, identifiantValidePour, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, siretValide,
   type RegimeTva, type StatutJuridique,
 } from '@/lib/facture'
+import { useT } from '@/components/i18n/I18nProvider'
 
 const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
 const labelClass = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
@@ -54,6 +55,7 @@ function Choix<T extends string>({ nom, valeur, options, onChange }: {
  *  qu'elles sont incomplètes, aucune facture n'est émise : le client reçoit
  *  un récapitulatif, qui ne se présente pas comme une facture. */
 export function FacturationCard({ washer }: { washer: Washer }) {
+  const tr = useT()
   const router = useRouter()
   const [statut, setStatut] = useState<StatutJuridique>(washer.facture_statut ?? 'ei')
   const [nomLegal, setNomLegal] = useState(washer.facture_nom_legal ?? '')
@@ -115,8 +117,8 @@ export function FacturationCard({ washer }: { washer: Washer }) {
     })
     const json = await res.json().catch(() => ({})) as { error?: string }
     setMsg(res.ok
-      ? { ok: true, text: 'Informations de facturation enregistrées' }
-      : { ok: false, text: json.error ?? 'Erreur lors de la mise à jour' })
+      ? { ok: true, text: tr('Informations de facturation enregistrées') }
+      : { ok: false, text: json.error ?? tr('Erreur lors de la mise à jour') })
     if (res.ok) router.refresh()
     setLoading(false)
   }
@@ -124,24 +126,23 @@ export function FacturationCard({ washer }: { washer: Washer }) {
   return (
     <div id="facturation" className="scroll-mt-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-        <FileText size={16} strokeWidth={2} className="text-slate-400 dark:text-slate-500" />Facturation
+        <FileText size={16} strokeWidth={2} className="text-slate-400 dark:text-slate-500" />{tr('Facturation')}
       </h2>
       <form onSubmit={save} noValidate className="space-y-4">
         <p className="text-sm text-slate-500 dark:text-slate-400 -mt-1">
-          Quand vous marquez un rendez-vous « Terminé », sa facture est émise avec ces informations et
-          rangée dans l&apos;onglet Factures. Vos clients professionnels la reçoivent par email.
+          {tr('Quand vous marquez un rendez-vous « Terminé », sa facture est émise avec ces informations et rangée dans l’onglet Factures. Vos clients professionnels la reçoivent par email.')}
         </p>
 
         {manques.length === 0 ? (
-          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">✓ Vos factures sont prêtes à être émises.</p>
+          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{tr('✓ Vos factures sont prêtes à être émises.')}</p>
         ) : (
           <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-            {phraseManques(manques)} En attendant, vos clients reçoivent un simple récapitulatif.
+            {phraseManques(manques)} {tr('En attendant, vos clients reçoivent un simple récapitulatif.')}
           </p>
         )}
 
         <div>
-          <p className={labelClass}>Votre statut</p>
+          <p className={labelClass}>{tr('Votre statut')}</p>
           <Choix
             nom="facture_statut"
             valeur={statut}
@@ -154,7 +155,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         </div>
 
         <div>
-          <label htmlFor="facture-nom-legal" className={labelClass}>{societe ? 'Raison sociale' : 'Nom légal'}</label>
+          <label htmlFor="facture-nom-legal" className={labelClass}>{societe ? 'Raison sociale' : tr('Nom légal')}</label>
           <input
             id="facture-nom-legal"
             type="text"
@@ -165,37 +166,37 @@ export function FacturationCard({ washer }: { washer: Washer }) {
           />
           <p className={aideClass}>
             {societe
-              ? 'Le nom officiel de votre société, tel qu’inscrit au registre.'
-              : 'Votre prénom et votre nom, tels qu’inscrits à l’Insee.'}
+              ? tr('Le nom officiel de votre société, tel qu’inscrit au registre.')
+              : tr('Votre prénom et votre nom, tels qu’inscrits à l’Insee.')}
           </p>
         </div>
 
         <div>
           <label htmlFor="facture-siret" className={labelClass}>{regles.identifiantTitre}</label>
           <input id="facture-siret" type="text" value={siret} onChange={e => setSiret(e.target.value)} placeholder={regles.identifiantExemple} className={inputClass} />
-          <p className={aideClass}>France : 14 chiffres, sur votre avis de situation Insee ou sur annuaire-entreprises.data.gouv.fr. Suisse : numéro IDE (CHE-123.456.789), sur zefix.ch.</p>
+          <p className={aideClass}>{tr('France : 14 chiffres, sur votre avis de situation Insee ou sur annuaire-entreprises.data.gouv.fr. Suisse : numéro IDE (CHE-123.456.789), sur zefix.ch.')}</p>
         </div>
 
         <div>
-          <label className={labelClass}>{societe ? 'Adresse du siège' : 'Adresse professionnelle'}</label>
+          <label className={labelClass}>{societe ? tr('Adresse du siège') : 'Adresse professionnelle'}</label>
           <AddressAutocomplete value={adresse} onChange={setAdresse} placeholder={regles.adresseExemple} className={inputClass} />
         </div>
 
         {societe && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="facture-forme" className={labelClass}>Forme juridique</label>
+              <label htmlFor="facture-forme" className={labelClass}>{tr('Forme juridique')}</label>
               <input id="facture-forme" list="formes-juridiques" value={forme} onChange={e => setForme(e.target.value)} placeholder={regles.formes[0]} className={inputClass} />
               <datalist id="formes-juridiques">
                 {regles.formes.map(f => <option key={f} value={f} />)}
               </datalist>
             </div>
             <div>
-              <label htmlFor="facture-capital" className={labelClass}>Capital social</label>
+              <label htmlFor="facture-capital" className={labelClass}>{tr('Capital social')}</label>
               <input id="facture-capital" type="text" value={capital} onChange={e => setCapital(e.target.value)} placeholder="1 000 €" className={inputClass} />
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="facture-immatriculation" className={labelClass}>Immatriculation</label>
+              <label htmlFor="facture-immatriculation" className={labelClass}>{tr('Immatriculation')}</label>
               <input id="facture-immatriculation" type="text" value={immatriculation} onChange={e => setImmatriculation(e.target.value)} placeholder={regles.immatriculationExemple} className={inputClass} />
               <p className={aideClass}>{regles.immatriculationAide}</p>
             </div>
@@ -209,14 +210,14 @@ export function FacturationCard({ washer }: { washer: Washer }) {
             valeur={regime}
             onChange={setRegime}
             options={[
-              { value: 'franchise', label: 'Je ne facture pas la TVA', desc: 'Franchise en base (le cas des micro-entreprises) : mention « TVA non applicable, art. 293 B du CGI ».' },
-              { value: 'assujetti', label: 'Je facture la TVA', desc: 'Vos prix restent affichés TTC ; la facture détaille le HT et la TVA.' },
+              { value: 'franchise', label: tr('Je ne facture pas la TVA'), desc: tr('Franchise en base (le cas des micro-entreprises) : mention « TVA non applicable, art. 293 B du CGI ».') },
+              { value: 'assujetti', label: tr('Je facture la TVA'), desc: tr('Vos prix restent affichés TTC ; la facture détaille le HT et la TVA.') },
             ] as const}
           />
         </div>
 
         <div>
-          <label htmlFor="facture-prochain-numero" className={labelClass}>Numéro de la prochaine facture</label>
+          <label htmlFor="facture-prochain-numero" className={labelClass}>{tr('Numéro de la prochaine facture')}</label>
           <input
             id="facture-prochain-numero"
             type="number"
@@ -228,16 +229,14 @@ export function FacturationCard({ washer }: { washer: Washer }) {
             className={`${inputClass} w-40`}
           />
           <p className={aideClass}>
-            Vous facturiez déjà avant WashBoard ? Indiquez le numéro qui suit votre dernière facture, pour que la suite
-            reste continue (par exemple 46 si vous étiez à la n° 45). La prochaine facture sera la
-            F-{String(Math.max(1, Number(prochainNumero) || numeroActuel)).padStart(5, '0')}. Ce numéro ne peut qu&apos;augmenter.
+            {tr('Vous facturiez déjà avant WashBoard ? Indiquez le numéro qui suit votre dernière facture, pour que la suite reste continue (par exemple 46 si vous étiez à la n° 45). La prochaine facture sera la F-')}{String(Math.max(1, Number(prochainNumero) || numeroActuel)).padStart(5, '0')}{tr('. Ce numéro ne peut qu’augmenter.')}
           </p>
         </div>
 
         {regime === 'assujetti' && (
           <div className="grid grid-cols-1 sm:grid-cols-[8rem_1fr] gap-3">
             <div>
-              <label htmlFor="facture-taux-tva" className={labelClass}>Taux</label>
+              <label htmlFor="facture-taux-tva" className={labelClass}>{tr('Taux')}</label>
               <select id="facture-taux-tva" value={taux} onChange={e => setTaux(e.target.value)} className={inputClass}>
                 {tauxProposes.map(t => <option key={t} value={String(t)}>{String(t).replace('.', ',')} %</option>)}
               </select>

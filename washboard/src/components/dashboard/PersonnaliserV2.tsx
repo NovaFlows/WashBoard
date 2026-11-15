@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, X } from 'lucide-react'
 import { WIDGETS, type WidgetKey } from '@/lib/dashboardWidgets'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Personnaliser l'accueil », feuille v2 — planche `project/Personnaliser.dc.html`.
 // Passe 8 de la refonte 2026, réservée à la PWA installée (elle n'est ouverte
@@ -49,6 +50,7 @@ const SELECTEUR_FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]
 const REGLABLES = WIDGETS.filter(w => w.key !== 'today')
 
 export default function PersonnaliserV2({ visibles, onClose }: { visibles: WidgetKey[]; onClose: () => void }) {
+  const t = useT()
   const router = useRouter()
   const feuilleRef = useRef<HTMLDivElement>(null)
   useBloquerDefilement()
@@ -151,13 +153,13 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
         body: JSON.stringify({ dashboard_widgets: choisis }),
       })
       if (!res.ok) {
-        setErreur('Enregistrement impossible. Réessayez dans un instant.')
+        setErreur(t('Enregistrement impossible. Réessayez dans un instant.'))
         return
       }
       onClose()
       router.refresh()
     } catch {
-      setErreur('Enregistrement impossible. Vérifiez votre connexion.')
+      setErreur(t('Enregistrement impossible. Vérifiez votre connexion.'))
     } finally {
       setEnregistrement(false)
     }
@@ -170,7 +172,7 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
       role="dialog"
       aria-modal="true"
-      aria-label="Personnaliser l’accueil"
+      aria-label={t('Personnaliser l’accueil')}
     >
       <button
         aria-hidden
@@ -196,15 +198,15 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
 
         <div className="flex items-start gap-3 px-5 pt-1 sm:pt-5">
           <div className="min-w-0 flex-1">
-            <h2 className={`text-[22px] ${titre}`}>Personnaliser</h2>
+            <h2 className={`text-[22px] ${titre}`}>{t('Personnaliser')}</h2>
             <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Ce qui s’affiche sous vos rendez-vous, et dans quel ordre.
+              {t('Ce qui s’affiche sous vos rendez-vous, et dans quel ordre.')}
             </p>
           </div>
           <button
             ref={closeRef}
             onClick={onClose}
-            aria-label="Fermer"
+            aria-label={t('Fermer')}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:bg-[color:var(--v2-filet)] hover:text-[color:var(--v2-color-encre)]"
           >
             <X size={20} strokeWidth={2} />
@@ -214,9 +216,9 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 pt-4">
           <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 py-3">
-            <p className={`text-[15px] ${corps}`}>Prochain rendez-vous et journée</p>
+            <p className={`text-[15px] ${corps}`}>{t('Prochain rendez-vous et journée')}</p>
             <p className={`mt-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Toujours affichés dans l’application.
+              {t('Toujours affichés dans l’application.')}
             </p>
           </div>
 
@@ -285,7 +287,7 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
               onClick={toutReafficher}
               className={`text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)] min-h-[44px] px-3`}
             >
-              Tout réafficher, dans l’ordre d’origine
+              {t('Tout réafficher, dans l’ordre d’origine')}
             </button>
           </div>
 
@@ -305,7 +307,7 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
             onClick={onClose}
             className={`h-11 flex-1 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
           >
-            Annuler
+            {t('Annuler')}
           </button>
           <button
             type="button"

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { couleurTexteSur, libelleRemise, tempsRestant, type PromotionPublique } from '@/lib/promotion'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Bandeau de promotion en haut de la page de réservation, réglé par le laveur
 // (Plus › Promotions) : couleur, texte, compte à rebours. Disparaît de lui-même à la fin
@@ -14,6 +15,7 @@ function deuxChiffres(n: number) {
 }
 
 export default function BandeauPromotion({ promo }: { promo: PromotionPublique }) {
+  const tr = useT()
   // Le compte à rebours ne se calcule que dans le navigateur : rendu côté serveur, l'heure
   // du serveur et celle du visiteur différeraient d'une seconde et React le signalerait.
   const [maintenant, setMaintenant] = useState<Date | null>(null)
@@ -31,7 +33,7 @@ export default function BandeauPromotion({ promo }: { promo: PromotionPublique }
   const texte = couleurTexteSur(fond)
 
   return (
-    <div role="region" aria-label="Promotion en cours" className="w-full" style={{ background: fond, color: texte }}>
+    <div role="region" aria-label={tr('Promotion en cours')} className="w-full" style={{ background: fond, color: texte }}>
       <div className="mx-auto flex max-w-lg flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2.5 text-center">
         <p className="text-[14px] font-semibold leading-snug">
           {promo.nom} · {libelleRemise(promo)}
@@ -41,11 +43,11 @@ export default function BandeauPromotion({ promo }: { promo: PromotionPublique }
           <p className="text-[13px] tabular-nums opacity-90" aria-live="off">
             {reste ? (
               <>
-                Plus que{' '}
+                {tr('Plus que')}{' '}
                 {reste.jours > 0 && <>{reste.jours} j </>}
-                {deuxChiffres(reste.heures)} h {deuxChiffres(reste.minutes)} min {deuxChiffres(reste.secondes)} s
+                {deuxChiffres(reste.heures)} h {deuxChiffres(reste.minutes)} {tr('min')} {deuxChiffres(reste.secondes)} s
               </>
-            ) : <span className="invisible">Plus que 00 h 00 min 00 s</span>}
+            ) : <span className="invisible">{tr('Plus que 00 h 00 min 00 s')}</span>}
           </p>
         )}
       </div>

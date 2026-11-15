@@ -17,6 +17,7 @@ import {
 import { lireDocuments, envoyerDocument, marquerPayee } from '@/lib/documentsApi'
 import type { Document } from '@/lib/documents'
 import { FUSEAU } from '@/lib/dateUtils'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // Fiche entreprise — proposition de Yanis (canevas du 2026-09-28), construite le même jour.
 // Réservée à la PWA installée, comme le reste de Clients (voir ClientsView.tsx).
@@ -45,10 +46,10 @@ function initiales(texte: string): string {
   return (mots[0][0] + mots[mots.length - 1][0]).toUpperCase()
 }
 
-function dateCourte(iso: string, maintenant: number): string {
+function dateCourte(iso: string, maintenant: number, loc = 'fr-FR'): string {
   const d = new Date(iso)
   const memeAnnee = d.getFullYear() === new Date(maintenant).getFullYear()
-  return d.toLocaleDateString('fr-FR', {
+  return d.toLocaleDateString(loc, {
     day: 'numeric', month: 'short', ...(memeAnnee ? {} : { year: 'numeric' }), timeZone: FUSEAU,
   })
 }
@@ -65,6 +66,7 @@ function FeuilleAjouterContactV2({
   onEnregistrer: (cle: string, role: string) => Promise<string | null>
   onClose: () => void
 }) {
+  const t = useT()
   const [recherche, setRecherche] = useState('')
   const [choisi, setChoisi] = useState<ResumeClient | null>(null)
   const [role, setRole] = useState('')
@@ -83,8 +85,8 @@ function FeuilleAjouterContactV2({
 
   return (
     <Feuille
-      titre="Rattacher un contact"
-      sousTitre={choisi ? undefined : 'Choisissez un client déjà connu'}
+      titre={t('Rattacher un contact')}
+      sousTitre={choisi ? undefined : t('Choisissez un client déjà connu')}
       onClose={onClose}
       pied={choisi ? (
         <button type="button" onClick={() => void soumettre()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
@@ -100,25 +102,25 @@ function FeuilleAjouterContactV2({
             <p className={`mt-0.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{choisi.phone || choisi.email}</p>
           </div>
           <div>
-            <label htmlFor="role-contact" className={ETIQUETTE}>Son rôle (facultatif)</label>
+            <label htmlFor="role-contact" className={ETIQUETTE}>{t('Son rôle (facultatif)')}</label>
             <input
               id="role-contact" className={CHAMP} value={role} onChange={e => setRole(e.target.value)}
-              placeholder="Chef d’atelier, comptabilité…" maxLength={200}
+              placeholder={t('Chef d’atelier, comptabilité…')} maxLength={200}
             />
           </div>
           <button type="button" onClick={() => setChoisi(null)} className={`text-[13px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
-            Choisir un autre client
+            {t('Choisir un autre client')}
           </button>
         </div>
       ) : (
         <div className="space-y-3">
           <input
             type="search" inputMode="search" value={recherche} onChange={e => setRecherche(e.target.value)}
-            placeholder="Nom, téléphone, adresse" aria-label="Rechercher un client" className={CHAMP} autoFocus
+            placeholder={t('Nom, téléphone, adresse')} aria-label={t('Rechercher un client')} className={CHAMP} autoFocus
           />
           {candidats.length === 0 ? (
             <p className={`py-4 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              Tous vos clients sont déjà rattachés à une entreprise.
+              {t('Tous vos clients sont déjà rattachés à une entreprise.')}
             </p>
           ) : (
             <ul className="divide-y divide-[color:var(--v2-filet)]">
@@ -155,6 +157,7 @@ function FeuilleSiteV2({
   onSupprime: () => void
   onClose: () => void
 }) {
+  const t = useT()
   const [adresse, setAdresse] = useState(site?.adresse ?? '')
   const [note, setNote] = useState(site?.note ?? '')
   const [enCours, setEnCours] = useState(false)
@@ -165,7 +168,7 @@ function FeuilleSiteV2({
 
   async function enregistrer() {
     if (enCours) return
-    if (!adresse.trim()) { setErreur('Indiquez l’adresse du site.'); return }
+    if (!adresse.trim()) { setErreur(t('Indiquez l’adresse du site.')); return }
     setEnCours(true)
     setErreur(null)
     const r = site
@@ -189,8 +192,8 @@ function FeuilleSiteV2({
   if (suppression && site) {
     return (
       <ConfirmationSuppression
-        titre="Supprimer ce site ?"
-        texte="Son adresse et ses instructions d’accès disparaissent."
+        titre={t('Supprimer ce site ?')}
+        texte={t('Son adresse et ses instructions d’accès disparaissent.')}
         enCours={suppressionEnCours}
         erreur={suppressionErreur}
         onConfirmer={() => void confirmerSuppression()}
@@ -201,7 +204,7 @@ function FeuilleSiteV2({
 
   return (
     <Feuille
-      titre={site ? 'Modifier le site' : 'Nouveau site'}
+      titre={site ? t('Modifier le site') : t('Nouveau site')}
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
@@ -212,20 +215,20 @@ function FeuilleSiteV2({
       <div className="space-y-4">
         {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
         <div>
-          <label htmlFor="site-adresse" className={ETIQUETTE}>Adresse</label>
-          <AddressAutocomplete value={adresse} onChange={setAdresse} className={CHAMP} placeholder="12 avenue de la Somme, Mérignac" />
+          <label htmlFor="site-adresse" className={ETIQUETTE}>{t('Adresse')}</label>
+          <AddressAutocomplete value={adresse} onChange={setAdresse} className={CHAMP} placeholder={t('12 avenue de la Somme, Mérignac')} />
         </div>
         <div>
-          <label htmlFor="site-note" className={ETIQUETTE}>Instructions d’accès (facultatif)</label>
+          <label htmlFor="site-note" className={ETIQUETTE}>{t('Instructions d’accès (facultatif)')}</label>
           <textarea
             id="site-note" value={note} onChange={e => setNote(e.target.value)} rows={3} maxLength={500}
-            placeholder="Parking arrière, point d’eau à droite…"
+            placeholder={t('Parking arrière, point d’eau à droite…')}
             className={`w-full min-w-0 resize-none rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 py-2.5 text-[16px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
           />
         </div>
         {site && (
           <button type="button" onClick={() => setSuppression(true)} className={`text-[13px] ${corpsFort}`} style={{ color: 'var(--v2-color-rouge)' }}>
-            Supprimer ce site
+            {t('Supprimer ce site')}
           </button>
         )}
       </div>
@@ -244,6 +247,7 @@ function FeuilleInfosEntrepriseV2({
   onEnregistre: () => void
   onClose: () => void
 }) {
+  const t = useT()
   const [nomSaisi, setNomSaisi] = useState(nomActuel)
   const [delai, setDelai] = useState(delaiPaiementJours !== null ? String(delaiPaiementJours) : '')
   const [enCours, setEnCours] = useState(false)
@@ -251,7 +255,7 @@ function FeuilleInfosEntrepriseV2({
 
   async function enregistrer() {
     if (enCours) return
-    if (!nomSaisi.trim()) { setErreur('Indiquez le nom de l’entreprise.'); return }
+    if (!nomSaisi.trim()) { setErreur(t('Indiquez le nom de l’entreprise.')); return }
     setEnCours(true)
     setErreur(null)
     const r = await modifierEntreprise(id, {
@@ -265,7 +269,7 @@ function FeuilleInfosEntrepriseV2({
 
   return (
     <Feuille
-      titre="Modifier l’entreprise"
+      titre={t('Modifier l’entreprise')}
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
@@ -276,11 +280,11 @@ function FeuilleInfosEntrepriseV2({
       <div className="space-y-4">
         {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
         <div>
-          <label htmlFor="entreprise-nom" className={ETIQUETTE}>Nom</label>
+          <label htmlFor="entreprise-nom" className={ETIQUETTE}>{t('Nom')}</label>
           <input id="entreprise-nom" className={CHAMP} value={nomSaisi} onChange={e => setNomSaisi(e.target.value)} maxLength={200} />
         </div>
         <div>
-          <label htmlFor="entreprise-delai" className={ETIQUETTE}>Délai de paiement, en jours (facultatif)</label>
+          <label htmlFor="entreprise-delai" className={ETIQUETTE}>{t('Délai de paiement, en jours (facultatif)')}</label>
           <input
             id="entreprise-delai" type="number" inputMode="numeric" min={0} max={3650} className={CHAMP}
             value={delai} onChange={e => setDelai(e.target.value)} placeholder="30"
@@ -311,6 +315,8 @@ export default function FicheEntrepriseV2({
   onOuvrirContact: (cle: string) => void
   onClose: () => void
 }) {
+  const loc = useLocale()
+  const t = useT()
   const router = useRouter()
   const [maintenant] = useState(() => Date.now())
   const [feuille, setFeuille] = useState<SousFeuille | null>(null)
@@ -407,17 +413,17 @@ export default function FicheEntrepriseV2({
   return (
     <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
       <div className="flex items-center gap-1 pb-2">
-        <button type="button" onClick={onClose} aria-label="Retour à Clients" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
+        <button type="button" onClick={onClose} aria-label={t('Retour à Clients')} className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
           <ChevronLeft size={22} strokeWidth={2} />
         </button>
         <div className="min-w-0 flex-1">
           <h1 className={`truncate text-[24px] leading-none ${titre}`}>{entreprise.nom}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {sites.length} site{sites.length > 1 ? 's' : ''} · {contacts.length} contact{contacts.length > 1 ? 's' : ''}
+            {sites.length} {t('site')}{sites.length > 1 ? 's' : ''} · {contacts.length} {t('contact')}{contacts.length > 1 ? 's' : ''}
           </p>
         </div>
         <button
-          type="button" onClick={() => setFeuille({ quoi: 'options' })} aria-label="Options de l’entreprise"
+          type="button" onClick={() => setFeuille({ quoi: 'options' })} aria-label={t('Options de l’entreprise')}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] hover:bg-[color:var(--v2-filet)] hover:text-[color:var(--v2-color-encre)]"
         >
           <MoreHorizontal size={20} strokeWidth={2} />
@@ -428,18 +434,18 @@ export default function FicheEntrepriseV2({
 
       <dl className="grid grid-cols-3 gap-3 mt-3">
         <div className="flex flex-col-reverse">
-          <dt className={`m-0 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>au total</dt>
+          <dt className={`m-0 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('au total')}</dt>
           <dd className={`m-0 text-[24px] leading-none ${corpsFort} tabular-nums`}>{euros.format(totalRevenue)}</dd>
         </div>
         <div className="flex flex-col-reverse">
-          <dt className={`m-0 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>véhicules</dt>
+          <dt className={`m-0 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('véhicules')}</dt>
           <dd className={`m-0 text-[24px] leading-none ${corpsFort} tabular-nums`}>{vehicules}</dd>
         </div>
         <div className="flex flex-col-reverse">
           {/* « délai » et pas juste « paiement » : sans ça, confondu avec « a-t-il payé »
               (Alexandre, 2026-09-28) — ce chiffre est un délai CONVENU, pas un état d'encaissement,
               qui lui vit dans l'alerte « factures impayées » ci-dessous. */}
-          <dt className={`m-0 text-[12px] leading-tight ${corps} text-[color:var(--v2-color-gris)]`}>délai paiement</dt>
+          <dt className={`m-0 text-[12px] leading-tight ${corps} text-[color:var(--v2-color-gris)]`}>{t('délai paiement')}</dt>
           <dd className={`m-0 text-[24px] leading-none ${corpsFort} tabular-nums`}>
             {entreprise.delaiPaiementJours !== null ? `${entreprise.delaiPaiementJours} j` : '—'}
           </dd>
@@ -455,7 +461,7 @@ export default function FicheEntrepriseV2({
           <p className={`flex items-center gap-2 px-3.5 pt-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>
             <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: 'var(--v2-color-ambre)' }} aria-hidden />
             {facturesImpayees.length === 1
-              ? 'Une facture n’est pas encore encaissée :'
+              ? t('Une facture n’est pas encore encaissée :')
               : `${facturesImpayees.length} factures ne sont pas encore encaissées, pour ${euros.format(facturesImpayees.reduce((s, f) => s + f.document.contenu.totaux.ttc, 0))} au total :`}
           </p>
           <ul className="mt-1 divide-y divide-[color:var(--v2-color-ambre)]/20">
@@ -471,7 +477,7 @@ export default function FicheEntrepriseV2({
                   <span className="min-w-0 flex-1">
                     <span className={`block text-[13.5px] ${corpsFort}`}>{f.document.numero}</span>
                     <span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                      Émise il y a {f.jours} j · {euros.format(f.document.contenu.totaux.ttc)}
+                      {t('Émise il y a')} {f.jours} j · {euros.format(f.document.contenu.totaux.ttc)}
                     </span>
                   </span>
                   {chargementFacture && factureOuverteId === f.document.id
@@ -489,9 +495,9 @@ export default function FicheEntrepriseV2({
           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: 'var(--v2-color-ambre)' }} aria-hidden />
           <p className={`text-[13px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>
             {devisEnAttente.length === 1 ? (
-              <>Le devis envoyé il y a {devisEnAttente[0].jours} j n’a pas eu de réponse.</>
+              <>{t('Le devis envoyé il y a')} {devisEnAttente[0].jours} {t('j n’a pas eu de réponse.')}</>
             ) : (
-              <>{devisEnAttente.length} devis envoyés sont sans réponse, le plus ancien depuis {devisEnAttente[0].jours} j.</>
+              <>{devisEnAttente.length} {t('devis envoyés sont sans réponse, le plus ancien depuis')} {devisEnAttente[0].jours} j.</>
             )}
           </p>
         </div>
@@ -501,7 +507,7 @@ export default function FicheEntrepriseV2({
         {premierTelephone && (
           <a href={`tel:${premierTelephone}`} className={`${BOUTON} flex-1 gap-2 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`} style={PRESSION}>
             <Phone size={16} strokeWidth={2} aria-hidden />
-            Appeler
+            {t('Appeler')}
           </a>
         )}
         <a
@@ -510,19 +516,19 @@ export default function FicheEntrepriseV2({
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
           <Plus size={16} strokeWidth={2.4} aria-hidden />
-          Devis
+          {t('Devis')}
         </a>
       </div>
 
       <section className="mt-6">
         <div className="flex items-center justify-between pb-1.5">
-          <h2 className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Contacts</h2>
+          <h2 className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Contacts')}</h2>
           <button type="button" onClick={() => setFeuille({ quoi: 'contact' })} className={`text-[13px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
-            + Contact
+            {t('+ Contact')}
           </button>
         </div>
         {contacts.length === 0 ? (
-          <p className={`py-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>Aucun contact rattaché.</p>
+          <p className={`py-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Aucun contact rattaché.')}</p>
         ) : (
           <ul className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] px-4">
             {contacts.map(c => {
@@ -558,13 +564,13 @@ export default function FicheEntrepriseV2({
 
       <section className="mt-6">
         <div className="flex items-center justify-between pb-1.5">
-          <h2 className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Sites</h2>
+          <h2 className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Sites')}</h2>
           <button type="button" onClick={() => setFeuille({ quoi: 'site', site: null })} className={`text-[13px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
-            + Site
+            {t('+ Site')}
           </button>
         </div>
         {sites.length === 0 ? (
-          <p className={`py-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>Aucun site pour l’instant.</p>
+          <p className={`py-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Aucun site pour l’instant.')}</p>
         ) : (
           <ul className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] divide-y divide-[color:var(--v2-filet)] px-4">
             {sites.map(s => (
@@ -583,13 +589,13 @@ export default function FicheEntrepriseV2({
 
       {derniersPassages.length > 0 && (
         <section className="mt-6 border-t border-[color:var(--v2-filet)] pt-1">
-          <h2 className="sr-only">Derniers passages</h2>
+          <h2 className="sr-only">{t('Derniers passages')}</h2>
           <ol>
             {derniersPassages.slice(0, 10).map(b => (
               <li key={b.id} className="flex items-baseline justify-between gap-2 py-2.5">
                 <span className="min-w-0">
                   <span className={`text-[14.5px] ${nom}`}>{b.services?.name ?? 'Prestation'}</span>
-                  <span className={`ml-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{dateCourte(b.scheduled_at, maintenant)}</span>
+                  <span className={`ml-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{dateCourte(b.scheduled_at, maintenant, loc)}</span>
                 </span>
                 <span className={`shrink-0 text-[14px] ${corpsFort} tabular-nums`}>{b.booked_price ?? b.services?.price ?? 0} €</span>
               </li>
@@ -606,7 +612,7 @@ export default function FicheEntrepriseV2({
               onClick={() => setFeuille({ quoi: 'infos' })}
               className={`flex h-11 w-full items-center text-left text-[15px] ${corpsFort}`}
             >
-              Modifier le nom et le délai de paiement
+              {t('Modifier le nom et le délai de paiement')}
             </button>
             <button
               type="button"
@@ -614,7 +620,7 @@ export default function FicheEntrepriseV2({
               className={`flex h-11 w-full items-center text-left text-[15px] ${corpsFort}`}
               style={{ color: 'var(--v2-color-rouge)' }}
             >
-              Supprimer cette entreprise
+              {t('Supprimer cette entreprise')}
             </button>
           </div>
         </Feuille>
@@ -623,7 +629,7 @@ export default function FicheEntrepriseV2({
       {feuille?.quoi === 'supprimer' && (
         <ConfirmationSuppression
           titre={`Supprimer « ${entreprise.nom} » ?`}
-          texte="Ses sites disparaissent avec elle. Ses contacts redeviennent de simples clients : ils gardent toutes leurs réservations et leurs documents, rien n'est supprimé de leur côté."
+          texte={t('Ses sites disparaissent avec elle. Ses contacts redeviennent de simples clients : ils gardent toutes leurs réservations et leurs documents, rien n\'est supprimé de leur côté.')}
           enCours={suppressionEnCours}
           erreur={suppressionErreur}
           onConfirmer={() => void confirmerSuppression()}

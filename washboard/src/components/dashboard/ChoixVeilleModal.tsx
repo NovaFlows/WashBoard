@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PLAN_LABELS, PLAN_PRICES, SERVICE_QUOTA, type Plan } from '@/lib/plan'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type PrestationChoisissable = {
   id: string
@@ -36,10 +37,11 @@ function ApercuPage({ actives, plafond, habit }: {
   plafond: number
   habit: Habit
 }) {
+  const t = useT()
   return (
     <div className={habit.carteInterne}>
       <p className={`${habit.surtitre} ${habit.petit} px-3.5 py-2.5 border-b border-current/10`}>
-        Votre page de réservation
+        {t('Votre page de réservation')}
       </p>
       <div className={habit.ligne}>
         {actives.map((svc, i) => {
@@ -57,7 +59,7 @@ function ApercuPage({ actives, plafond, habit }: {
                 {svc.name}
               </span>
               <span className={`shrink-0 ${masquee ? `${habit.surtitre} ${habit.petit}` : `text-xs ${habit.petit}`}`}>
-                {masquee ? 'masquée' : `${svc.price}€`}
+                {masquee ? t('masquée') : `${svc.price}€`}
               </span>
             </div>
           )
@@ -93,6 +95,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
   /** Offre en cours, pour la nommer au lieu de dire « votre offre ». */
   offre: Plan
 }) {
+  const t = useT()
   const router = useRouter()
   // Deux habillages, une seule mécanique (voir plus bas, `V`) : dans la PWA la
   // fenêtre monte du bas comme les autres feuilles de la refonte et prend le
@@ -150,7 +153,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
       })
       if (!res.ok) {
         const corps = await res.json().catch(() => ({}))
-        setError(corps.error ?? 'Impossible de mettre cette prestation en veille')
+        setError(corps.error ?? t('Impossible de mettre cette prestation en veille'))
         setLoading(false)
         return
       }
@@ -202,7 +205,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
 
           {/* ── Bandeau : offre + avancement ─────────────────────────────── */}
           <div className="flex items-center justify-between gap-3 mb-5">
-            <span className={V.surtitre} style={{ color: V.accent }}>Offre {PLAN_LABELS[offre]}</span>
+            <span className={V.surtitre} style={{ color: V.accent }}>{t('Offre')} {PLAN_LABELS[offre]}</span>
             <span className="flex items-center gap-1.5" aria-label={`Étape ${etape} sur 2`}>
               <span
                 className="w-6 h-[3px] rounded-full transition-colors duration-200 ease-out"
@@ -219,16 +222,15 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
           {etape === 1 && (
             <>
               <h2 className={V.titre}>
-                {plafond} prestation{plafond > 1 ? 's' : ''} sur {actives.length} seulement sont en ligne
+                {plafond} {t('prestation')}{plafond > 1 ? 's' : ''} {t('sur')} {actives.length} {t('seulement sont en ligne')}
               </h2>
 
               <p className={`${V.texte} mt-3`}>
-                L’offre <strong>{PLAN_LABELS[offre]}</strong> en
-                affiche {plafond} au maximum. Faute de décision de votre part,{' '}
+                {t('L’offre')} <strong>{PLAN_LABELS[offre]}</strong> {t('en affiche')} {plafond} {t('au maximum. Faute de décision de votre part,')}{' '}
                 {masqueesAujourdhui.length > 0 && (
                   <strong>{masqueesAujourdhui.map(s => `« ${s.name} »`).join(', ')}</strong>
                 )}{' '}
-                {pluriel ? 'ont été masquées' : 'a été masquée'} par défaut.
+                {pluriel ? t('ont été masquées') : t('a été masquée')} {t('par défaut.')}
               </p>
 
               <div className="mt-5">
@@ -238,13 +240,12 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
               {/* Dit avant toute décision : c'est la crainte d'effacer qui fait
                   qu'on n'ose pas trancher, et donc qu'on repousse. */}
               <p className={`${V.petit} mt-4`}>
-                Rien n’est effacé : vos rendez-vous, vos factures et votre historique restent intacts,
-                et une prestation en veille revient dès que vous changez d’offre.
+                {t('Rien n’est effacé : vos rendez-vous, vos factures et votre historique restent intacts, et une prestation en veille revient dès que vous changez d’offre.')}
               </p>
 
               <div className="flex items-center justify-end gap-1 mt-6">
                 <button type="button" onClick={reporter} disabled={loading} className={V.secondaire}>
-                  Plus tard
+                  {t('Plus tard')}
                 </button>
                 <button
                   type="button"
@@ -254,7 +255,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = V.accentSombre)}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = V.accent)}
                 >
-                  Choisir
+                  {t('Choisir')}
                 </button>
               </div>
 
@@ -267,14 +268,14 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                     bloc casse. L'espace insecable avant la fleche l'empeche
                     d'etre orpheline quelle que soit la largeur. */}
                 <p className={V.petit}>
-                  Vous préférez tout garder ?
+                  {t('Vous préférez tout garder ?')}
                 </p>
                 <Link
                   href="/dashboard/abonnement"
                   className="block text-sm font-bold hover:underline mt-0.5"
                   style={{ color: V.accent }}
                 >
-                  Offre {PLAN_LABELS[OFFRE_SANS_PLAFOND]} — {PLAN_PRICES[OFFRE_SANS_PLAFOND]}€/mois{' '}→
+                  {t('Offre')} {PLAN_LABELS[OFFRE_SANS_PLAFOND]} — {PLAN_PRICES[OFFRE_SANS_PLAFOND]}{t('€/mois')}{' '}→
                 </Link>
               </div>
             </>
@@ -284,11 +285,10 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
           {etape === 2 && (
             <>
               <h2 className={V.titre}>
-                {pluriel ? 'Lesquelles retirer' : 'Laquelle retirer'} de votre page ?
+                {pluriel ? 'Lesquelles retirer' : 'Laquelle retirer'} {t('de votre page ?')}
               </h2>
               <p className={`${V.texte} mt-2`}>
-                {pluriel ? 'Les prestations déjà masquées sont sélectionnées' : 'La prestation déjà masquée est sélectionnée'}.
-                Touchez une autre carte pour changer.
+                {pluriel ? t('Les prestations déjà masquées sont sélectionnées') : t('La prestation déjà masquée est sélectionnée')}{t('. Touchez une autre carte pour changer.')}
               </p>
 
               <div className="space-y-2 mt-5">
@@ -324,11 +324,11 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                           {svc.name}
                         </span>
                         <span className={`block mt-0.5 ${V.petit}`}>
-                          {svc.price}€ · {svc.duration_minutes} min
+                          {svc.price}€ · {svc.duration_minutes} {t('min')}
                         </span>
                       </span>
                       <span className={`shrink-0 ${V.surtitre} ${V.petit}`}>
-                        {retiree ? 'retirée' : ''}
+                        {retiree ? t('retirée') : ''}
                       </span>
                     </button>
                   )
@@ -343,11 +343,11 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
 
               <div className="flex items-center justify-between gap-3 mt-6">
                 <span className={`text-xs font-bold ${V.petit}`}>
-                  {choisies.length} / {aRanger} {pluriel ? 'retirées' : 'retirée'}
+                  {choisies.length} / {aRanger} {pluriel ? t('retirées') : t('retirée')}
                 </span>
                 <div className="flex items-center gap-1">
                   <button type="button" onClick={() => setEtape(1)} disabled={loading} className={V.secondaire}>
-                    Retour
+                    {t('Retour')}
                   </button>
                   <button
                     type="button"

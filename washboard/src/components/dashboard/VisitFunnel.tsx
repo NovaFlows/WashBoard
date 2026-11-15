@@ -1,4 +1,7 @@
+'use client'
+
 import type { FunnelStepStat } from '@/lib/funnelStats'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type Props = {
   stats: FunnelStepStat[]
@@ -11,21 +14,22 @@ type Props = {
 // Une seule série (nombre de sessions) → pas besoin de légende, chaque barre
 // est directement étiquetée (voir dataviz: identity via label, pas couleur).
 export default function VisitFunnel({ stats, accent = '#2563eb', periodLabel }: Props) {
+  const t = useT()
   const hasData = stats.some(s => s.sessions > 0)
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
       <div className="flex items-baseline justify-between mb-1">
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Entonnoir de réservation</h3>
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('Entonnoir de réservation')}</h3>
         <span className="text-[11px] text-slate-400 dark:text-slate-500">{periodLabel}</span>
       </div>
       <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-4">
-        Visiteurs de votre page de réservation, par étape atteinte.
+        {t('Visiteurs de votre page de réservation, par étape atteinte.')}
       </p>
 
       {!hasData ? (
         <p className="text-sm text-slate-400 dark:text-slate-500 py-4 text-center">
-          Pas encore de visite mesurée sur cette période.
+          {t('Pas encore de visite mesurée sur cette période.')}
         </p>
       ) : (
         <div className="space-y-3">
@@ -45,7 +49,7 @@ export default function VisitFunnel({ stats, accent = '#2563eb', periodLabel }: 
               </div>
               {i > 0 && s.pctDropFromPrevious > 0 && (
                 <p className="text-[11px] text-rose-500 dark:text-rose-400 mt-1">
-                  −{s.pctDropFromPrevious}% par rapport à l&rsquo;étape précédente
+                  −{s.pctDropFromPrevious}{t('% par rapport à l’étape précédente')}
                 </p>
               )}
             </div>

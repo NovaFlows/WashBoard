@@ -5,6 +5,7 @@ import { Feuille, CHAMP, corps } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied, Puces } from '@/components/dashboard/ReglageAutomatismeV2'
 import AdresseV2 from '@/components/dashboard/AdresseV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Feuilles du bas de « Mon profil » (PWA) pour les réglages simples : nom de l'entreprise,
 // téléphone, adresse de départ, nombre de laveurs. Mêmes champs et même route que l'ancien
@@ -31,6 +32,7 @@ export function FeuilleTexteV2({
   onEnregistrer: Enregistrer
   onClose: () => void
 }) {
+  const t = useT()
   const [saisie, setSaisie] = useState(valeur)
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -54,7 +56,7 @@ export function FeuilleTexteV2({
       titre={titre}
       sousTitre={sousTitre}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="profil-texte" />}
+      pied={<Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="profil-texte" />}
     >
       <form id="profil-texte" onSubmit={soumettre} noValidate>
         <Bloc titre={etiquette}>
@@ -81,6 +83,7 @@ export function FeuilleTexteV2({
 export function FeuilleAdresseDepartV2({
   adresse, onEnregistrer, onClose,
 }: { adresse: string; onEnregistrer: Enregistrer; onClose: () => void }) {
+  const t = useT()
   const [saisie, setSaisie] = useState(adresse)
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -99,22 +102,22 @@ export function FeuilleAdresseDepartV2({
 
   return (
     <Feuille
-      titre="Adresse de départ"
-      sousTitre="D’où vous partez le matin."
+      titre={t('Adresse de départ')}
+      sousTitre={t('D’où vous partez le matin.')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="profil-adresse" />}
+      pied={<Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="profil-adresse" />}
     >
       <form id="profil-adresse" onSubmit={soumettre} noValidate>
-        <Bloc titre="Votre adresse">
+        <Bloc titre={t('Votre adresse')}>
           <AdresseV2
             id="profil-adresse-champ"
             valeur={saisie}
             onChange={v => { setSaisie(v); setErreur(null) }}
-            placeholder="12 rue de la Paix, 75001 Paris"
+            placeholder={t('12 rue de la Paix, 75001 Paris')}
             erreur={erreur}
           />
           <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Sert à calculer la distance jusqu’à vos clients, et les frais de déplacement.
+            {t('Sert à calculer la distance jusqu’à vos clients, et les frais de déplacement.')}
           </p>
         </Bloc>
       </form>
@@ -129,6 +132,7 @@ const LAVEURS = [1, 2, 3, 4, 5]
 export function FeuilleEquipeV2({
   nombre, onEnregistrer, onClose,
 }: { nombre: number; onEnregistrer: (n: number) => Promise<string | null>; onClose: () => void }) {
+  const t = useT()
   const depart = Math.max(1, nombre)
   const [choix, setChoix] = useState<number | 'autre'>(LAVEURS.includes(depart) ? depart : 'autre')
   const [libre, setLibre] = useState(String(depart))
@@ -151,13 +155,13 @@ export function FeuilleEquipeV2({
 
   return (
     <Feuille
-      titre="Nombre de laveurs"
-      sousTitre="Vous compris."
+      titre={t('Nombre de laveurs')}
+      sousTitre={t('Vous compris.')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="profil-equipe" />}
+      pied={<Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="profil-equipe" />}
     >
       <form id="profil-equipe" onSubmit={soumettre} noValidate>
-        <Bloc titre="Combien êtes-vous à laver">
+        <Bloc titre={t('Combien êtes-vous à laver')}>
           <Puces
             nom="Nombre de laveurs"
             valeurs={LAVEURS}
@@ -174,14 +178,14 @@ export function FeuilleEquipeV2({
               max={50}
               value={libre}
               onChange={e => { setLibre(e.target.value); setErreur(null) }}
-              aria-label="Nombre de laveurs"
+              aria-label={t('Nombre de laveurs')}
               className={`${CHAMP} mt-2.5`}
             />
           )}
           <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
             {n > 1
               ? `Jusqu’à ${n} rendez-vous en même temps sur votre page de réservation.`
-              : 'Un seul rendez-vous à la fois : aucun chevauchement possible.'}
+              : t('Un seul rendez-vous à la fois : aucun chevauchement possible.')}
           </p>
           {erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
         </Bloc>

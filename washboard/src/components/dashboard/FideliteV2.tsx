@@ -10,6 +10,7 @@ import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard
 import { TAMPONS_PROPOSES, phraseCarte, recompenseCourte, type ReglagesFidelite, type TypeRecompense } from '@/lib/fidelite'
 import { COULEUR_CARTE_DEFAUT, FINITIONS_CARTE, LIBELLES_FINITION, NUANCES_CARTE, couleurCarte, type EmblemeCarte, type FinitionCarte } from '@/lib/carteFidelite'
 import CarteFidelite3D, { type CommandesCarte, type ScenarioCarte } from '@/components/fidelite/CarteFidelite3D'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Carte de fidélité » — décisions d'Alexandre, 2026-10-17 : des tampons (une prestation
 // terminée = un tampon), une récompense au choix du laveur (offerte, % ou €) appliquée
@@ -44,6 +45,7 @@ type Props = {
 }
 
 export default function FideliteV2({ slug, liste, marque = null, logo = null, logoHorsOffre = false }: Props) {
+  const t = useT()
   const grandEcran = useGrandEcran()
   const [b, setB] = useState<Brouillon | null>(null)
   const [enAttente, setEnAttente] = useState(false)
@@ -61,12 +63,12 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
       .then(r => r.json().then(j => ({ ok: r.ok, j })))
       .then(({ ok, j }) => {
         if (annule) return
-        if (!ok) { setErreur(j?.error ?? 'Impossible de charger vos réglages.'); setB(DEFAUT); return }
+        if (!ok) { setErreur(j?.error ?? t('Impossible de charger vos réglages.')); setB(DEFAUT); return }
         setEnAttente(j.enAttente === true)
         const r = j.fidelite as ReglagesFidelite | null
         setB(r ? { ...DEFAUT, ...r, couleur: r.couleur ?? null, finition: r.finition ?? 'holo', embleme: r.embleme ?? null, valeur: r.recompense === 'offerte' ? DEFAUT.valeur : String(r.valeur).replace('.', ',') } : DEFAUT)
       })
-      .catch(() => { if (!annule) { setErreur('Impossible de charger vos réglages. Vérifiez votre connexion.'); setB(DEFAUT) } })
+      .catch(() => { if (!annule) { setErreur(t('Impossible de charger vos réglages. Vérifiez votre connexion.')); setB(DEFAUT) } })
     return () => { annule = true }
   }, [])
 
@@ -104,7 +106,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
   async function enregistrer() {
     if (!b || enregistrement) return
     setErreur(null)
-    if (b.recompense !== 'offerte' && !(valeurNum > 0)) { setErreur('Indiquez le montant de la remise.'); return }
+    if (b.recompense !== 'offerte' && !(valeurNum > 0)) { setErreur(t('Indiquez le montant de la remise.')); return }
     setEnregistrement(true)
     try {
       const res = await fetch('/api/washer/fidelite', {
@@ -116,10 +118,10 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
         }),
       })
       const json = await res.json().catch(() => null)
-      if (!res.ok) { setErreur(json?.error ?? 'Enregistrement impossible. Réessayez.'); return }
+      if (!res.ok) { setErreur(json?.error ?? t('Enregistrement impossible. Réessayez.')); return }
       setFait(true)
     } catch {
-      setErreur('Enregistrement impossible. Vérifiez votre connexion.')
+      setErreur(t('Enregistrement impossible. Vérifiez votre connexion.'))
     } finally {
       setEnregistrement(false)
     }
@@ -130,63 +132,63 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
       ? 'text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'
       : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}>
       <div className="flex items-center gap-1 pb-3">
-        <Link href="/dashboard/parametres/prestations" aria-label="Retour à Prestations et prix" className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
+        <Link href="/dashboard/parametres/prestations" aria-label={t('Retour à Prestations et prix')} className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]">
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[24px] leading-none ${titre}`}>Carte de fidélité</h1>
-          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Faites revenir vos clients</p>
+          <h1 className={`text-[24px] leading-none ${titre}`}>{t('Carte de fidélité')}</h1>
+          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Faites revenir vos clients')}</p>
         </div>
       </div>
 
-      {enAttente && <Constat>La carte de fidélité arrive très bientôt sur votre compte. Réessayez dans quelques minutes.</Constat>}
+      {enAttente && <Constat>{t('La carte de fidélité arrive très bientôt sur votre compte. Réessayez dans quelques minutes.')}</Constat>}
 
       {b && !enAttente && (
         <div className="flex flex-col gap-[22px]">
           <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
-                <p className={`text-[15px] ${corpsFort}`}>Proposer une carte de fidélité</p>
-                <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Un tampon à chaque prestation terminée</p>
+                <p className={`text-[15px] ${corpsFort}`}>{t('Proposer une carte de fidélité')}</p>
+                <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Un tampon à chaque prestation terminée')}</p>
               </div>
-              <Interrupteur actif={b.actif} enCours={false} libelle="Proposer une carte de fidélité" onClick={() => maj({ actif: !b.actif })} />
+              <Interrupteur actif={b.actif} enCours={false} libelle={t('Proposer une carte de fidélité')} onClick={() => maj({ actif: !b.actif })} />
             </div>
           </section>
 
           {b.actif && (
             <>
               <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
-                <p className={ETIQUETTE}>Nombre de tampons pour une récompense</p>
+                <p className={ETIQUETTE}>{t('Nombre de tampons pour une récompense')}</p>
                 <div className="flex flex-wrap gap-2">
                   {TAMPONS_PROPOSES.map(n => <button key={n} type="button" onClick={() => maj({ tampons: n })} className={puce(b.tampons === n)}>{n}</button>)}
-                  <input aria-label="Autre nombre de tampons" inputMode="numeric" className={`${CHAMP} !w-24`}
-                    value={TAMPONS_PROPOSES.includes(b.tampons as (typeof TAMPONS_PROPOSES)[number]) ? '' : String(b.tampons)} placeholder="Autre"
+                  <input aria-label={t('Autre nombre de tampons')} inputMode="numeric" className={`${CHAMP} !w-24`}
+                    value={TAMPONS_PROPOSES.includes(b.tampons as (typeof TAMPONS_PROPOSES)[number]) ? '' : String(b.tampons)} placeholder={t('Autre')}
                     onChange={e => { const n = Number(e.target.value.replace(/\D/g, '')); if (n) maj({ tampons: Math.min(30, Math.max(2, n)) }) }} />
                 </div>
 
                 <div className="mt-4 flex items-center gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className={`text-[15px] ${corps}`}>Un tampon par véhicule</p>
-                    <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>Une réservation pour 3 véhicules donne 3 tampons</p>
+                    <p className={`text-[15px] ${corps}`}>{t('Un tampon par véhicule')}</p>
+                    <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Une réservation pour 3 véhicules donne 3 tampons')}</p>
                   </div>
-                  <Interrupteur actif={b.tampon_par_vehicule} enCours={false} libelle="Un tampon par véhicule" onClick={() => maj({ tampon_par_vehicule: !b.tampon_par_vehicule })} />
+                  <Interrupteur actif={b.tampon_par_vehicule} enCours={false} libelle={t('Un tampon par véhicule')} onClick={() => maj({ tampon_par_vehicule: !b.tampon_par_vehicule })} />
                 </div>
 
-                <p className={`${ETIQUETTE} mt-5`}>Récompense</p>
+                <p className={`${ETIQUETTE} mt-5`}>{t('Récompense')}</p>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => maj({ recompense: 'offerte' })} className={puce(b.recompense === 'offerte')}>Prestation offerte</button>
-                  <button type="button" onClick={() => maj({ recompense: 'pourcentage' })} className={puce(b.recompense === 'pourcentage')}>Remise en %</button>
-                  <button type="button" onClick={() => maj({ recompense: 'montant' })} className={puce(b.recompense === 'montant')}>Remise en €</button>
+                  <button type="button" onClick={() => maj({ recompense: 'offerte' })} className={puce(b.recompense === 'offerte')}>{t('Prestation offerte')}</button>
+                  <button type="button" onClick={() => maj({ recompense: 'pourcentage' })} className={puce(b.recompense === 'pourcentage')}>{t('Remise en %')}</button>
+                  <button type="button" onClick={() => maj({ recompense: 'montant' })} className={puce(b.recompense === 'montant')}>{t('Remise en €')}</button>
                 </div>
                 {b.recompense === 'offerte' && (
                   <div className="mt-3 flex flex-col">
                     <div className="flex items-center gap-3">
-                      <p className={`min-w-0 flex-1 text-[15px] ${corps}`}>Offrir aussi les options</p>
-                      <Interrupteur actif={b.offre_options} enCours={false} libelle="Offrir aussi les options" onClick={() => maj({ offre_options: !b.offre_options })} />
+                      <p className={`min-w-0 flex-1 text-[15px] ${corps}`}>{t('Offrir aussi les options')}</p>
+                      <Interrupteur actif={b.offre_options} enCours={false} libelle={t('Offrir aussi les options')} onClick={() => maj({ offre_options: !b.offre_options })} />
                     </div>
                     <div className="flex items-center gap-3">
-                      <p className={`min-w-0 flex-1 text-[15px] ${corps}`}>Offrir aussi les frais de déplacement</p>
-                      <Interrupteur actif={b.offre_deplacement} enCours={false} libelle="Offrir aussi les frais de déplacement" onClick={() => maj({ offre_deplacement: !b.offre_deplacement })} />
+                      <p className={`min-w-0 flex-1 text-[15px] ${corps}`}>{t('Offrir aussi les frais de déplacement')}</p>
+                      <Interrupteur actif={b.offre_deplacement} enCours={false} libelle={t('Offrir aussi les frais de déplacement')} onClick={() => maj({ offre_deplacement: !b.offre_deplacement })} />
                     </div>
                   </div>
                 )}
@@ -195,16 +197,16 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                     value={b.valeur} onChange={e => maj({ valeur: e.target.value.replace(/[^\d.,]/g, '') })} />
                 )}
                 <p className={`mt-2.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                  Appliquée automatiquement à la réservation suivante{b.recompense === 'offerte' ? '' : ', sur la prestation et ses options (pas sur le déplacement)'}. Vous pouvez ajouter ou retirer un tampon depuis la fiche d’un client.
+                  {t('Appliquée automatiquement à la réservation suivante')}{b.recompense === 'offerte' ? '' : t(', sur la prestation et ses options (pas sur le déplacement)')}{t('. Vous pouvez ajouter ou retirer un tampon depuis la fiche d’un client.')}
                 </p>
               </section>
 
               <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className={`${ETIQUETTE} !mb-0`}>Ce que voit le client</p>
+                  <p className={`${ETIQUETTE} !mb-0`}>{t('Ce que voit le client')}</p>
                   <button type="button" onClick={() => setLecture(l => ({ cle: l.cle + 1, scenario: 'tampon' }))}
                     className={`shrink-0 text-[13px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}>
-                    Rejouer l’animation
+                    {t('Rejouer l’animation')}
                   </button>
                 </div>
                 <div className="-mx-4">
@@ -224,12 +226,12 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                   />
                 </div>
                 <div className="-mt-4 flex items-center justify-center gap-3">
-                  <button type="button" onClick={retirerTampon} disabled={exempleAffiche <= 0} aria-label="Retirer un tampon de l’exemple"
+                  <button type="button" onClick={retirerTampon} disabled={exempleAffiche <= 0} aria-label={t('Retirer un tampon de l’exemple')}
                     className="flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--v2-filet-fort)] text-[22px] leading-none transition-transform active:scale-90 disabled:opacity-35">−</button>
                   <p className={`min-w-[150px] text-center text-[14px] ${corpsFort} tabular-nums`} aria-live="polite">
-                    {exempleAffiche} tampon{exempleAffiche > 1 ? 's' : ''} sur {requis}
+                    {exempleAffiche} {t('tampon')}{exempleAffiche > 1 ? 's' : ''} {t('sur')} {requis}
                   </p>
-                  <button type="button" onClick={ajouterTampon} disabled={exempleAffiche >= requis} aria-label="Ajouter un tampon à l’exemple"
+                  <button type="button" onClick={ajouterTampon} disabled={exempleAffiche >= requis} aria-label={t('Ajouter un tampon à l’exemple')}
                     className="flex h-11 w-11 items-center justify-center rounded-full text-[22px] leading-none transition-transform active:scale-90 disabled:opacity-35"
                     style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-fond)' }}>+</button>
                 </div>
@@ -241,9 +243,9 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                     { recompense: b.recompense, valeur: valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement },
                   )}
                 </p>
-                <p className={`mt-1 text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Ajoutez des tampons pour voir l’animation de la récompense. Touchez la carte pour la retourner.</p>
+                <p className={`mt-1 text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Ajoutez des tampons pour voir l’animation de la récompense. Touchez la carte pour la retourner.')}</p>
 
-                <p className={`${ETIQUETTE} mt-5`}>Couleur de la carte</p>
+                <p className={`${ETIQUETTE} mt-5`}>{t('Couleur de la carte')}</p>
                 <div className="flex flex-wrap items-center gap-2.5">
                   {nuances.map(n => (
                     <button key={n.hex} type="button" title={n.nom} aria-label={n.nom} aria-pressed={couleurEffective === n.hex}
@@ -253,27 +255,27 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                   ))}
                   <label className={`inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] ${corpsFort}`}
                     style={{ borderColor: couleurLibre ? 'var(--v2-color-encre)' : 'var(--v2-filet-fort)' }}>
-                    <input type="color" aria-label="Autre couleur" value={couleurEffective.toLowerCase()} onChange={e => maj({ couleur: e.target.value.toUpperCase() })}
+                    <input type="color" aria-label={t('Autre couleur')} value={couleurEffective.toLowerCase()} onChange={e => maj({ couleur: e.target.value.toUpperCase() })}
                       className="h-5 w-5 cursor-pointer border-0 bg-transparent p-0" />
-                    Autre
+                    {t('Autre')}
                   </label>
                 </div>
 
-                <p className={`${ETIQUETTE} mt-5`}>Finition</p>
+                <p className={`${ETIQUETTE} mt-5`}>{t('Finition')}</p>
                 <div className="flex flex-wrap gap-2">
                   {FINITIONS_CARTE.map(f => <button key={f} type="button" onClick={() => maj({ finition: f })} className={puce(b.finition === f)}>{LIBELLES_FINITION[f]}</button>)}
                 </div>
 
-                <p className={`${ETIQUETTE} mt-5`}>Sur la carte</p>
+                <p className={`${ETIQUETTE} mt-5`}>{t('Sur la carte')}</p>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" disabled={!logo} onClick={() => maj({ embleme: 'logo' })} className={`${puce(emblemeEffectif === 'logo')} disabled:opacity-40`}>Mon logo</button>
-                  <button type="button" onClick={() => maj({ embleme: 'initiale' })} className={puce(emblemeEffectif === 'initiale')}>Mon initiale</button>
+                  <button type="button" disabled={!logo} onClick={() => maj({ embleme: 'logo' })} className={`${puce(emblemeEffectif === 'logo')} disabled:opacity-40`}>{t('Mon logo')}</button>
+                  <button type="button" onClick={() => maj({ embleme: 'initiale' })} className={puce(emblemeEffectif === 'initiale')}>{t('Mon initiale')}</button>
                 </div>
                 {!logo && (
                   <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
                     {logoHorsOffre
-                      ? 'Votre offre actuelle n’affiche pas votre logo sur vos pages : la carte porte votre initiale.'
-                      : <>Ajoutez votre logo dans <Link href="/dashboard/parametres/apparence" className="underline underline-offset-2">Apparence de ma page</Link> pour l’afficher sur la carte.</>}
+                      ? t('Votre offre actuelle n’affiche pas votre logo sur vos pages : la carte porte votre initiale.')
+                      : <>{t('Ajoutez votre logo dans')} <Link href="/dashboard/parametres/apparence" className="underline underline-offset-2">{t('Apparence de ma page')}</Link> {t('pour l’afficher sur la carte.')}</>}
                   </p>
                 )}
               </section>
@@ -284,10 +286,10 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
 
           <div className="flex flex-col gap-2">
             <button type="button" onClick={enregistrer} disabled={enregistrement} className={`${BOUTON} w-full`} style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)', ...PRESSION }}>
-              {enregistrement ? 'Enregistrement…' : fait ? 'Enregistré' : 'Enregistrer'}
+              {enregistrement ? 'Enregistrement…' : fait ? t('Enregistré') : 'Enregistrer'}
             </button>
             <a href={`/book/${slug}`} target="_blank" rel="noopener" className={`mt-1 self-center text-[13.5px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}>
-              Voir ma page de réservation
+              {t('Voir ma page de réservation')}
             </a>
           </div>
         </div>

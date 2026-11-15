@@ -7,6 +7,7 @@ import { PRESETS } from '@/components/dashboard/admin/CategoriesManager'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { Constat, TEXTE_ROUGE } from '@/components/dashboard/PrestationsUiV2'
 import { prestationsUtilisantTypes, typesDepuisModele, type ModeleCategorie } from '@/lib/prestationForm'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Création / modification d'une catégorie (Voiture, Canapé…) et de ses types,
 // en feuille du bas — refonte 2026, réservée à la PWA installée (ouverte par
@@ -31,6 +32,7 @@ type Props = {
 }
 
 export default function FeuilleCategorieV2({ categorie, services, onEnregistrer, onSupprimer, onClose }: Props) {
+  const tr = useT()
   const [nomCategorie, setNomCategorie] = useState(categorie?.name ?? '')
   const [types, setTypes] = useState<CategoryType[]>(() => (categorie?.types ?? []).map(t => ({ ...t })))
   const [nouveauType, setNouveauType] = useState('')
@@ -83,7 +85,7 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
           className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
           style={PRESSION}
         >
-          Annuler
+          {tr('Annuler')}
         </button>
         <button
           type="button"
@@ -100,19 +102,19 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
 
   return (
     <Feuille
-      titre={categorie ? 'Modifier la catégorie' : 'Nouvelle catégorie'}
+      titre={categorie ? tr('Modifier la catégorie') : tr('Nouvelle catégorie')}
       onClose={onClose}
       pied={pied}
     >
       <div>
         <div className="pb-5">
-          <label htmlFor="cat-nom" className={ETIQUETTE}>Nom de la catégorie</label>
+          <label htmlFor="cat-nom" className={ETIQUETTE}>{tr('Nom de la catégorie')}</label>
           <input
             id="cat-nom"
             type="text"
             autoComplete="off"
             enterKeyHint="done"
-            placeholder="Voiture, Canapé, Maison…"
+            placeholder={tr('Voiture, Canapé, Maison…')}
             value={nomCategorie}
             onChange={e => setNomCategorie(e.target.value)}
             className={CHAMP}
@@ -121,8 +123,8 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
 
         {types.length === 0 && (
           <section className="border-t border-[color:var(--v2-filet)] py-5">
-            <p className={ETIQUETTE}>Partir d’un modèle (facultatif)</p>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Modèles de catégorie">
+            <p className={ETIQUETTE}>{tr('Partir d’un modèle (facultatif)')}</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label={tr('Modèles de catégorie')}>
               {PRESETS.map(p => (
                 <button
                   key={p.name}
@@ -139,9 +141,9 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
         )}
 
         <section className="border-t border-[color:var(--v2-filet)] py-5">
-          <h3 className={`text-[15px] ${corpsFort}`}>Types</h3>
+          <h3 className={`text-[15px] ${corpsFort}`}>{tr('Types')}</h3>
           <p className={`mt-1 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Ce que vos clients choisissent : Citadine, SUV… ou 2 places, angle…
+            {tr('Ce que vos clients choisissent : Citadine, SUV… ou 2 places, angle…')}
           </p>
 
           {types.length > 0 && (
@@ -174,8 +176,8 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
               type="text"
               autoComplete="off"
               enterKeyHint="done"
-              aria-label="Nouveau type"
-              placeholder="Ajouter un type…"
+              aria-label={tr('Nouveau type')}
+              placeholder={tr('Ajouter un type…')}
               value={nouveauType}
               onChange={e => setNouveauType(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouterType() } }}
@@ -188,18 +190,16 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
               className={`${BOUTON} shrink-0 border border-[color:var(--v2-color-encre)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              Ajouter
+              {tr('Ajouter')}
             </button>
           </div>
 
           {concernees.length > 0 && (
             <div className="mt-4">
               <Constat ton="ambre" role="status">
-                Vous retirez {utilises.length > 1 ? 'des types encore proposés' : 'un type encore proposé'}
-                {' '}dans {concernees.length} prestation{concernees.length > 1 ? 's' : ''}
-                {' '}({concernees.slice(0, 2).map(s => s.name).join(', ')}{concernees.length > 2 ? '…' : ''}).
-                Ouvrez-{concernees.length > 1 ? 'les' : 'la'} ensuite pour {utilises.length > 1 ? 'les' : 'le'} retirer,
-                sinon vos clients {utilises.length > 1 ? 'les verront' : 'le verront'} sous un nom brut.
+                {tr('Vous retirez')} {utilises.length > 1 ? tr('des types encore proposés') : tr('un type encore proposé')}
+                {' '}{tr('dans')} {concernees.length} {tr('prestation')}{concernees.length > 1 ? 's' : ''}
+                {' '}({concernees.slice(0, 2).map(s => s.name).join(', ')}{concernees.length > 2 ? '…' : ''}{tr('). Ouvrez-')}{concernees.length > 1 ? 'les' : 'la'} {tr('ensuite pour')} {utilises.length > 1 ? 'les' : 'le'} {tr('retirer, sinon vos clients')} {utilises.length > 1 ? tr('les verront') : tr('le verront')} {tr('sous un nom brut.')}
               </Constat>
             </div>
           )}
@@ -213,7 +213,7 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
               className={`flex min-h-11 items-center text-[15px] ${corpsFort}`}
               style={{ color: TEXTE_ROUGE }}
             >
-              Supprimer cette catégorie
+              {tr('Supprimer cette catégorie')}
             </button>
           </div>
         )}

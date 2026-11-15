@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react'
 import { Feuille, corpsFort, PRESSION } from '@/components/dashboard/FeuilleV2'
 import { applicationsItineraire, detecterPlateforme } from '@/lib/itineraire'
 import { LogoApplication } from '@/components/dashboard/LogosItineraire'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Ouvrir l'itinéraire avec… » — feuille du bas de l'accueil v2 (PWA). Demande
 // d'Alexandre, 2026-09-24 : Plans, Waze ou Google Maps selon le téléphone, sans
@@ -18,11 +19,12 @@ import { LogoApplication } from '@/components/dashboard/LogosItineraire'
 // un vrai téléphone : le geste d'ouverture d'application depuis une PWA
 // installée dépend de l'appareil.
 export default function ChoixItineraireV2({ adresse, onClose }: { adresse: string; onClose: () => void }) {
+  const t = useT()
   const plateforme = detecterPlateforme(navigator.userAgent, navigator.platform, navigator.maxTouchPoints)
   const applications = applicationsItineraire(adresse, plateforme)
 
   return (
-    <Feuille titre="Ouvrir avec" sousTitre={adresse} onClose={onClose}>
+    <Feuille titre={t('Ouvrir avec')} sousTitre={adresse} onClose={onClose}>
       <ul className="-mt-1 mb-2 divide-y divide-[color:var(--v2-filet)] rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
         {applications.map(app => (
           <li key={app.id}>

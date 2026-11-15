@@ -9,6 +9,7 @@ import EncartAcompte, { type AcompteDu } from './EncartAcompte'
 import CarteApresReservation, { type FideliteDue } from './CarteApresReservation'
 import { buildIcs } from '@/lib/ics'
 import { SOURCES_DECOUVERTE, type SourceDecouverte } from '@/lib/sourceDecouverte'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 type Props = {
   washerName: string
@@ -32,6 +33,8 @@ type Props = {
 }
 
 export default function StepConfirmation({ washerName, bookingId, jeton, form, services, whatsappHref = null, remise = 0, nomPromotion = null, acompte = null, accent, fidelite = null, washerId }: Props) {
+  const loc = useLocale()
+  const t = useT()
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
@@ -89,8 +92,8 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
         </svg>
       </div>
 
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">Réservation envoyée !</h2>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Un email de confirmation vous a été envoyé</p>
+      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">{t('Réservation envoyée !')}</h2>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{t('Un email de confirmation vous a été envoyé')}</p>
 
       {fidelite && washerId && <CarteApresReservation fidelite={fidelite} washerId={washerId} />}
 
@@ -101,10 +104,10 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
       )}
 
       <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left space-y-3 mb-5">
-        <Row label="Prestataire" value={washerName} />
+        <Row label={t('Prestataire')} value={washerName} />
         {service && (
           <Row
-            label="Prestation"
+            label={t('Prestation')}
             value={
               form.is_smart_slot && Number(form.smart_discount) > 0
                 ? `${service.name} — ${formatPrice(displayPrice - Number(form.smart_discount))} ★`
@@ -115,7 +118,7 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
         {form.vehicles_detail && form.vehicles_detail.length > 0 && (
           <div className="flex justify-between text-sm gap-3">
             <span className="text-slate-500 dark:text-slate-400 shrink-0">
-              Véhicule{form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}
+              {t('Véhicule')}{form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}
             </span>
             <div className="font-medium text-slate-900 dark:text-slate-100 text-right space-y-0.5">
               {form.vehicles_detail.flatMap(v => {
@@ -135,29 +138,29 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
           ))
         )}
         {form.travel_fee != null && form.travel_fee > 0 && (
-          <Row label="Frais de déplacement" value={`+${form.travel_fee}€`} />
+          <Row label={t('Frais de déplacement')} value={`+${form.travel_fee}€`} />
         )}
         {remise > 0 && (
           <Row label={nomPromotion ? `Promotion ${nomPromotion}` : 'Promotion'} value={`−${formatPrice(remise)}`} />
         )}
         {((form.travel_fee != null && form.travel_fee > 0) || remise > 0) && (
           <div className="flex justify-between text-sm gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">{t('Total')}</span>
             <span className="font-bold text-slate-900 dark:text-slate-100">{formatPrice(total)}</span>
           </div>
         )}
         {date && (
           <Row
-            label="Date & heure"
-            value={`${date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+            label={t('Date & heure')}
+            value={`${date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })}`}
           />
         )}
         {form.address && <Row label={form.lieu === 'centre' ? 'En centre auto' : 'Adresse'} value={form.address} right />}
-        {form.notes && <Row label="Note" value={form.notes} right />}
+        {form.notes && <Row label={t('Note')} value={form.notes} right />}
       </div>
 
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg mb-5">
-        <span className="text-xs text-slate-500 dark:text-slate-400">Référence</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{t('Référence')}</span>
         <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
           {bookingId.slice(0, 8).toUpperCase()}
         </span>
@@ -175,7 +178,7 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
               <path strokeLinecap="round" d="M3 10h18M8 3v4M16 3v4" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 15l2 2 4-4" />
             </svg>
-            Ajouter à mon agenda
+            {t('Ajouter à mon agenda')}
           </button>
         )}
 
@@ -187,7 +190,7 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
           </svg>
-          Télécharger la confirmation PDF
+          {t('Télécharger la confirmation PDF')}
         </a>
 
         {whatsappHref && (
@@ -200,7 +203,7 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
             </svg>
-            Écrire à {washerName.split(' ')[0]} sur WhatsApp
+            {t('Écrire à')} {washerName.split(' ')[0]} {t('sur WhatsApp')}
           </a>
         )}
       </div>
@@ -210,9 +213,9 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
           (voir lib/sourceDecouverte) — jamais un champ de texte libre. */}
       <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-          Comment avez-vous connu {washerName} ?
+          {t('Comment avez-vous connu')} {washerName} ?
         </h3>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 mb-3">Facultatif, un seul geste.</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 mb-3">{t('Facultatif, un seul geste.')}</p>
         <div className="flex flex-wrap gap-2">
           {SOURCES_DECOUVERTE.map(s => {
             const selected = source === s.valeur
@@ -235,11 +238,11 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
           })}
         </div>
         {sourceEnvoi === 'fait' && (
-          <p role="status" className="mt-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">Merci, c&apos;est noté.</p>
+          <p role="status" className="mt-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">{t('Merci, c’est noté.')}</p>
         )}
         {sourceEnvoi === 'erreur' && (
           <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
-            Impossible d&apos;enregistrer votre réponse pour l&apos;instant.
+            {t('Impossible d’enregistrer votre réponse pour l’instant.')}
           </p>
         )}
       </div>

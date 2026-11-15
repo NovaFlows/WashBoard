@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import { ARTICLES, THEME_LABEL, type Theme } from '@/lib/blog'
 import { PLAN_CARDS, freeMonthsLabel } from '@/lib/plan'
@@ -5,6 +7,7 @@ import { tarifOffre } from '@/lib/resumeOffres'
 import { Faq, type FaqItem } from '@/components/blog/Prose'
 import Coque from '@/components/landing/vitrine/Coque'
 import FilAriane from '@/components/landing/vitrine/FilAriane'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Gabarit commun aux pages métier ("logiciel pour <métier>"). Une page par
 // métier publié : voir `@/lib/metiers`. Ce fichier porte la structure et le
@@ -73,6 +76,7 @@ export default function MetierPageTemplate({
   ctaTitre,
   ctaTexte,
 }: MetierPageTemplateProps) {
+  const t = useT()
   // Avec un thème (page métier) : les articles de ce thème, les plus
   // récemment mis à jour d'abord, comme sur /blog — ajouter un article à
   // ARTICLES avec ce thème suffit à l'afficher ici, sans toucher cette page.
@@ -96,17 +100,17 @@ export default function MetierPageTemplate({
           <h1 className="pg-h1">{h1}</h1>
           <p className="chapo">{intro}</p>
           <div className="heros-cta">
-            <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
-            <Link href="/booking" className="pg-lien-doux">ou prendre un appel</Link>
+            <Link href="/signup" className="btn btn-accent">{t('Lancer mon mois gratuit')}</Link>
+            <Link href="/booking" className="pg-lien-doux">{t('ou prendre un appel')}</Link>
           </div>
-          <p className="rassure">Sans engagement · Sans carte bancaire</p>
+          <p className="rassure">{t('Sans engagement · Sans carte bancaire')}</p>
         </div>
       </header>
 
       {/* ── Le problème du métier ── */}
       <section className="section">
         <div className="w">
-          <p className="sur-titre"><span className="pt" />Le problème</p>
+          <p className="sur-titre"><span className="pt" />{t('Le problème')}</p>
           <h2 className="pg-h2">{problemesTitre}</h2>
           <div className="pg-cols">
             {problemes.map((p, i) => (
@@ -123,7 +127,7 @@ export default function MetierPageTemplate({
       {/* ── Comment WashBoard répond ── */}
       <section className="section">
         <div className="w">
-          <p className="sur-titre"><span className="pt" />Comment WashBoard répond</p>
+          <p className="sur-titre"><span className="pt" />{t('Comment WashBoard répond')}</p>
           <h2 className="pg-h2">{fonctionnalitesTitre}</h2>
           {fonctionnalitesIntro && <p className="chapo">{fonctionnalitesIntro}</p>}
           <div className="pg-liste">
@@ -142,8 +146,8 @@ export default function MetierPageTemplate({
       {metiers && metiers.length > 0 && (
         <section className="section">
           <div className="w">
-            <p className="sur-titre"><span className="pt" />Les métiers couverts</p>
-            <h2 className="pg-h2">Un même outil, réglé pour chaque métier</h2>
+            <p className="sur-titre"><span className="pt" />{t('Les métiers couverts')}</p>
+            <h2 className="pg-h2">{t('Un même outil, réglé pour chaque métier')}</h2>
             <ul className="pg-liste">
               {metiers.map((m, i) => {
                 // Un nombre impair de cartes laisse un trou en bas à droite de la
@@ -157,7 +161,7 @@ export default function MetierPageTemplate({
                   <>
                     <p className="t">{m.titre}</p>
                     <div className="txt">{m.desc}</div>
-                    {m.href && <span className="suite">En savoir plus →</span>}
+                    {m.href && <span className="suite">{t('En savoir plus →')}</span>}
                   </>
                 )
                 return (
@@ -174,9 +178,9 @@ export default function MetierPageTemplate({
       {/* ── Ce que ça coûte — dérivé de PLAN_CARDS, jamais recopié ── */}
       <section className="section">
         <div className="w">
-          <p className="sur-titre"><span className="pt" />Ce que ça coûte</p>
+          <p className="sur-titre"><span className="pt" />{t('Ce que ça coûte')}</p>
           <h2 className="pg-h2">
-            {prix[0].price === 0 ? 'Gratuit' : `${prix[0].price}€/mois`} pour démarrer, sans engagement en mensuel.
+            {prix[0].price === 0 ? 'Gratuit' : `${prix[0].price}€/mois`} {t('pour démarrer, sans engagement en mensuel.')}
           </h2>
           <div className="pg-texte">
             {prix.map(c => (
@@ -189,9 +193,8 @@ export default function MetierPageTemplate({
               </p>
             ))}
             <p>
-              Passage à l&apos;année possible (engagement de 12 mois), {freeMonthsLabel()}. Détail
-              complet des formules sur{' '}
-              <Link href="/#tarifs">la page d&apos;accueil</Link>.
+              {t('Passage à l’année possible (engagement de 12 mois),')} {freeMonthsLabel()}{t('. Détail complet des formules sur')}{' '}
+              <Link href="/#tarifs">{t('la page d’accueil')}</Link>.
             </p>
           </div>
         </div>
@@ -218,7 +221,7 @@ export default function MetierPageTemplate({
       {articles.length > 0 && (
         <section className="section">
           <div className="w">
-            <p className="sur-titre"><span className="pt" />Pour aller plus loin</p>
+            <p className="sur-titre"><span className="pt" />{t('Pour aller plus loin')}</p>
             <h2 className="pg-h2">
               {theme
                 ? `${articles.length > 1 ? 'Nos articles' : 'Notre article'} ${THEME_LABEL[theme].toLowerCase()}`
@@ -243,7 +246,7 @@ export default function MetierPageTemplate({
       {/* ── FAQ propre à ce métier ── */}
       <section className="section">
         <div className="w">
-          <p className="sur-titre"><span className="pt" />Questions</p>
+          <p className="sur-titre"><span className="pt" />{t('Questions')}</p>
           <Faq items={faq} />
         </div>
       </section>
@@ -254,9 +257,9 @@ export default function MetierPageTemplate({
           <h2 className="h2">{ctaTitre}</h2>
           <p className="chapo" style={{ marginInline: 'auto' }}>{ctaTexte}</p>
           <div className="heros-cta">
-            <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
+            <Link href="/signup" className="btn btn-accent">{t('Lancer mon mois gratuit')}</Link>
           </div>
-          <p className="rassure">Sans engagement · Sans carte bancaire</p>
+          <p className="rassure">{t('Sans engagement · Sans carte bancaire')}</p>
         </div>
       </section>
     </Coque>

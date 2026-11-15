@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { isPwaStandalone } from '@/lib/pwaStandalone'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Ligne de diagnostic discrète au bas de l'écran « Plus » de la PWA : la version
 // réellement chargée par le téléphone, et ce qu'il détecte de lui-même.
@@ -28,6 +29,7 @@ function lire() {
 }
 
 export function DiagnosticPwa() {
+  const t = useT()
   const brut = useSyncExternalStore(rien, lire, () => '')
   const etat = brut ? (JSON.parse(brut) as { appli: boolean; classe: boolean; hote: string }) : null
   const oui = (v: boolean) => (v ? 'oui' : 'non')
@@ -45,8 +47,8 @@ export function DiagnosticPwa() {
     <p className="pb-2 text-center text-[11px] text-[color:var(--v2-color-gris)] tabular-nums opacity-70">
       v. {process.env.NEXT_PUBLIC_BUILD_SHA}
       {etat && <><br />{etat.hote}</>}
-      {etat && <> · mode appli : {oui(etat.appli)} · classe wb-pwa : {oui(etat.classe)}</>}
-      {equipe && <><br />compte : {equipe.compte ?? '?'} · équipe : {oui(equipe.membre)} · liste du déploiement : {equipe.listeConfiguree ? 'définie' : 'ABSENTE'}</>}
+      {etat && <> {t('· mode appli :')} {oui(etat.appli)} {t('· classe wb-pwa :')} {oui(etat.classe)}</>}
+      {equipe && <><br />{t('compte :')} {equipe.compte ?? '?'} {t('· équipe :')} {oui(equipe.membre)} {t('· liste du déploiement :')} {equipe.listeConfiguree ? t('définie') : 'ABSENTE'}</>}
     </p>
   )
 }

@@ -6,6 +6,7 @@ import {
   PLAN_CARDS, PLAN_LABELS, PLAN_PRICES, PLAN_COULEURS, requiredPlan,
   lienRendezVousBusiness, rendezVousExterne, LIBELLE_CONTACT, LIBELLE_RDV_BUSINESS, type Feature,
 } from '@/lib/plan'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Cette fonctionnalité fait partie d'une offre supérieure », version v2 —
 // l'équivalent de `UpgradePrompt.tsx` (site) pour les écrans de la refonte.
@@ -37,6 +38,7 @@ export function OffreVerrouilleeV2({ titre: intitule, description, feature, rass
    *  lui coûte son historique. */
   rassurance?: string
 }) {
+  const t = useT()
   const offre = requiredPlan(feature)
   const carte = PLAN_CARDS.find(c => c.key === offre)
   const prix = PLAN_PRICES[offre]
@@ -57,7 +59,7 @@ export function OffreVerrouilleeV2({ titre: intitule, description, feature, rass
               style={{ backgroundColor: PLAN_COULEURS[offre] }}
               aria-hidden
             />
-            Offre {label}
+            {t('Offre')} {label}
           </span>
         </span>
         <span className={`shrink-0 text-[18px] leading-none ${hero}`}>
@@ -65,8 +67,8 @@ export function OffreVerrouilleeV2({ titre: intitule, description, feature, rass
             <span className={`text-[14px] ${corpsFort}`}>{LIBELLE_CONTACT}</span>
           ) : (
             <>
-              {carte?.from && <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>dès </span>}
-              {prix} €<span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>/mois</span>
+              {carte?.from && <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('dès')} </span>}
+              {prix} €<span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('/mois')}</span>
             </>
           )}
         </span>
@@ -107,7 +109,7 @@ export function OffreVerrouilleeV2({ titre: intitule, description, feature, rass
           className={`mt-5 flex h-11 w-full items-center justify-center rounded-[var(--v2-radius-bouton)] text-[15px] text-white ${corpsFort} transition-transform active:scale-[.98]`}
           style={{ background: 'var(--v2-color-accent)' }}
         >
-          Passer à {label} — {prix} €/mois
+          {t('Passer à')} {label} — {prix} {t('€/mois')}
         </Link>
       )}
 
@@ -115,7 +117,7 @@ export function OffreVerrouilleeV2({ titre: intitule, description, feature, rass
         href="/dashboard/abonnement"
         className={`mt-2.5 block text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}
       >
-        Comparer toutes les offres
+        {t('Comparer toutes les offres')}
       </Link>
     </div>
   )

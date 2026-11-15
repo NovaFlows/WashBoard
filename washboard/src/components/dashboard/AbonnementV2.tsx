@@ -10,6 +10,7 @@ import {
 } from '@/lib/plan'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 export type PropsAbonnement = {
   subscriptionStatus: string
@@ -79,6 +80,7 @@ function JaugeV2({ titre: intitule, utilise, plafond, unite }: {
   plafond: number
   unite: string
 }) {
+  const t = useT()
   const part = Math.min(100, Math.round((utilise / plafond) * 100))
   const chaud = utilise >= plafond
   const proche = !chaud && utilise >= plafond - 1
@@ -98,7 +100,7 @@ function JaugeV2({ titre: intitule, utilise, plafond, unite }: {
       </div>
       {chaud && (
         <p className={`mt-1.5 text-[12.5px] leading-snug ${corps}`} style={{ color: couleur }}>
-          Plafond atteint : {unite}
+          {t('Plafond atteint :')} {unite}
         </p>
       )}
     </div>
@@ -110,6 +112,7 @@ export default function AbonnementV2({
   plafondReservations, reservationsCeMois, plafondPrestations, prestationsAuCatalogue,
   remiseAZero, doitChoisir, liste,
 }: PropsAbonnement) {
+  const t = useT()
   const grandEcran = useGrandEcran()
   const [maintenant] = useState(() => Date.now())
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
@@ -134,14 +137,14 @@ export default function AbonnementV2({
 
   const offreAffichee: Plan = grandfathered ? PLAN_HISTORIQUE : plan
   const etat = grandfathered
-    ? { texte: 'Accès complet', ton: 'vert' as const }
+    ? { texte: t('Accès complet'), ton: 'vert' as const }
     : plan === 'decouverte'
-      ? { texte: 'Gratuite, sans paiement', ton: 'gris' as const }
+      ? { texte: t('Gratuite, sans paiement'), ton: 'gris' as const }
       : subscriptionStatus === 'active'
         ? { texte: 'Abonnement actif', ton: 'vert' as const }
         : subscriptionStatus === 'trial'
           ? { texte: 'Essai gratuit', ton: 'accent' as const }
-          : { texte: 'Abonnement expiré', ton: 'rouge' as const }
+          : { texte: t('Abonnement expiré'), ton: 'rouge' as const }
 
   const contenu = (
     <div
@@ -150,9 +153,9 @@ export default function AbonnementV2({
         : `max-w-3xl mx-auto space-y-5 -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
       <div>
-        <h1 className={grandEcran ? `text-[20px] ${titre}` : `text-[21px] ${titre}`}>Mon offre</h1>
+        <h1 className={grandEcran ? `text-[20px] ${titre}` : `text-[21px] ${titre}`}>{t('Mon offre')}</h1>
         <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          Ce que vous payez, ce qu’il vous reste, ce que vous pourriez prendre
+          {t('Ce que vous payez, ce qu’il vous reste, ce que vous pourriez prendre')}
         </p>
       </div>
 
@@ -166,7 +169,7 @@ export default function AbonnementV2({
                 style={{ backgroundColor: PLAN_COULEURS[offreAffichee] }}
                 aria-hidden
               />
-              {grandfathered ? 'Client historique' : 'Votre offre'}
+              {grandfathered ? t('Client historique') : 'Votre offre'}
             </span>
             <p className={`mt-1 text-[24px] leading-none ${titre}`}>{PLAN_LABELS[offreAffichee]}</p>
             <p
@@ -177,37 +180,34 @@ export default function AbonnementV2({
             </p>
           </div>
           <p className={`shrink-0 text-right text-[26px] leading-none ${hero}`}>
-            {prixActuel === 0 ? 'Gratuit' : <>{prixActuel} €<span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>par mois</span></>}
+            {prixActuel === 0 ? 'Gratuit' : <>{prixActuel} €<span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('par mois')}</span></>}
           </p>
         </div>
 
         <div className="mt-4 space-y-2.5">
           {doitChoisir && (
             <Constat ton="accent">
-              Votre mois d’essai est terminé, et rien n’est perdu : page de réservation, agenda et
-              clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte,
-              limitée à {plafondReservations ?? 5} réservations par mois.
+              {t('Votre mois d’essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à')} {plafondReservations ?? 5} {t('réservations par mois.')}
             </Constat>
           )}
           {subscriptionStatus === 'trial' && joursRestants !== null && (
             <Constat ton={joursRestants <= 7 ? 'ambre' : 'accent'}>
               {joursRestants === 0
-                ? 'Votre essai gratuit a expiré aujourd’hui.'
+                ? t('Votre essai gratuit a expiré aujourd’hui.')
                 : `Il vous reste ${joursRestants} jour${joursRestants > 1 ? 's' : ''} d’essai gratuit.`}
             </Constat>
           )}
           {subscriptionStatus === 'active' && (plan !== 'decouverte' || grandfathered) && (
-            <Constat ton="vert">Votre abonnement est actif. Merci de votre confiance !</Constat>
+            <Constat ton="vert">{t('Votre abonnement est actif. Merci de votre confiance !')}</Constat>
           )}
           {subscriptionStatus === 'expired' && (
             <Constat ton="rouge">
-              Votre accès est suspendu. Réglez votre abonnement pour retrouver l’accès complet.
+              {t('Votre accès est suspendu. Réglez votre abonnement pour retrouver l’accès complet.')}
             </Constat>
           )}
           {dus > 1 && (
             <Constat ton="ambre">
-              {dus} mois de paiement en retard. Régularisez pour éviter la suspension de votre page
-              de réservation.
+              {dus} {t('mois de paiement en retard. Régularisez pour éviter la suspension de votre page de réservation.')}
             </Constat>
           )}
         </div>
@@ -216,11 +216,11 @@ export default function AbonnementV2({
       {/* ── Ce qu'il me reste ──────────────────────────────────────────────── */}
       {(plafondReservations !== null || plafondPrestations !== null) && (
         <section className={`${CARTE} px-4 py-4`}>
-          <h2 className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Votre consommation</h2>
+          <h2 className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Votre consommation')}</h2>
           <div className="mt-3 space-y-4">
             {plafondReservations !== null && reservationsCeMois !== null && (
               <JaugeV2
-                titre="Réservations ce mois"
+                titre={t('Réservations ce mois')}
                 utilise={reservationsCeMois}
                 plafond={plafondReservations}
                 unite={`vos clients ne peuvent plus réserver en ligne jusqu’au ${remiseAZero}.`}
@@ -228,7 +228,7 @@ export default function AbonnementV2({
             )}
             {plafondPrestations !== null && prestationsAuCatalogue !== null && (
               <JaugeV2
-                titre="Prestations au catalogue"
+                titre={t('Prestations au catalogue')}
                 utilise={prestationsAuCatalogue}
                 plafond={plafondPrestations}
                 unite="vous ne pouvez plus en ajouter."
@@ -236,8 +236,7 @@ export default function AbonnementV2({
             )}
           </div>
           <p className={`mt-3 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Les réservations se remettent à zéro le {remiseAZero}, puis tous les mois à cette date.
-            Les rendez-vous annulés ne comptent pas.
+            {t('Les réservations se remettent à zéro le')} {remiseAZero}{t(', puis tous les mois à cette date. Les rendez-vous annulés ne comptent pas.')}
           </p>
         </section>
       )}
@@ -245,10 +244,10 @@ export default function AbonnementV2({
       {/* ── Ce que je pourrais prendre ─────────────────────────────────────── */}
       <section>
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Nos offres</h2>
+          <h2 className={`text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Nos offres')}</h2>
           {/* Bascule mensuel / annuel : mêmes pilules que les onglets des autres
               écrans v2, plutôt que l'interrupteur du site. */}
-          <div className="flex gap-1.5" role="tablist" aria-label="Rythme de facturation">
+          <div className="flex gap-1.5" role="tablist" aria-label={t('Rythme de facturation')}>
             {([['monthly', 'Mensuel'], ['yearly', 'Annuel']] as const).map(([cle, libelle]) => (
               <button
                 key={cle}
@@ -270,7 +269,7 @@ export default function AbonnementV2({
 
         {grandfathered && (
           <p className={`mt-2 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>
-            Client historique : toutes les fonctionnalités sont incluses, sans changer d’offre —{' '}
+            {t('Client historique : toutes les fonctionnalités sont incluses, sans changer d’offre —')}{' '}
             {facturation === 'yearly'
               ? `${formatEuros(yearlyMonthlyEquivalent(PLAN_PRICES[PLAN_HISTORIQUE]))} €/mois, soit ${formatEuros(yearlyPrice(PLAN_PRICES[PLAN_HISTORIQUE]))} €/an`
               : `${formatEuros(PLAN_PRICES[PLAN_HISTORIQUE])} €/mois`}.
@@ -300,7 +299,7 @@ export default function AbonnementV2({
                       className={`shrink-0 rounded-[var(--v2-radius-pilule)] px-2 py-0.5 text-[11px] ${corpsFort} text-white`}
                       style={{ background: 'var(--v2-color-accent)' }}
                     >
-                      Actuelle
+                      {t('Actuelle')}
                     </span>
                   )}
                 </div>
@@ -312,16 +311,16 @@ export default function AbonnementV2({
                     'Gratuit'
                   ) : (
                     <>
-                      {carte.from && <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>dès </span>}
+                      {carte.from && <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('dès')} </span>}
                       {facturation === 'yearly' ? formatEuros(yearlyMonthlyEquivalent(carte.price)) : carte.price} €
-                      <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>/mois</span>
+                      <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('/mois')}</span>
                     </>
                   )}
                 </p>
 
                 {facturation === 'yearly' && carte.price > 0 && !carte.surDevis && (
                   <p className={`mt-1 text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-vert)' }}>
-                    Soit {formatEuros(yearlyPrice(carte.price))} €/an — {freeMonthsLabel()}
+                    {t('Soit')} {formatEuros(yearlyPrice(carte.price))} {t('€/an —')} {freeMonthsLabel()}
                   </p>
                 )}
 
@@ -341,11 +340,11 @@ export default function AbonnementV2({
                 <div className="mt-4">
                   {grandfathered ? (
                     <p className={`rounded-[var(--v2-radius-bouton)] py-2.5 text-center text-[13px] ${corpsFort}`} style={{ color: 'var(--v2-color-vert)', background: 'color-mix(in srgb, var(--v2-color-vert) 10%, transparent)' }}>
-                      Inclus dans votre plan
+                      {t('Inclus dans votre plan')}
                     </p>
                   ) : actuelle ? (
                     <p className={`rounded-[var(--v2-radius-bouton)] bg-[color:var(--v2-filet)] py-2.5 text-center text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-                      Votre offre actuelle
+                      {t('Votre offre actuelle')}
                     </p>
                   ) : carte.surDevis ? (
                     <a
@@ -358,18 +357,18 @@ export default function AbonnementV2({
                     </a>
                   ) : carte.price === 0 ? (
                     <p className={`rounded-[var(--v2-radius-bouton)] bg-[color:var(--v2-filet)] py-2.5 text-center text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-                      Sans paiement
+                      {t('Sans paiement')}
                     </p>
                   ) : (
                     <div className="space-y-2">
                       {facturation === 'monthly' && moisDus > 1 && (
                         <p className={`text-center text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-ambre)' }}>
-                          {moisDus} mois dus — total {carte.price * moisDus} €
+                          {moisDus} {t('mois dus — total')} {carte.price * moisDus} €
                         </p>
                       )}
                       {facturation === 'yearly' && (
                         <p className={`text-center text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                          12 mois payés en une fois
+                          {t('12 mois payés en une fois')}
                         </p>
                       )}
                       <a
@@ -379,7 +378,7 @@ export default function AbonnementV2({
                         className={`flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] text-[14px] text-white ${corpsFort} transition-transform active:scale-[.98]`}
                         style={{ background: '#003087' }}
                       >
-                        PayPal — {formatEuros(montantPour(carte.price))} €
+                        {t('PayPal —')} {formatEuros(montantPour(carte.price))} €
                       </a>
                     </div>
                   )}
@@ -391,20 +390,20 @@ export default function AbonnementV2({
 
         {!grandfathered && (
           <p className={`mt-4 text-center text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Après réception de votre paiement, votre abonnement est activé à la main sous 24 h ouvrées.
+            {t('Après réception de votre paiement, votre abonnement est activé à la main sous 24 h ouvrées.')}
           </p>
         )}
       </section>
 
       {/* ── Questions fréquentes ───────────────────────────────────────────── */}
       <section className={`${CARTE} overflow-hidden`}>
-        <h2 className={`px-4 pt-4 text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Questions fréquentes</h2>
+        <h2 className={`px-4 pt-4 text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Questions fréquentes')}</h2>
         <div className="mt-1 divide-y divide-[color:var(--v2-filet)]">
           {[
-            { q: 'Comment annuler mon abonnement ?', r: 'Écrivez-nous à novaflows.pro@gmail.com. Aucun engagement, résiliation immédiate.' },
-            { q: 'Mes données sont-elles conservées si j’arrête ?', r: 'Oui : clients, rendez-vous et historique sont gardés 30 jours après la résiliation.' },
-            { q: 'Puis-je changer de mode de paiement ?', r: 'Oui, écrivez-nous à tout moment.' },
-            { q: 'Comment changer d’offre ?', r: 'Payez l’offre voulue ci-dessus, ou écrivez-nous : nous l’activons sous 24 h.' },
+            { q: 'Comment annuler mon abonnement ?', r: t('Écrivez-nous à novaflows.pro@gmail.com. Aucun engagement, résiliation immédiate.') },
+            { q: t('Mes données sont-elles conservées si j’arrête ?'), r: t('Oui : clients, rendez-vous et historique sont gardés 30 jours après la résiliation.') },
+            { q: 'Puis-je changer de mode de paiement ?', r: t('Oui, écrivez-nous à tout moment.') },
+            { q: t('Comment changer d’offre ?'), r: t('Payez l’offre voulue ci-dessus, ou écrivez-nous : nous l’activons sous 24 h.') },
           ].map(({ q, r }) => (
             <div key={q} className="px-4 py-3">
               <p className={`text-[13.5px] ${corpsFort}`}>{q}</p>
@@ -415,9 +414,9 @@ export default function AbonnementV2({
       </section>
 
       <p className={`text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-        Une question sur les offres ?{' '}
+        {t('Une question sur les offres ?')}{' '}
         <Link href="/dashboard/assistance" className={corpsFort} style={{ color: 'var(--v2-color-accent)' }}>
-          Écrire à l’équipe
+          {t('Écrire à l’équipe')}
         </Link>
       </p>
     </div>

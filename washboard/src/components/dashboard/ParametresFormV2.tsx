@@ -8,6 +8,7 @@ import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
 import ApercuPageV2 from '@/components/dashboard/ApercuPageV2'
 import { PLAN_LABELS } from '@/lib/plan'
 import { infosFacturationManquantes } from '@/lib/facture'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Plus » — refonte 2026, passe 6. Présentation v2 de l'écran de réglages,
 // réservée à la PWA installée en mode standalone (voir ParametresForm.tsx, le
@@ -63,11 +64,12 @@ export function Chevron() {
 // qu'un « beaucoup » à quelqu'un qui n'a pas ouvert ses messages. `null`/`0` :
 // rien ne s'affiche, jamais un « 0 non lu ».
 export function NonLus({ count }: { count: number | null | undefined }) {
+  const t = useT()
   if (!count || count <= 0) return null
   return (
     <span className={`inline-flex items-center gap-1.5 text-[12.5px] ${corpsFort} shrink-0`} style={{ color: 'var(--v2-color-accent)' }}>
       <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--v2-color-accent)' }} />
-      {count > 9 ? '9+' : count} non lu{count > 1 ? 's' : ''}
+      {count > 9 ? '9+' : count} {t('non lu')}{count > 1 ? 's' : ''}
     </span>
   )
 }
@@ -245,6 +247,7 @@ type Props = {
 // mois plus tard croirait avoir perdu quelque chose »), et elle est déjà masquable à la main
 // (bouton « Masquer », `CLE_CARTE_CACHEE`). Voir le rapport de la passe pour la recommandation.
 export default function ParametresFormV2({ washer, servicesCount, resumeHoraires }: Props) {
+  const t = useT()
   const grandEcran = useGrandEcran()
   const facturationIncomplete = infosFacturationManquantes(washer).length > 0
 
@@ -283,7 +286,7 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
           {liste}
         </div>
         <div className="min-w-0 flex-1">
-          <TitreSection>Votre page de réservation</TitreSection>
+          <TitreSection>{t('Votre page de réservation')}</TitreSection>
           {/* `flex-wrap` : quand la liste prend ses deux colonnes, il ne reste ~386px à droite —
               juste la vignette. Le résumé passe alors dessous au lieu de déborder — et la
               vignette, posée sur `basis` plutôt que sur une largeur fixe, se laisse comprimer
@@ -304,19 +307,18 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
                 Avec ce plancher il passe dessous dès qu'il n'a pas la place d'être lisible. */}
             <div className="min-w-[320px] max-w-[420px] flex-1">
               <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                C’est ce que voient vos clients quand ils réservent. Le logo, les couleurs et le
-                message se règlent dans « Apparence de ma page ».
+                {t('C’est ce que voient vos clients quand ils réservent. Le logo, les couleurs et le message se règlent dans « Apparence de ma page ».')}
               </p>
               <div className="mt-5">
                 <CarteListe>
                   <div className="flex items-center justify-between gap-3 py-3">
-                    <span className={`text-[13px] ${corps}`}>Lien</span>
-                    <span className={`truncate text-[12px] ${corpsFort} tabular-nums`}>/book/{washer.slug}</span>
+                    <span className={`text-[13px] ${corps}`}>{t('Lien')}</span>
+                    <span className={`truncate text-[12px] ${corpsFort} tabular-nums`}>{t('/book/')}{washer.slug}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3 py-3">
-                    <span className={`text-[13px] ${corps}`}>Offre actuelle</span>
+                    <span className={`text-[13px] ${corps}`}>{t('Offre actuelle')}</span>
                     <span className={`text-[13px] ${corpsFort}`}>
-                      {washer.grandfathered ? 'Accès complet' : PLAN_LABELS[washer.plan]}
+                      {washer.grandfathered ? t('Accès complet') : PLAN_LABELS[washer.plan]}
                     </span>
                   </div>
                 </CarteListe>

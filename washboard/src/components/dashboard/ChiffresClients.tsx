@@ -11,6 +11,7 @@ import { statsRelances } from '@/lib/statsRelances'
 import Link from 'next/link'
 import { finitAvant, premierJourDeDonnee } from '@/lib/chiffresArgent'
 import type { ChiffresBooking } from '@/components/dashboard/ChiffresV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Onglet « Clients » de Chiffres (refonte 2026, passe 5, repris au
 // 2026-09-24). Reprend `listeClients`/`buildClientProfile` (déjà utilisés par
@@ -68,6 +69,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
    *  maquette (260px héros + détail à gauche, meilleurs clients + relances à droite). */
   grandEcran?: boolean
 }) {
+  const t = useT()
   const [filtre, setFiltre] = useState<FiltreClients>('tous')
   const [ouvert, setOuvert] = useState<string | null>(null)
 
@@ -91,10 +93,10 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
 
   const blocHero = (
     <div className="flex flex-col gap-[3px]">
-      <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Valeur moyenne par client</span>
+      <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Valeur moyenne par client')}</span>
       <span className={`${grandEcran ? 'text-[50px]' : 'text-[44px] sm:text-[52px]'} leading-none ${hero}`}>{euros(stats.valeurMoyenne)}</span>
       <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-        sur {nombre.format(stats.actifs.length)} client{stats.actifs.length > 1 ? 's' : ''} actif{stats.actifs.length > 1 ? 's' : ''} sur la période
+        {t('sur')} {nombre.format(stats.actifs.length)} {t('client')}{stats.actifs.length > 1 ? 's' : ''} {t('actif')}{stats.actifs.length > 1 ? 's' : ''} {t('sur la période')}
       </span>
     </div>
   )
@@ -102,9 +104,9 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
   const blocMeilleursClients = (
     <div>
       <div className="flex items-baseline justify-between px-0.5 pb-2">
-        <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Vos meilleurs clients</span>
+        <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Vos meilleurs clients')}</span>
         <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          {Math.round((stats.meilleurs.reduce((s, c) => s + c.totalRevenue, 0) / (stats.totalCA || 1)) * 100)} % du chiffre d’affaires
+          {Math.round((stats.meilleurs.reduce((s, c) => s + c.totalRevenue, 0) / (stats.totalCA || 1)) * 100)} {t('% du chiffre d’affaires')}
         </span>
       </div>
       <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
@@ -135,37 +137,37 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
 
   const blocProSplit = filtre === 'tous' && (
     <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed px-1`}>
-      Les clients professionnels font {stats.partCaPro} % du chiffre d’affaires pour {stats.partRdvPro} % des rendez-vous.
+      {t('Les clients professionnels font')} {stats.partCaPro} {t('% du chiffre d’affaires pour')} {stats.partRdvPro} {t('% des rendez-vous.')}
     </p>
   )
 
   const blocDefinitionCa = (
     <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed px-1`}>
-      Ici, le chiffre d’affaires compte les rendez-vous confirmés et terminés ; l’onglet Argent ne compte que les terminés, remises déduites.
+      {t('Ici, le chiffre d’affaires compte les rendez-vous confirmés et terminés ; l’onglet Argent ne compte que les terminés, remises déduites.')}
     </p>
   )
 
   const blocRelances = (
     <div>
       <div className="flex items-baseline justify-between px-0.5 pb-2">
-        <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Les relances qui marchent</span>
+        <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Les relances qui marchent')}</span>
         <Link href="/dashboard/clients/messages" className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
-          Réglages
+          {t('Réglages')}
         </Link>
       </div>
       <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 py-3.5">
         {relances.envoyees === 0 ? (
-          <p className={`text-[13.5px] ${corps}`}>Aucune relance n’est partie sur cette période.</p>
+          <p className={`text-[13.5px] ${corps}`}>{t('Aucune relance n’est partie sur cette période.')}</p>
         ) : (
           <>
             <p className={`text-[14.5px] ${corpsFort}`}>
-              {nombre.format(relances.revenus)} client{relances.revenus > 1 ? 's' : ''} sur {nombre.format(relances.envoyees)} relancé{relances.envoyees > 1 ? 's' : ''} {relances.revenus > 1 ? 'ont' : 'a'} repris rendez-vous
+              {nombre.format(relances.revenus)} {t('client')}{relances.revenus > 1 ? 's' : ''} {t('sur')} {nombre.format(relances.envoyees)} {t('relancé')}{relances.envoyees > 1 ? 's' : ''} {relances.revenus > 1 ? 'ont' : 'a'} {t('repris rendez-vous')}
               <span className="text-[color:var(--v2-color-gris)]"> · {nombre.format(Math.round((relances.revenus / relances.envoyees) * 100))} %</span>
             </p>
           </>
         )}
         <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed mt-1`}>
-          Relances parties sur la période, et clients revenus depuis. SMS et email sont comptés ensemble.
+          {t('Relances parties sur la période, et clients revenus depuis. SMS et email sont comptés ensemble.')}
         </p>
       </div>
     </div>
@@ -175,16 +177,16 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
     <div className="space-y-5">
       {reservationsIncompletes && (
         <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)]`} role="status">
-          Une partie de vos rendez-vous n’a pas pu être chargée : ces chiffres peuvent être incomplets.
+          {t('Une partie de vos rendez-vous n’a pas pu être chargée : ces chiffres peuvent être incomplets.')}
         </p>
       )}
 
       {sources.reponses > 0 && (
         <div>
           <div className="flex items-baseline justify-between px-0.5 pb-2">
-            <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>D’où viennent vos clients</span>
+            <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('D’où viennent vos clients')}</span>
             <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {nombre.format(sources.reponses)} réponse{sources.reponses > 1 ? 's' : ''} sur {nombre.format(sources.total)} rendez-vous
+              {nombre.format(sources.reponses)} {t('réponse')}{sources.reponses > 1 ? 's' : ''} {t('sur')} {nombre.format(sources.total)} rendez-vous
             </span>
           </div>
           <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
@@ -200,7 +202,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
         </div>
       )}
 
-      <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Type de client">
+      <div className="flex gap-2 overflow-x-auto" role="group" aria-label={t('Type de client')}>
         {FILTRES.map(f => (
           <button
             key={f.cle}

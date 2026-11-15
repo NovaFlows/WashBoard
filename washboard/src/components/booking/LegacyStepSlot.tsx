@@ -9,6 +9,7 @@ import { filtrerHeures } from '@/lib/heuresPrestation'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, capaciteCreneau, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
@@ -79,6 +80,7 @@ export default function LegacyStepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
   hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre: centreComplet = null, lieuPrestation = null, heuresPrestation = null, centresPrestation = null, onNext, onBack, accent = '#2563eb',
 }: Props) {
+  const tr = useT()
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   // Plusieurs centres : seulement ceux où la prestation se fait.
   const centre = useMemo(() => centreRestreint(centreComplet, centresPrestation), [centreComplet, centresPrestation])
@@ -332,12 +334,12 @@ export default function LegacyStepSlot({
 
   return (
     <div>
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Choisissez un créneau</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Où et quand souhaitez-vous être lavé ?</p>
+      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">{tr('Choisissez un créneau')}</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">{tr('Où et quand souhaitez-vous être lavé ?')}</p>
 
       {centre && lieuxOk.length > 1 && (
         <div className="mb-5">
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Lieu du lavage">
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={tr('Lieu du lavage')}>
             {(['domicile', 'centre'] as const).map(l => (
               <button
                 key={l} type="button" role="radio" aria-checked={lieu === l} onClick={() => choisirLieu(l)}
@@ -349,16 +351,16 @@ export default function LegacyStepSlot({
             ))}
           </div>
           {!auCentre && hasTravelFee && (
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{tr('Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.')}</p>
           )}
         </div>
       )}
 
       {auCentre && centre ? (
         <div className="mb-5 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3">
-          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{centres.length > 1 ? 'Choisissez votre centre auto' : 'Rendez-vous au centre auto'}</p>
+          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{centres.length > 1 ? tr('Choisissez votre centre auto') : tr('Rendez-vous au centre auto')}</p>
           {centres.length > 1 ? (
-            <div className="mt-2 flex flex-col gap-2" role="radiogroup" aria-label="Centre auto">
+            <div className="mt-2 flex flex-col gap-2" role="radiogroup" aria-label={tr('Centre auto')}>
               {centres.map(c => (
                 <button key={c.adresse} type="button" role="radio" aria-checked={adresseCentre === c.adresse} onClick={() => setCentreAdresse(c.adresse)}
                   className={'text-left rounded-xl border px-3 py-2.5 min-h-11 transition-colors ' + (adresseCentre === c.adresse ? 'text-white border-transparent' : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300')}
@@ -369,15 +371,15 @@ export default function LegacyStepSlot({
               ))}
             </div>
           ) : <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">{adresseCentre}</p>}
-          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">Pas de frais de déplacement</p>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">{tr('Pas de frais de déplacement')}</p>
         </div>
       ) : (
       <div className="mb-5">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Adresse du véhicule</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{tr('Adresse du véhicule')}</label>
         <AddressAutocomplete
           value={address}
           onChange={setAddress}
-          placeholder="12 rue de la Paix, 75001 Paris"
+          placeholder={tr('12 rue de la Paix, 75001 Paris')}
           className="w-full border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-shadow"
           style={{ '--tw-ring-color': accent } as React.CSSProperties}
         />
@@ -388,13 +390,13 @@ export default function LegacyStepSlot({
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
             {travelFeeMode === 'previous' && !(selectedDate && selectedTime) ? (
-              <span>Les frais de déplacement seront calculés depuis votre RDV précédent une fois le créneau sélectionné.</span>
+              <span>{tr('Les frais de déplacement seront calculés depuis votre RDV précédent une fois le créneau sélectionné.')}</span>
             ) : fetchingTravelFee ? (
-              <span className="animate-pulse">Calcul des frais de déplacement...</span>
+              <span className="animate-pulse">{tr('Calcul des frais de déplacement...')}</span>
             ) : travelFeeEstimate != null && travelFeeEstimate > 0 ? (
-              <span>Frais de déplacement estimés : <strong className="text-slate-700 dark:text-slate-200">{travelFeeEstimate}€</strong></span>
+              <span>{tr('Frais de déplacement estimés :')} <strong className="text-slate-700 dark:text-slate-200">{travelFeeEstimate}€</strong></span>
             ) : travelFeeEstimate === 0 ? (
-              <span className="text-emerald-600 dark:text-emerald-400">Pas de frais de déplacement pour cette adresse</span>
+              <span className="text-emerald-600 dark:text-emerald-400">{tr('Pas de frais de déplacement pour cette adresse')}</span>
             ) : null}
           </div>
         )}
@@ -415,14 +417,14 @@ export default function LegacyStepSlot({
           pas deux listes à faire tenir ensemble sur un téléphone. */}
       {montrerCalendrier ? (
         <div className="mb-4">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">Sélectionnez un jour</p>
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2.5">{tr('Sélectionnez un jour')}</p>
 
           <div className="flex items-center justify-between mb-2">
             <button
               type="button"
               onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
               disabled={!moisPrecedentPossible}
-              aria-label="Mois précédent"
+              aria-label={tr('Mois précédent')}
               className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -434,7 +436,7 @@ export default function LegacyStepSlot({
               type="button"
               onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
               disabled={!moisSuivantPossible}
-              aria-label="Mois suivant"
+              aria-label={tr('Mois suivant')}
               className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -485,7 +487,7 @@ export default function LegacyStepSlot({
               className="mt-3 text-xs font-bold hover:opacity-70 transition-opacity"
               style={{ color: accent }}
             >
-              ← Revenir aux horaires du {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
+              {tr('← Revenir aux horaires du')} {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
             </button>
           )}
         </div>
@@ -499,7 +501,7 @@ export default function LegacyStepSlot({
             type="button"
             onClick={() => jourPrecedent && choisirJour(jourPrecedent)}
             disabled={!jourPrecedent}
-            aria-label="Jour disponible précédent"
+            aria-label={tr('Jour disponible précédent')}
             className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -516,14 +518,14 @@ export default function LegacyStepSlot({
             <span className="block text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
               {DAY_NAMES[selectedDate.getDay()]} {selectedDate.getDate()} {MOIS_LONGS[selectedDate.getMonth()]}
             </span>
-            <span className="block text-[11px] font-medium" style={{ color: accent }}>Changer de date</span>
+            <span className="block text-[11px] font-medium" style={{ color: accent }}>{tr('Changer de date')}</span>
           </button>
 
           <button
             type="button"
             onClick={() => jourSuivant && choisirJour(jourSuivant)}
             disabled={!jourSuivant}
-            aria-label="Jour disponible suivant"
+            aria-label={tr('Jour disponible suivant')}
             className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 disabled:opacity-25 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -534,9 +536,9 @@ export default function LegacyStepSlot({
       {selectedDate && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2.5">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Heure</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{tr('Heure')}</p>
             {fetchingSmarts && (
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 animate-pulse">Recherche des créneaux optimisés...</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 animate-pulse">{tr('Recherche des créneaux optimisés...')}</span>
             )}
           </div>
 
@@ -548,7 +550,7 @@ export default function LegacyStepSlot({
               <p className={`text-sm ${dureeTropLongue ? 'text-amber-700 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
                 {dureeTropLongue
                   ? `Avec les options choisies, la prestation dure ${formatDureeFr(serviceDuration)} et ne rentre dans aucun de vos horaires disponibles ce jour-là.`
-                  : 'Aucun créneau disponible ce jour'}
+                  : tr('Aucun créneau disponible ce jour')}
               </p>
             </div>
           ) : (
@@ -557,7 +559,7 @@ export default function LegacyStepSlot({
               {smartSlotsInDay.length > 0 && (
                 <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400">★ Créneaux optimisés pour votre tournée</span>
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-400">{tr('★ Créneaux optimisés pour votre tournée')}</span>
                     {smartDiscountValue > 0 && (
                       <span className="text-[10px] bg-amber-200 dark:bg-amber-800/60 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded-full font-bold">
                         -{smartDiscountType === 'percent' ? `${smartDiscountValue}%` : `${smartDiscountValue}€`}
@@ -611,6 +613,7 @@ export default function LegacyStepSlot({
                 )
 
                 const Section = ({ label, slots, visible, onMore }: { label: string; slots: string[]; visible: number; onMore: () => void }) => {
+  const tr = useT()
                   if (slots.length === 0) return null
                   const shown = slots.slice(0, visible)
                   const hasMore = slots.length > visible
@@ -625,7 +628,7 @@ export default function LegacyStepSlot({
                           onClick={onMore}
                           className="mt-2.5 w-full py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                         >
-                          Voir plus ({slots.length - visible} créneaux)
+                          {tr('Voir plus (')}{slots.length - visible} {tr('créneaux)')}
                         </button>
                       )}
                     </div>
@@ -635,10 +638,10 @@ export default function LegacyStepSlot({
                 return (
                   <div>
                     {smartSlotsInDay.length > 0 && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Autres créneaux disponibles</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{tr('Autres créneaux disponibles')}</p>
                     )}
-                    <Section label="Matin" slots={morning} visible={morningVisible} onMore={() => setMorningVisible(v => v + SLOTS_PER_PAGE)} />
-                    <Section label="Après-midi" slots={afternoon} visible={afternoonVisible} onMore={() => setAfternoonVisible(v => v + SLOTS_PER_PAGE)} />
+                    <Section label={tr('Matin')} slots={morning} visible={morningVisible} onMore={() => setMorningVisible(v => v + SLOTS_PER_PAGE)} />
+                    <Section label={tr('Après-midi')} slots={afternoon} visible={afternoonVisible} onMore={() => setAfternoonVisible(v => v + SLOTS_PER_PAGE)} />
                   </div>
                 )
               })()}
@@ -652,7 +655,7 @@ export default function LegacyStepSlot({
           onClick={onBack}
           className="flex-1 py-3 px-4 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm"
         >
-          Retour
+          {tr('Retour')}
         </button>
         <button
           onClick={handleNext}
@@ -660,7 +663,7 @@ export default function LegacyStepSlot({
           className="flex-1 py-3 px-4 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90 text-sm"
           style={{ backgroundColor: accent }}
         >
-          Continuer
+          {tr('Continuer')}
         </button>
       </div>
     </div>

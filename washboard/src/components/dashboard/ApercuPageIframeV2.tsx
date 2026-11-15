@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Maximize2, Minimize2, RefreshCw } from 'lucide-react'
 import { corps } from '@/components/dashboard/FeuilleV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // `useSyncExternalStore` plutôt que « état + effet » (même raisonnement que
 // `usePwaStandalone.ts`/`useGrandEcran.ts`) : le serveur n'a pas de `document`, et un
@@ -144,6 +145,7 @@ function plafondAgrandi(): number {
  *  et montre le resultat sans qu on ait a cliquer « Rafraichir ». C est la promesse de la
  *  maquette : « Reglez a gauche, le resultat change tout de suite a droite ». */
 export default function ApercuPageIframeV2({ slug, version }: { slug: string; version?: string }) {
+  const t = useT()
   const [cle, setCle] = useState(0)
   const [charge, setCharge] = useState(false)
   const [hauteurNaturelle, setHauteurNaturelle] = useState<number | null>(null)
@@ -287,13 +289,13 @@ export default function ApercuPageIframeV2({ slug, version }: { slug: string; ve
     >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--v2-filet)] px-3 py-2">
         <span className={`truncate text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          Ce que voient vos clients, en direct
+          {t('Ce que voient vos clients, en direct')}
         </span>
         <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={rafraichir}
-            aria-label="Rafraîchir l’aperçu"
+            aria-label={t('Rafraîchir l’aperçu')}
             className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--v2-color-encre)] transition-colors hover:bg-[color:var(--v2-filet)]"
           >
             <RefreshCw size={16} strokeWidth={1.75} />
@@ -302,7 +304,7 @@ export default function ApercuPageIframeV2({ slug, version }: { slug: string; ve
             <button
               type="button"
               onClick={basculerPleinEcran}
-              aria-label={pleinEcran ? 'Quitter le plein écran' : 'Voir en plein écran'}
+              aria-label={pleinEcran ? t('Quitter le plein écran') : t('Voir en plein écran')}
               className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--v2-color-encre)] transition-colors hover:bg-[color:var(--v2-filet)]"
             >
               {pleinEcran ? <Minimize2 size={16} strokeWidth={1.75} /> : <Maximize2 size={16} strokeWidth={1.75} />}
@@ -348,7 +350,7 @@ export default function ApercuPageIframeV2({ slug, version }: { slug: string; ve
             key={`${cle}-${version ?? ''}`}
             ref={iframeRef}
             src={`/book/${slug}`}
-            title="Aperçu de votre page de réservation"
+            title={t('Aperçu de votre page de réservation')}
             loading="lazy"
             onLoad={() => { setCharge(true); if (!pleinEcran) demarrerObservationInterne() }}
             className="h-full w-full border-0"

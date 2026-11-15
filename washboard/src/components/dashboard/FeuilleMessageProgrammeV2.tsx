@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Feuille, BOUTON, PRESSION, corps, corpsFort, puce } from '@/components/dashboard/FeuilleV2'
 import { DECALAGES_JOURS, type LigneMessage } from '@/lib/messagesAutomatiques'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Un message de « Programmé » ouvert : le décaler, ou ne pas l'envoyer (Alexandre, 2026-10-10).
 // Toute la règle (nouvelle date, ce qui s'écrit en base) vit dans `PATCH /api/bookings/[id]/message`
@@ -19,11 +20,12 @@ export default function FeuilleMessageProgrammeV2({
   onAgir: (action: 'decaler' | 'annuler', jours?: number) => Promise<ResultatMessage>
   onClose: () => void
 }) {
+  const t = useT()
   const choix = DECALAGES_JOURS[ligne.type]
   const [jours, setJours] = useState<number>(choix[0])
   const [enCours, setEnCours] = useState<'decaler' | 'annuler' | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
-  const quoi = ligne.type === 'avis' ? 'la demande d’avis' : 'la relance'
+  const quoi = ligne.type === 'avis' ? t('la demande d’avis') : t('la relance')
 
   async function agir(action: 'decaler' | 'annuler') {
     if (enCours) return
@@ -38,7 +40,7 @@ export default function FeuilleMessageProgrammeV2({
   return (
     <Feuille
       titre={ligne.nom}
-      sousTitre={`${ligne.type === 'avis' ? 'Demande d’avis' : 'Relance'} · ${ligne.droite}`}
+      sousTitre={`${ligne.type === 'avis' ? t('Demande d’avis') : 'Relance'} · ${ligne.droite}`}
       onClose={onClose}
       pied={
         <button
@@ -54,13 +56,13 @@ export default function FeuilleMessageProgrammeV2({
     >
       <div className="space-y-5">
         <div>
-          <h3 className={`text-[15px] ${corpsFort}`}>Décaler l’envoi</h3>
+          <h3 className={`text-[15px] ${corpsFort}`}>{t('Décaler l’envoi')}</h3>
           <p className={`mt-1 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
             {ligne.type === 'avis'
-              ? 'Votre client recevra la demande plus tard que prévu.'
-              : 'Votre client sera relancé plus tard, s’il n’a pas repris rendez-vous d’ici là.'}
+              ? t('Votre client recevra la demande plus tard que prévu.')
+              : t('Votre client sera relancé plus tard, s’il n’a pas repris rendez-vous d’ici là.')}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="Décalage">
+          <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label={t('Décalage')}>
             {choix.map(j => (
               <button
                 key={j}
@@ -87,7 +89,7 @@ export default function FeuilleMessageProgrammeV2({
             {enCours === 'annuler' ? 'Enregistrement…' : `Ne pas envoyer ${quoi}`}
           </button>
           <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Seulement ce message. Pour ne plus jamais écrire à ce client, utilisez « Ne plus contacter » dans sa fiche.
+            {t('Seulement ce message. Pour ne plus jamais écrire à ce client, utilisez « Ne plus contacter » dans sa fiche.')}
           </p>
         </div>
 

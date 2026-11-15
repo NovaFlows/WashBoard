@@ -7,6 +7,7 @@ import { cleMois, colonnePremierJour, compterActifsParJour, plageDeMois, pointsR
 import { police, corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 import type { Booking, Unavailability } from '@/components/dashboard/calendrierTypes'
 import { journeeBloquee } from '@/lib/slots'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Vue « mois » de l'agenda v2 — réservée à la PWA installée en mode standalone
 // (voir CalendrierDashboardV2.tsx, qui la rend ; le site reste en v1, décision
@@ -137,6 +138,7 @@ function animerTransition(
 }
 
 export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, onChoisir, onFermer, getBandeauCentre }: Props) {
+  const t = useT()
   const coucheRef = useRef<HTMLDivElement>(null)
   const enteteRef = useRef<HTMLDivElement>(null)
   const retourRef = useRef<HTMLButtonElement>(null)
@@ -211,7 +213,7 @@ export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, on
     <div
       ref={coucheRef}
       role="region"
-      aria-label="Vue du mois"
+      aria-label={t('Vue du mois')}
       className={`fixed inset-0 z-[12] overflow-y-auto overscroll-contain bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
       style={sortant ? { pointerEvents: 'none' } : undefined}
     >
@@ -231,18 +233,18 @@ export default function MoisV2({ jourAffiche, aujourdhui, byDate, getUnavail, on
               ref={retourRef}
               type="button"
               onClick={onFermer}
-              aria-label="Retour à la semaine"
+              aria-label={t('Retour à la semaine')}
               className={`-ml-2 flex h-11 items-center gap-0.5 pl-1 pr-3 text-[16px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
             >
               <ChevronLeft size={22} strokeWidth={2.25} aria-hidden />
-              Semaine
+              {t('Semaine')}
             </button>
             <button
               type="button"
               onClick={() => setCible(c => ({ annee: aujourdhui.getFullYear(), mois: aujourdhui.getMonth(), doux: true, n: c.n + 1 }))}
               className={`-mr-2 flex h-11 items-center px-3 text-[16px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
             >
-              Aujourd’hui
+              {t('Aujourd’hui')}
             </button>
           </div>
           <div className="grid grid-cols-7 pb-1.5" aria-hidden>

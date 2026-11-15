@@ -6,6 +6,7 @@ import { Lock, X } from 'lucide-react'
 import { requiredPlanLabel, type Feature } from '@/lib/plan'
 import { useOffre } from '@/components/dashboard/OffreContext'
 import { useBloquerDefilement, useGlisserPourFermer } from '@/hooks/useFeuilleTactile'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Feuille du bas générique de l'agenda v2 — réservée à la PWA installée en
 // mode standalone (voir CalendrierDashboardV2.tsx et `.claude/agents/refonte.md`,
@@ -93,6 +94,7 @@ export function Feuille({
    *  panneau comme sur la fiche client. */
   panneau?: boolean
 }) {
+  const t = useT()
   const { peut } = useOffre()
   const ferme = !!verrou && !peut(verrou)
   const [visible, setVisible] = useState(panneau)
@@ -183,7 +185,7 @@ export function Feuille({
             ref={closeRef}
             type="button"
             onClick={onClose}
-            aria-label="Fermer"
+            aria-label={t('Fermer')}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:bg-[color:var(--v2-filet)] hover:text-[color:var(--v2-color-encre)]"
           >
             <X size={20} strokeWidth={2} />
@@ -212,7 +214,7 @@ export function Feuille({
                   className={`inline-flex items-center gap-2 rounded-full border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-4 py-2.5 text-[13.5px] shadow-lg ${corpsFort}`}
                 >
                   <Lock size={14} strokeWidth={2.4} aria-hidden />
-                  Inclus dans l’offre {requiredPlanLabel(verrou)}
+                  {t('Inclus dans l’offre')} {requiredPlanLabel(verrou)}
                 </Link>
               </div>
             </div>
@@ -230,7 +232,7 @@ export function Feuille({
                 className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`}
                 style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
               >
-                Voir les offres
+                {t('Voir les offres')}
               </Link>
             ) : pied}
           </div>

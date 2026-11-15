@@ -5,6 +5,7 @@ import { Feuille, CHAMP, corps } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied } from '@/components/dashboard/ReglageAutomatismeV2'
 import { normaliserSiteWeb } from '@/lib/apparence'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Mon site web — feuille du bas de l'écran « Apparence de ma page » (PWA). C'est le
 // seul champ de la carte « Présence en ligne » de l'ancien écran (aucun réseau
@@ -32,6 +33,7 @@ type Props = {
 }
 
 export default function FeuilleSiteV2({ site, onEnregistrer, onClose, panneau }: Props) {
+  const t = useT()
   const [saisie, setSaisie] = useState(site ?? '')
   const [enCours, setEnCours] = useState(false)
   const [erreurChamp, setErreurChamp] = useState<string | null>(null)
@@ -63,14 +65,14 @@ export default function FeuilleSiteV2({ site, onEnregistrer, onClose, panneau }:
 
   return (
     <Feuille
-      titre="Mon site web"
-      sousTitre="Facultatif."
+      titre={t('Mon site web')}
+      sousTitre={t('Facultatif.')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="apparence-site" />}
+      pied={<Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="apparence-site" />}
       panneau={panneau}
     >
       <form id="apparence-site" onSubmit={valider} noValidate>
-        <Bloc titre="Adresse de votre site">
+        <Bloc titre={t('Adresse de votre site')}>
           <input
             type="url"
             inputMode="url"
@@ -81,7 +83,7 @@ export default function FeuilleSiteV2({ site, onEnregistrer, onClose, panneau }:
             onChange={e => { setSaisie(e.target.value); setErreurChamp(null) }}
             onBlur={normaliserAuDepart}
             placeholder="https://monsite.fr"
-            aria-label="Adresse de votre site web"
+            aria-label={t('Adresse de votre site web')}
             aria-invalid={!!erreurChamp}
             aria-describedby="apparence-site-aide"
             className={CHAMP}
@@ -89,10 +91,10 @@ export default function FeuilleSiteV2({ site, onEnregistrer, onClose, panneau }:
           {erreurChamp && <div className="mt-2"><Constat ton="rouge" role="alert">{erreurChamp}</Constat></div>}
           <div id="apparence-site-aide" className={`mt-2 space-y-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
             <p>
-              S’il y a des avis avec étoiles sur cette page, ils s’affichent sur votre page de réservation. Mis à jour chaque jour.
+              {t('S’il y a des avis avec étoiles sur cette page, ils s’affichent sur votre page de réservation. Mis à jour chaque jour.')}
             </p>
             <p>
-              Copiez l’adresse exacte de la page : si elle redirige vers une autre adresse (avec ou sans « www », par exemple), les avis ne sont pas lus.
+              {t('Copiez l’adresse exacte de la page : si elle redirige vers une autre adresse (avec ou sans « www », par exemple), les avis ne sont pas lus.')}
             </p>
           </div>
         </Bloc>

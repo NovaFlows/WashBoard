@@ -19,6 +19,7 @@ import {
   supprimerDepense, supprimerRecurrent,
 } from '@/lib/depensesApi'
 import { BoutonSupprimerSurvol } from '@/components/dashboard/BoutonSupprimerSurvol'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Dépenses » — refonte 2026, destination NEUVE, ouverte depuis Chiffres › Argent
 // (Alexandre, 2026-09-26 : « quand je clique sur ajouter des frais j'arrive sur l'ancienne page
@@ -61,6 +62,7 @@ function LigneFrais({
   onFermerLigne: () => void
   onSupprimer: () => void
 }) {
+  const t = useT()
   const { refLigne, poignee, styleContenu } = useLigneGlissante({ ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne })
   return (
     <li ref={refLigne} className="relative overflow-hidden">
@@ -74,7 +76,7 @@ function LigneFrais({
         style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
         <Trash2 size={20} strokeWidth={2} aria-hidden />
-        Supprimer
+        {t('Supprimer')}
       </button>
       <div
         {...poignee}
@@ -85,7 +87,7 @@ function LigneFrais({
           <span className={`truncate text-[15px] ${nom}`}>{depense.label}</span>
           <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
             {libelleCategorie(depense.category)} · {jourCourt(depense.date)}
-            {depense.recurring_expense_id ? ' · chaque mois' : ''}
+            {depense.recurring_expense_id ? t(' · chaque mois') : ''}
           </span>
         </span>
         <span className={`shrink-0 text-[15px] ${corpsFort} tabular-nums`}>{euros.format(Number(depense.amount))}</span>
@@ -96,6 +98,7 @@ function LigneFrais({
 }
 
 export default function DepensesV2() {
+  const t = useT()
   // Qui voit la disposition à deux colonnes : UNIQUEMENT une largeur ≥ `SEUIL_GRAND_ECRAN_PX`
   // (1024px, `grandEcran.ts`) — même garde que ChiffresV2.tsx/ClientsViewV2.tsx. `Depenses.tsx`
   // a déjà décidé plus haut si cet écran se montre du tout (PWA, ou site + grand écran +
@@ -170,18 +173,16 @@ export default function DepensesV2() {
   // un peu plus large, car sa liste porte plus d'information par ligne).
 
   const sectionFrais = (
-    <section aria-label="Frais de la période" className={grandEcran ? undefined : 'mt-[26px]'}>
-      <h2 className={`px-0.5 pb-1.5 text-[19px] leading-tight ${titre}`}>Les frais</h2>
+    <section aria-label={t('Frais de la période')} className={grandEcran ? undefined : 'mt-[26px]'}>
+      <h2 className={`px-0.5 pb-1.5 text-[19px] leading-tight ${titre}`}>{t('Les frais')}</h2>
       <div className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
         {!depenses ? (
-          <p className={`py-8 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Chargement…</p>
+          <p className={`py-8 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Chargement…')}</p>
         ) : depenses.length === 0 ? (
           /* Un seul bouton d'ajout sur l'écran : le « + » de l'en-tête. Un second ici
              faisait doublon (Alexandre, 2026-09-26). */
           <p className={`px-4 py-6 text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Aucun frais sur cette période. Touchez « + » en haut pour en ajouter un : carburant,
-            produits, matériel… tout ce que vous notez ici se retire de votre chiffre d’affaires
-            dans Chiffres.
+            {t('Aucun frais sur cette période. Touchez « + » en haut pour en ajouter un : carburant, produits, matériel… tout ce que vous notez ici se retire de votre chiffre d’affaires dans Chiffres.')}
           </p>
         ) : (
           <ul className="divide-y divide-[color:var(--v2-filet)] px-4">
@@ -200,20 +201,20 @@ export default function DepensesV2() {
       </div>
       {depenses && depenses.length > 0 && (
         <p className={`mt-2 px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          Glissez une ligne vers la gauche pour la supprimer.
+          {t('Glissez une ligne vers la gauche pour la supprimer.')}
         </p>
       )}
     </section>
   )
 
   const sectionRecurrents = (
-    <section aria-label="Frais qui reviennent chaque mois" className={grandEcran ? undefined : 'mt-[26px]'}>
+    <section aria-label={t('Frais qui reviennent chaque mois')} className={grandEcran ? undefined : 'mt-[26px]'}>
       <div className="flex items-center justify-between gap-3 pb-1.5">
-        <h2 className={`px-0.5 text-[19px] leading-tight ${titre}`}>Chaque mois</h2>
+        <h2 className={`px-0.5 text-[19px] leading-tight ${titre}`}>{t('Chaque mois')}</h2>
         <button
           type="button"
           onClick={() => setFeuille('recurrent')}
-          aria-label="Ajouter un frais qui revient chaque mois"
+          aria-label={t('Ajouter un frais qui revient chaque mois')}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)] transition-transform active:scale-[.94] motion-reduce:transition-none"
           style={PRESSION}
         >
@@ -223,7 +224,7 @@ export default function DepensesV2() {
       <div className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
         {recurrents.length === 0 ? (
           <p className={`px-4 py-6 text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Assurance, abonnement, loyer : ajoutez-les une fois, ils s’inscrivent tout seuls chaque mois.
+            {t('Assurance, abonnement, loyer : ajoutez-les une fois, ils s’inscrivent tout seuls chaque mois.')}
           </p>
         ) : (
           <ul className="divide-y divide-[color:var(--v2-filet)] px-4">
@@ -255,7 +256,7 @@ export default function DepensesV2() {
                     onClick={() => { setSuppressionErreur(null); setSuppression({ quoi: 'recurrent', recurrent: r }) }}
                     className={`min-h-9 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
                   >
-                    Supprimer
+                    {t('Supprimer')}
                   </button>
                 </div>
               </li>
@@ -275,29 +276,29 @@ export default function DepensesV2() {
         {!grandEcran && (
           <Link
             href="/dashboard/chiffres"
-            aria-label="Retour à Chiffres"
+            aria-label={t('Retour à Chiffres')}
             className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
           >
             <ChevronLeft size={22} strokeWidth={2} />
           </Link>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[24px] leading-none ${titre}`}>Dépenses</h1>
+          <h1 className={`text-[24px] leading-none ${titre}`}>{t('Dépenses')}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Ce que vous dépensez pour travailler
+            {t('Ce que vous dépensez pour travailler')}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setFeuille('frais')}
-          aria-label="Ajouter un frais"
+          aria-label={t('Ajouter un frais')}
           className={grandEcran
             ? `flex h-11 items-center gap-2 rounded-[var(--v2-radius-pilule)] px-4 text-[13.5px] ${corpsFort} text-white transition-transform active:scale-[.97] motion-reduce:transition-none`
             : 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.94] motion-reduce:transition-none'}
           style={{ background: 'var(--v2-color-accent)', color: grandEcran ? 'var(--v2-color-sur-accent)' : undefined, ...PRESSION }}
         >
           <Plus size={grandEcran ? 18 : 22} strokeWidth={2.4} aria-hidden />
-          {grandEcran && 'Ajouter un frais'}
+          {grandEcran && t('Ajouter un frais')}
         </button>
       </div>
 
@@ -312,18 +313,18 @@ export default function DepensesV2() {
         // (`depenses`) : aucune requête de plus.
         <div className="mt-4 flex items-baseline gap-[22px]">
           <div className="flex flex-col gap-[3px]">
-            <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Total de la période</span>
+            <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Total de la période')}</span>
             <span className={`text-[50px] leading-none ${hero}`}>{depenses ? euros.format(total) : '—'}</span>
           </div>
           {depenses && (
             <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {nombre.format(depenses.length)} frais enregistré{depenses.length > 1 ? 's' : ''} sur la période
+              {nombre.format(depenses.length)} {t('frais enregistré')}{depenses.length > 1 ? 's' : ''} {t('sur la période')}
             </span>
           )}
         </div>
       ) : (
         <div className="mt-4 flex items-baseline justify-between rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3.5">
-          <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Total de la période</span>
+          <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Total de la période')}</span>
           <span className={`text-[22px] ${corpsFort} tabular-nums`}>{depenses ? euros.format(total) : '—'}</span>
         </div>
       )}
@@ -371,8 +372,8 @@ export default function DepensesV2() {
             ? `Supprimer « ${suppression.depense.label} » ?`
             : `Supprimer « ${suppression.recurrent.label} » ?`}
           texte={suppression.quoi === 'frais'
-            ? 'Ce frais ne comptera plus dans vos chiffres.'
-            : 'Il ne s’inscrira plus chaque mois. Les frais déjà posés ce mois-ci disparaissent aussi.'}
+            ? t('Ce frais ne comptera plus dans vos chiffres.')
+            : t('Il ne s’inscrira plus chaque mois. Les frais déjà posés ce mois-ci disparaissent aussi.')}
           enCours={suppressionEnCours}
           erreur={suppressionErreur}
           onConfirmer={confirmerSuppression}

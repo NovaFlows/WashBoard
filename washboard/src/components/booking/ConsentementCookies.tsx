@@ -7,6 +7,7 @@ import {
   type Registre,
 } from '@/lib/consentement'
 import { chargerPixel, retirerPixel } from '@/lib/metaPixel'
+import { useT } from '@/components/i18n/I18nProvider'
 
 /** Événement qui rouvre la question depuis le pied de page. */
 export const EVENEMENT_GERER = 'wb:gerer-cookies'
@@ -42,6 +43,7 @@ export default function ConsentementCookies({ pixelId, slug }: {
    *  pas le Pixel d'un autre, et tous partagent le domaine washboard.fr. */
   slug: string
 }) {
+  const t = useT()
   // `null` tant que le registre n'est pas lu : au premier rendu, le serveur ne
   // sait rien du navigateur. Afficher le bandeau avant d'avoir lu le choix le
   // ferait apparaître puis disparaître à chaque visite de quelqu'un qui a déjà
@@ -100,14 +102,14 @@ export default function ConsentementCookies({ pixelId, slug }: {
     >
       <div className="mx-auto max-w-lg rounded-xl bg-white dark:bg-slate-900 shadow-xl ring-1 ring-slate-900/10 dark:ring-white/10 px-4 py-3 sm:flex sm:items-center sm:gap-4">
         <p id="consentement-titre" className="text-[13px] leading-snug text-slate-600 dark:text-slate-300 sm:flex-1">
-          Ce prestataire mesure ses publicités avec le Pixel Meta.{' '}
+          {t('Ce prestataire mesure ses publicités avec le Pixel Meta.')}{' '}
           <Link href="/confidentialite" className="underline hover:text-slate-900 dark:hover:text-slate-100">
-            En savoir plus
+            {t('En savoir plus')}
           </Link>
         </p>
         <div className="mt-2.5 flex gap-2 sm:mt-0 sm:shrink-0 sm:w-56">
-          <button onClick={() => repondre('refuse')} className={bouton}>Refuser</button>
-          <button onClick={() => repondre('accepte')} className={bouton}>Accepter</button>
+          <button onClick={() => repondre('refuse')} className={bouton}>{t('Refuser')}</button>
+          <button onClick={() => repondre('accepte')} className={bouton}>{t('Accepter')}</button>
         </div>
       </div>
     </div>
@@ -116,13 +118,14 @@ export default function ConsentementCookies({ pixelId, slug }: {
 
 /** Le lien du pied de page. N'apparaît que là où il y a quelque chose à gérer. */
 export function LienGererCookies({ pixelId }: { pixelId: string | null }) {
+  const t = useT()
   if (!pixelId) return null
   return (
     <button
       onClick={ouvrirGestionCookies}
       className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 underline transition-colors"
     >
-      Gérer mes cookies
+      {t('Gérer mes cookies')}
     </button>
   )
 }

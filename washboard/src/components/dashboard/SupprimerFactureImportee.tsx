@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useT } from '@/components/i18n/I18nProvider'
 
 /** Supprime une facture importée par erreur (mauvais fichier, doublon). Les
  *  factures émises par WashBoard, elles, ne se suppriment jamais : une facture
  *  émise ne s'efface pas, elle s'annule par un avoir. */
 export function SupprimerFactureImportee({ id, nom }: { id: string; nom: string }) {
+  const t = useT()
   const router = useRouter()
   const [enCours, setEnCours] = useState(false)
 
@@ -16,7 +18,7 @@ export function SupprimerFactureImportee({ id, nom }: { id: string; nom: string 
     const res = await fetch(`/api/factures/importees/${id}`, { method: 'DELETE' })
     setEnCours(false)
     if (res.ok) router.refresh()
-    else alert('La suppression a échoué. Réessayez dans un instant.')
+    else alert(t('La suppression a échoué. Réessayez dans un instant.'))
   }
 
   return (
@@ -27,7 +29,7 @@ export function SupprimerFactureImportee({ id, nom }: { id: string; nom: string 
       aria-label={`Supprimer la facture importée ${nom}`}
       className="text-sm text-slate-400 hover:text-red-600 disabled:opacity-40 transition-colors"
     >
-      Supprimer
+      {t('Supprimer')}
     </button>
   )
 }

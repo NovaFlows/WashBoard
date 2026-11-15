@@ -21,6 +21,8 @@ import { paysDuTelephone, whatsappDigits } from '@/lib/phone'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 import { pixelIdValide, pixelIdDev } from '@/lib/consentement'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
+import { getLangue } from '@/lib/i18n/serveur'
+import { LOCALES_INTL } from '@/lib/i18n/langues'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -391,7 +393,8 @@ export default async function BookingPage({ params }: Props) {
 // sur cette page, donc un texte simple plutôt qu'un lien vers une ancre
 // qui n'existe plus.
 async function ReviewSummary({ websiteUrl, googlePlaceId }: { websiteUrl: string | null; googlePlaceId: string | null }) {
+  const loc = LOCALES_INTL[await getLangue()]
   const { aggregate } = await reviewsForWasher({ website_url: websiteUrl, google_place_id: googlePlaceId })
   if (!aggregate || aggregate.count <= 0) return null
-  return <span>★ {aggregate.value.toLocaleString('fr-FR')} · {aggregate.count} avis</span>
+  return <span>★ {aggregate.value.toLocaleString(loc)} · {aggregate.count} avis</span>
 }

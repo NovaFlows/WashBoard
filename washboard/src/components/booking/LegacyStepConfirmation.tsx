@@ -1,3 +1,5 @@
+'use client'
+
 import type { Service } from '@/types'
 import type { FormState } from './LegacyBookingForm'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
@@ -5,6 +7,7 @@ import { formatPrice } from '@/lib/pricing'
 import { remisePromotion, type PromotionPublique } from '@/lib/promotion'
 import EncartAcompte, { type AcompteDu } from './EncartAcompte'
 import CarteApresReservation, { type FideliteDue } from './CarteApresReservation'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 type Props = {
   washerName: string
@@ -21,6 +24,8 @@ type Props = {
 }
 
 export default function LegacyStepConfirmation({ washerName, bookingId, jeton, form, services, promotion = null, acompte = null, accent, fidelite = null, washerId }: Props) {
+  const loc = useLocale()
+  const t = useT()
   const service = services.find(s => s.id === form.service_id)
   const date = form.scheduled_at ? new Date(form.scheduled_at) : null
   const displayPrice = form.booked_price ?? service?.price ?? 0
@@ -36,8 +41,8 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
         </svg>
       </div>
 
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">Réservation envoyée !</h2>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Un email de confirmation vous a été envoyé</p>
+      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">{t('Réservation envoyée !')}</h2>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{t('Un email de confirmation vous a été envoyé')}</p>
 
       {fidelite && washerId && <CarteApresReservation fidelite={fidelite} washerId={washerId} />}
 
@@ -48,10 +53,10 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
       )}
 
       <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left space-y-3 mb-5">
-        <Row label="Prestataire" value={washerName} />
+        <Row label={t('Prestataire')} value={washerName} />
         {service && (
           <Row
-            label="Prestation"
+            label={t('Prestation')}
             value={
               form.is_smart_slot && Number(form.smart_discount) > 0
                 ? `${service.name} — ${formatPrice(displayPrice - Number(form.smart_discount))} ★`
@@ -62,7 +67,7 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
         {form.vehicles_detail && form.vehicles_detail.length > 0 && (
           <div className="flex justify-between text-sm gap-3">
             <span className="text-slate-500 dark:text-slate-400 shrink-0">
-              Véhicule{form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}
+              {t('Véhicule')}{form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}
             </span>
             <div className="font-medium text-slate-900 dark:text-slate-100 text-right space-y-0.5">
               {form.vehicles_detail.flatMap(v => {
@@ -82,14 +87,14 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
           ))
         )}
         {form.travel_fee != null && form.travel_fee > 0 && (
-          <Row label="Frais de déplacement" value={`+${form.travel_fee}€`} />
+          <Row label={t('Frais de déplacement')} value={`+${form.travel_fee}€`} />
         )}
         {remise > 0 && promotion && (
           <Row label={`Promotion ${promotion.nom}`} value={`−${formatPrice(remise)}`} />
         )}
         {(frais > 0 || remise > 0) && (
           <div className="flex justify-between text-sm gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Total</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">{t('Total')}</span>
             <span className="font-bold text-slate-900 dark:text-slate-100">
               {formatPrice(displayPrice + frais - remise - (form.is_smart_slot ? Number(form.smart_discount ?? 0) : 0))}
             </span>
@@ -97,16 +102,16 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
         )}
         {date && (
           <Row
-            label="Date & heure"
-            value={`${date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+            label={t('Date & heure')}
+            value={`${date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })}`}
           />
         )}
         {form.address && <Row label={form.lieu === 'centre' ? 'En centre auto' : 'Adresse'} value={form.address} right />}
-        {form.notes && <Row label="Note" value={form.notes} right />}
+        {form.notes && <Row label={t('Note')} value={form.notes} right />}
       </div>
 
       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg mb-5">
-        <span className="text-xs text-slate-500 dark:text-slate-400">Référence</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{t('Référence')}</span>
         <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
           {bookingId.slice(0, 8).toUpperCase()}
         </span>
@@ -120,7 +125,7 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         </svg>
-        Télécharger la confirmation PDF
+        {t('Télécharger la confirmation PDF')}
       </a>
     </div>
   )

@@ -11,6 +11,7 @@ import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import SelecteurPeriodeV2 from '@/components/dashboard/SelecteurPeriodeV2'
 import { aujourdhuiParis, type PeriodeChiffres } from '@/lib/chiffresPeriode'
 import type { FactureManuelle } from '@/lib/chiffresArgent'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Chiffres » — refonte 2026, passe 5. Fusionne l'ancien CRM
 // (visiteurs/entonnoir/sources, aujourd'hui /dashboard/crm) et la
@@ -96,6 +97,7 @@ export default function ChiffresV2({
   bookings, facturesManuelles, events, websiteHost, hasCrm, hasCa, hasCompta, facturesCount,
   facturesImpayees, evenementsDepuis, reservationsIncompletes, evenementsIncomplets,
 }: ChiffresProps) {
+  const t = useT()
   const [onglet, setOnglet] = useState<Onglet>('argent')
   // Lu une seule fois : tout l'écran calcule sur le même « maintenant ».
   const [maintenant] = useState(() => Date.now())
@@ -108,7 +110,7 @@ export default function ChiffresV2({
   const grandEcran = useGrandEcran()
 
   const ongletsPills = (
-    <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Chiffres">
+    <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label={t('Chiffres')}>
       {ONGLETS.map(o => (
         <button
           key={o.cle}
@@ -134,9 +136,9 @@ export default function ChiffresV2({
       className={`${grandEcran ? '' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-6'} space-y-5 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] ${police}`}
     >
       <div>
-        <h1 className={`text-[21px] ${titre}`}>Chiffres</h1>
+        <h1 className={`text-[21px] ${titre}`}>{t('Chiffres')}</h1>
         <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-1`}>
-          Argent, acquisition et clients — au même endroit
+          {t('Argent, acquisition et clients — au même endroit')}
         </p>
       </div>
 
@@ -176,15 +178,15 @@ export default function ChiffresV2({
       )}
       {onglet === 'acquisition' && !hasCrm && (
         <OffreVerrouilleeV2
-          titre="Sachez d’où viennent vos clients"
-          description="Visites de votre page, réservations, sources : tout ce qui mène à un rendez-vous."
+          titre={t('Sachez d’où viennent vos clients')}
+          description={t('Visites de votre page, réservations, sources : tout ce qui mène à un rendez-vous.')}
           feature="crm"
         />
       )}
       {onglet === 'clients' && !hasCrm && (
         <OffreVerrouilleeV2
-          titre="Connaissez vos clients"
-          description="Vos meilleurs clients, ceux à relancer, la part de pros et de particuliers."
+          titre={t('Connaissez vos clients')}
+          description={t('Vos meilleurs clients, ceux à relancer, la part de pros et de particuliers.')}
           feature="crm"
         />
       )}

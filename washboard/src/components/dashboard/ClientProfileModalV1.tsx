@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { Building2, X, Phone, Mail, MapPin } from 'lucide-react'
 import type { ClientProfile } from '@/lib/clientProfile'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // La fiche client, présentation v1 — reprise à l'identique du commit
 // 8a1efa6 (dernier avant que cet écran passe en v2). C'est ce que voit tout
@@ -18,8 +19,8 @@ const STATUS: Record<string, { bg: string; text: string; label: string }> = {
   closed_late: { bg: 'bg-orange-100 dark:bg-orange-900/40',   text: 'text-orange-700 dark:text-orange-400',   label: 'Délai dépassé' },
 }
 
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+const fmtDate = (iso: string, loc = 'fr-FR') =>
+  new Date(iso).toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' })
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -38,6 +39,8 @@ export default function ClientProfileModalV1({
   profile: ClientProfile
   onClose: () => void
 }) {
+  const loc = useLocale()
+  const t = useT()
   const closeRef = useRef<HTMLButtonElement>(null)
 
   // Échap pour fermer, et focus sur la fermeture à l'ouverture : la fiche
@@ -84,7 +87,7 @@ export default function ClientProfileModalV1({
           <button
             ref={closeRef}
             onClick={onClose}
-            aria-label="Fermer la fiche"
+            aria-label={t('Fermer la fiche')}
             className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shrink-0"
           >
             <X size={18} />
@@ -93,14 +96,14 @@ export default function ClientProfileModalV1({
 
         <div className="p-5 space-y-5">
           <div className="grid grid-cols-3 gap-2">
-            <Stat label="Lavages" value={String(profile.honoredCount)} hint={profile.cancelledCount ? `${profile.cancelledCount} annulé${profile.cancelledCount > 1 ? 's' : ''}` : undefined} />
-            <Stat label="Total" value={`${profile.totalRevenue}€`} />
-            <Stat label="Panier moyen" value={`${profile.averageBasket}€`} />
+            <Stat label={t('Lavages')} value={String(profile.honoredCount)} hint={profile.cancelledCount ? `${profile.cancelledCount} annulé${profile.cancelledCount > 1 ? 's' : ''}` : undefined} />
+            <Stat label={t('Total')} value={`${profile.totalRevenue}€`} />
+            <Stat label={t('Panier moyen')} value={`${profile.averageBasket}€`} />
           </div>
 
           {profile.daysSinceLastVisit !== null && profile.daysSinceLastVisit >= 90 && (
             <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl px-3 py-2">
-              Pas revenu depuis {profile.daysSinceLastVisit} jours — bon candidat à une relance.
+              {t('Pas revenu depuis')} {profile.daysSinceLastVisit} {t('jours — bon candidat à une relance.')}
             </p>
           )}
 
@@ -125,7 +128,7 @@ export default function ClientProfileModalV1({
 
           <div>
             <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500 font-semibold mb-2">
-              Historique ({profile.bookings.length})
+              {t('Historique (')}{profile.bookings.length})
             </p>
             <div className="space-y-0">
               {profile.bookings.map(b => {
@@ -136,7 +139,7 @@ export default function ClientProfileModalV1({
                       <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
                         {b.services?.name ?? 'Prestation'}
                       </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{fmtDate(b.scheduled_at)}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{fmtDate(b.scheduled_at, loc)}</p>
                     </div>
                     <span className="font-semibold text-sm text-slate-700 dark:text-slate-300 tabular-nums shrink-0">
                       {b.booked_price ?? b.services?.price ?? 0}€

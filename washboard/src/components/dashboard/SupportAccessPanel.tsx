@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale } from '@/components/i18n/I18nProvider'
 
 // Le laveur ouvre, surveille et referme l'accès du support à son compte.
 //
@@ -11,6 +12,7 @@ import { useEffect, useState } from 'react'
 type Etat = { active: boolean; minutesLeft: number; lastUsedAt: string | null }
 
 export function SupportAccessPanel() {
+  const loc = useLocale()
   const [etat, setEtat] = useState<Etat | null>(null)
   const [occupe, setOccupe] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -54,7 +56,7 @@ export function SupportAccessPanel() {
   if (!etat && !erreur) return null
 
   const dernierAcces = etat?.lastUsedAt
-    ? new Date(etat.lastUsedAt).toLocaleString('fr-FR', {
+    ? new Date(etat.lastUsedAt).toLocaleString(loc, {
         day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
       })
     : null

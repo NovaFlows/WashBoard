@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, X } from 'lucide-react'
 import { lireMontant } from '@/lib/cloture'
 import { CHAMP } from '@/components/dashboard/FeuilleV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Même composant que ConfirmerCloture.tsx (mêmes props, même texte, même
 // logique de décision — voir `doitDemanderConfirmation` dans `lib/cloture.ts`,
@@ -48,6 +49,7 @@ export default function ConfirmerClotureV2({
   onPasFait: () => void
   onClose: () => void
 }) {
+  const t = useT()
   const panneauRef = useRef<HTMLDivElement>(null)
   const [saisie, setSaisie] = useState(() => formater(montantPrevu))
   const montant = lireMontant(saisie)
@@ -60,10 +62,10 @@ export default function ConfirmerClotureV2({
   }, [onClose])
 
   const suiteFait = !facturationPrete
-    ? 'Il passe en « Terminé ». Pour la facture, complétez d’abord vos informations de facturation dans les réglages.'
+    ? t('Il passe en « Terminé ». Pour la facture, complétez d’abord vos informations de facturation dans les réglages.')
     : professionnel
-      ? 'Il passe en « Terminé ». La facture est créée pour vous et envoyée par email à votre client professionnel.'
-      : 'Il passe en « Terminé ». La facture est créée pour vous : vous la retrouvez dans Chiffres › Factures.'
+      ? t('Il passe en « Terminé ». La facture est créée pour vous et envoyée par email à votre client professionnel.')
+      : t('Il passe en « Terminé ». La facture est créée pour vous : vous la retrouvez dans Chiffres › Factures.')
 
   return (
     <div
@@ -86,14 +88,14 @@ export default function ConfirmerClotureV2({
         className={`relative w-full max-w-sm rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] text-[color:var(--v2-color-encre)] ${police} p-5`}
       >
         <h2 id="cloture-titre-v2" className={`text-[17px] ${titre}`}>
-          {passe ? 'Avez-vous fait ce rendez-vous ?' : 'Clôturer ce rendez-vous'}
+          {passe ? t('Avez-vous fait ce rendez-vous ?') : t('Clôturer ce rendez-vous')}
         </h2>
         <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
           {clientName} · <span className="first-letter:uppercase inline-block">{quand}</span>
         </p>
 
         <div className="mt-4">
-          <label htmlFor="cloture-montant" className={`block text-[13px] ${corpsFort}`}>Montant encaissé</label>
+          <label htmlFor="cloture-montant" className={`block text-[13px] ${corpsFort}`}>{t('Montant encaissé')}</label>
           <div className="relative mt-1.5">
             <input
               id="cloture-montant"
@@ -109,9 +111,9 @@ export default function ConfirmerClotureV2({
           </div>
           <p id="cloture-montant-aide" className={`mt-1 text-[12px] ${corps}`} style={{ color: montant === null ? 'var(--v2-color-rouge)' : 'var(--v2-color-gris)' }}>
             {montant === null
-              ? 'Indiquez un montant, par exemple 45 ou 45,50.'
+              ? t('Indiquez un montant, par exemple 45 ou 45,50.')
               : montant === montantPrevu
-                ? 'Le prix prévu. Changez-le si votre client a payé autre chose.'
+                ? t('Le prix prévu. Changez-le si votre client a payé autre chose.')
                 : `Prévu : ${formater(montantPrevu)} €. La facture et vos chiffres prendront ${formater(montant)} €.`}
           </p>
         </div>
@@ -130,7 +132,7 @@ export default function ConfirmerClotureV2({
               <Check size={16} strokeWidth={3} />
             </span>
             <span>
-              <span className={`block text-[14px] ${corpsFort}`} style={{ color: 'var(--v2-color-vert)' }}>{passe ? 'Oui, je l’ai fait' : 'Marquer terminé'}</span>
+              <span className={`block text-[14px] ${corpsFort}`} style={{ color: 'var(--v2-color-vert)' }}>{passe ? t('Oui, je l’ai fait') : t('Marquer terminé')}</span>
               <span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>{suiteFait}</span>
             </span>
           </button>
@@ -147,9 +149,9 @@ export default function ConfirmerClotureV2({
               <X size={16} strokeWidth={3} />
             </span>
             <span>
-              <span className={`block text-[14px] ${corpsFort}`} style={{ color: 'var(--v2-color-rouge)' }}>Non, il n’a pas eu lieu</span>
+              <span className={`block text-[14px] ${corpsFort}`} style={{ color: 'var(--v2-color-rouge)' }}>{t('Non, il n’a pas eu lieu')}</span>
               <span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>
-                Il est annulé : aucune facture, il ne compte pas dans votre compta, et votre client ne reçoit aucun message.
+                {t('Il est annulé : aucune facture, il ne compte pas dans votre compta, et votre client ne reçoit aucun message.')}
               </span>
             </span>
           </button>}
@@ -159,7 +161,7 @@ export default function ConfirmerClotureV2({
           onClick={onClose}
           className={`w-full mt-3 py-2 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] hover:text-[color:var(--v2-color-encre)] rounded-[var(--v2-radius-bouton)] transition-colors`}
         >
-          Revenir
+          {t('Revenir')}
         </button>
       </div>
     </div>

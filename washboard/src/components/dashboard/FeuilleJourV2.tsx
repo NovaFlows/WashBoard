@@ -4,6 +4,7 @@ import type { Availability } from '@/types'
 import { Feuille, BOUTON, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import { TEXTE_ROUGE } from '@/components/dashboard/PrestationsUiV2'
 import { NOMS_JOURS, libellePlage, plagesDuJour } from '@/lib/horaires'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Les plages d'un jour, en feuille du bas — ouverte par un tap sur la ligne du
 // jour dans HorairesV2. Retirer une plage demande une confirmation (feuille
@@ -19,6 +20,7 @@ type Props = {
 }
 
 export default function FeuilleJourV2({ jour, plages, onAjouter, onRetirer, onClose }: Props) {
+  const t = useT()
   const nomJour = NOMS_JOURS[jour]
   const duJour = plagesDuJour(plages, jour)
 
@@ -26,7 +28,7 @@ export default function FeuilleJourV2({ jour, plages, onAjouter, onRetirer, onCl
     <Feuille titre={nomJour} onClose={onClose}>
       {duJour.length === 0 ? (
         <p className={`text-[15px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Fermé : aucun créneau réservable le {nomJour.toLowerCase()}.
+          {t('Fermé : aucun créneau réservable le')} {nomJour.toLowerCase()}.
         </p>
       ) : (
         <ul className="divide-y divide-[color:var(--v2-filet)]">
@@ -40,7 +42,7 @@ export default function FeuilleJourV2({ jour, plages, onAjouter, onRetirer, onCl
                 className={`-mr-2 flex h-11 shrink-0 items-center px-2 text-[15px] ${corpsFort}`}
                 style={{ color: TEXTE_ROUGE }}
               >
-                Retirer
+                {t('Retirer')}
               </button>
             </li>
           ))}
@@ -53,7 +55,7 @@ export default function FeuilleJourV2({ jour, plages, onAjouter, onRetirer, onCl
         className={`${BOUTON} mt-4 w-full border border-[color:var(--v2-color-encre)] text-[color:var(--v2-color-encre)]`}
         style={PRESSION}
       >
-        + Ajouter une plage le {nomJour.toLowerCase()}
+        {t('+ Ajouter une plage le')} {nomJour.toLowerCase()}
       </button>
     </Feuille>
   )

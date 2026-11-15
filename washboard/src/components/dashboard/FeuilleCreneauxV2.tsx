@@ -10,6 +10,7 @@ import {
   type ChampCreneaux, type ChampsCreneaux, type FormulaireCreneaux, type PrestationExemple,
   type ReglagesCreneaux, type TypeRemise,
 } from '@/lib/creneauxForm'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Créneaux intelligents » — feuille du bas de l'écran « Prestations et prix »
 // (refonte 2026, PWA installée seulement). Reprend la carte `#creneaux` de
@@ -33,6 +34,7 @@ type Props = {
 }
 
 export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas, onEnregistrer, onClose }: Props) {
+  const t = useT()
   const [f, setF] = useState<FormulaireCreneaux>(() => formulaireDepuisReglages(reglages))
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -77,33 +79,33 @@ export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas,
 
   return (
     <Feuille
-      titre="Créneaux intelligents"
+      titre={t('Créneaux intelligents')}
       verrou="creneaux_intelligents"
-      sousTitre="Une remise sur les créneaux proches d’un rendez-vous déjà pris, pour regrouper vos trajets."
+      sousTitre={t('Une remise sur les créneaux proches d’un rendez-vous déjà pris, pour regrouper vos trajets.')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="feuille-creneaux" />}
+      pied={<Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="feuille-creneaux" />}
     >
       <form id="feuille-creneaux" onSubmit={valider} noValidate>
         <div className="mb-5 flex items-center gap-3">
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className={`text-[15.5px] ${corpsFort}`}>Proposer une remise</span>
+            <span className={`text-[15.5px] ${corpsFort}`}>{t('Proposer une remise')}</span>
             {!f.actif && (
               <span className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                Vos créneaux sont tous au même prix
+                {t('Vos créneaux sont tous au même prix')}
               </span>
             )}
           </span>
           <Interrupteur
             actif={f.actif}
             enCours={false}
-            libelle="Proposer une remise"
+            libelle={t('Proposer une remise')}
             onClick={() => modifier({ actif: !f.actif })}
           />
         </div>
 
         {f.actif && (
           <>
-            <Bloc titre="Un client proche, c’est à combien de temps ?">
+            <Bloc titre={t('Un client proche, c’est à combien de temps ?')}>
               <Puces
                 nom="Temps de voiture"
                 valeurs={PROXIMITES}
@@ -125,11 +127,11 @@ export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas,
                     max={PROXIMITE_MAX}
                     value={f.proximite}
                     onChange={e => modifier({ proximite: e.target.value })}
-                    aria-label="Temps de voiture en minutes"
+                    aria-label={t('Temps de voiture en minutes')}
                     aria-invalid={!!erreurDe('proximite')}
                     className={`${CHAMP} !w-24`}
                   />
-                  <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>min</span>
+                  <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('min')}</span>
                 </div>
               )}
               {erreurDe('proximite') && (
@@ -144,8 +146,8 @@ export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas,
               )}
             </Bloc>
 
-            <Bloc titre="Remise">
-              <div className="flex gap-2.5" role="group" aria-label="Forme de la remise">
+            <Bloc titre={t('Remise')}>
+              <div className="flex gap-2.5" role="group" aria-label={t('Forme de la remise')}>
                 {([['fixed', 'En euros'], ['percent', 'En pourcentage']] as const).map(([id, label]) => {
                   const actif = f.type === id
                   return (
@@ -169,7 +171,7 @@ export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas,
 
               <div className="mt-3">
                 <Puces
-                  nom="Montant de la remise"
+                  nom={t('Montant de la remise')}
                   valeurs={presetsRemise}
                   libelle={v => (f.type === 'percent' ? `${v} %` : `${v} €`)}
                   valeur={choixRemise}

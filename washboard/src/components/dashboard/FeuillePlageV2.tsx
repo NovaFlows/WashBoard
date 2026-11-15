@@ -7,6 +7,7 @@ import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import {
   HEURES_CHOIX, JOURS_AFFICHES, NOMS_COURTS, NOMS_JOURS, analyserAjout, phraseEchecAjout, type ResultatJour,
 } from '@/lib/horaires'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Ajout d'une plage d'ouverture, en feuille du bas — refonte 2026, réservée à la
 // PWA installée (ouverte par HorairesV2.tsx uniquement ; le site garde
@@ -35,6 +36,7 @@ type Props = {
 }
 
 export default function FeuillePlageV2({ joursInitiaux, plages, onAjouter, onClose }: Props) {
+  const t = useT()
   const [jours, setJours] = useState(joursInitiaux)
   const [debut, setDebut] = useState('08:00')
   const [fin, setFin] = useState('18:00')
@@ -70,12 +72,12 @@ export default function FeuillePlageV2({ joursInitiaux, plages, onAjouter, onClo
         <div className="mb-3 space-y-1">
           <Constat ton="rouge" role="alert">{echec}</Constat>
           <p className={`pl-[15px] text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Les jours en échec restent cochés : vous pouvez réessayer.
+            {t('Les jours en échec restent cochés : vous pouvez réessayer.')}
           </p>
         </div>
       )}
       {jours.length === 0 && !enCours && (
-        <p className={`mb-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>Cochez au moins un jour.</p>
+        <p className={`mb-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Cochez au moins un jour.')}</p>
       )}
       <div className="flex gap-2.5">
         <button
@@ -101,14 +103,14 @@ export default function FeuillePlageV2({ joursInitiaux, plages, onAjouter, onClo
 
   return (
     <Feuille
-      titre="Nouvelle plage"
-      sousTitre="Vos clients réservent pendant ces heures."
+      titre={t('Nouvelle plage')}
+      sousTitre={t('Vos clients réservent pendant ces heures.')}
       onClose={onClose}
       pied={pied}
     >
       <div className="space-y-5 pb-2">
         <div>
-          <p className={ETIQUETTE} id="plage-jours">Jours</p>
+          <p className={ETIQUETTE} id="plage-jours">{t('Jours')}</p>
           <div className="grid grid-cols-4 gap-2" role="group" aria-labelledby="plage-jours">
             {JOURS_AFFICHES.map(j => {
               const actif = jours.includes(j)
@@ -132,13 +134,13 @@ export default function FeuillePlageV2({ joursInitiaux, plages, onAjouter, onClo
         <div>
           <div className="flex gap-3">
             <div className="min-w-0 flex-1">
-              <label htmlFor="plage-debut" className={ETIQUETTE}>Début</label>
+              <label htmlFor="plage-debut" className={ETIQUETTE}>{t('Début')}</label>
               <select id="plage-debut" value={debut} onChange={e => setDebut(e.target.value)} className={`${CHAMP} tabular-nums`}>
                 {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
               </select>
             </div>
             <div className="min-w-0 flex-1">
-              <label htmlFor="plage-fin" className={ETIQUETTE}>Fin</label>
+              <label htmlFor="plage-fin" className={ETIQUETTE}>{t('Fin')}</label>
               <select id="plage-fin" value={fin} onChange={e => setFin(e.target.value)} className={`${CHAMP} tabular-nums`}>
                 {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
               </select>

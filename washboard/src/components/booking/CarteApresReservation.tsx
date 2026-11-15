@@ -3,6 +3,7 @@
 import { formatPrice } from '@/lib/pricing'
 import CarteFidelite3D from '@/components/fidelite/CarteFidelite3D'
 import type { ApparenceCarte } from '@/lib/carteFidelite'
+import { useT } from '@/components/i18n/I18nProvider'
 
 /** La carte de fidélité telle que le serveur la renvoie après la réservation (`api/bookings`). */
 export type FideliteDue = {
@@ -21,6 +22,7 @@ export type FideliteDue = {
 // 2026-10-18 : le vrai tampon arrive quand le laveur marque la prestation terminée, avec
 // l'email « Votre tampon est arrivé »).
 export default function CarteApresReservation({ fidelite }: { fidelite: FideliteDue; washerId?: string }) {
+  const t = useT()
   const { etat, carte } = fidelite
   const complete = etat.disponibles > 0
   const surLaCarte = complete ? etat.requis : etat.progression
@@ -30,10 +32,10 @@ export default function CarteApresReservation({ fidelite }: { fidelite: Fidelite
   if (!carte) {
     return (
       <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left text-sm leading-relaxed text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
-        {fidelite.remise > 0 && <p className="font-semibold">Récompense fidélité appliquée : −{formatPrice(fidelite.remise)}</p>}
-        <p className={fidelite.remise > 0 ? 'mt-1' : 'font-semibold'}>Carte de fidélité : {etat.progression} / {etat.requis}</p>
+        {fidelite.remise > 0 && <p className="font-semibold">{t('Récompense fidélité appliquée : −')}{formatPrice(fidelite.remise)}</p>}
+        <p className={fidelite.remise > 0 ? 'mt-1' : 'font-semibold'}>{t('Carte de fidélité :')} {etat.progression} / {etat.requis}</p>
         <p className="mt-0.5 opacity-90">{fidelite.phrase}</p>
-        <a href={lien} className="mt-2 inline-block font-semibold underline underline-offset-2">Voir ma carte</a>
+        <a href={lien} className="mt-2 inline-block font-semibold underline underline-offset-2">{t('Voir ma carte')}</a>
       </div>
     )
   }
@@ -42,7 +44,7 @@ export default function CarteApresReservation({ fidelite }: { fidelite: Fidelite
     <div className="mb-5">
       {fidelite.remise > 0 && (
         <p className="mx-auto w-fit rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
-          Récompense fidélité appliquée : −{formatPrice(fidelite.remise)}
+          {t('Récompense fidélité appliquée : −')}{formatPrice(fidelite.remise)}
         </p>
       )}
       <div className="-mx-2">
@@ -53,11 +55,11 @@ export default function CarteApresReservation({ fidelite }: { fidelite: Fidelite
           scenario="reservation"
           nouveaux={gain}
           largeur={340}
-          legende={complete ? 'Votre récompense vous attend pour la prochaine réservation' : `+${gain} tampon${gain > 1 ? 's' : ''} dès que la prestation sera terminée`}
+          legende={complete ? t('Votre récompense vous attend pour la prochaine réservation') : `+${gain} tampon${gain > 1 ? 's' : ''} dès que la prestation sera terminée`}
         />
       </div>
       <p className="mt-1 text-[13px] leading-snug text-slate-500 dark:text-slate-400">{fidelite.phrase}</p>
-      <a href={lien} className="mt-1.5 inline-block text-[13.5px] font-semibold text-slate-900 underline underline-offset-4 dark:text-slate-100">Voir ma carte</a>
+      <a href={lien} className="mt-1.5 inline-block text-[13.5px] font-semibold text-slate-900 underline underline-offset-4 dark:text-slate-100">{t('Voir ma carte')}</a>
     </div>
   )
 }

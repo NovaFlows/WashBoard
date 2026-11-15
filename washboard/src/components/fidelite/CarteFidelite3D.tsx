@@ -3,6 +3,7 @@
 import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as PointerEventReact, type Ref } from 'react'
 import { teintesCarte, variablesCarte, type FinitionCarte } from '@/lib/carteFidelite'
 import './carteFidelite3D.css'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // La carte de fidélité en 3D — maquette validée par Alexandre le 2026-10-18 (« on garde tout
 // comme ça »). Elle apparaît, se retourne et reçoit son tampon ; on l'incline à la souris ou
@@ -74,6 +75,7 @@ function disposition(n: number) {
 }
 
 export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, requis, tampons, recompense, scenario, nouveaux = 1, legende, largeur = 360, halo = true, ref }: Props) {
+  const tr = useT()
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const idEncre = `wb-cf-encre-${uid}`
   const idOr = `wb-cf-or-${uid}`
@@ -423,17 +425,17 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
                     </div>
                     <div className="wb-cf-ident">
                       <div className="wb-cf-nom">{nom}</div>
-                      <div className="wb-cf-sous">Carte de fidélité</div>
+                      <div className="wb-cf-sous">{tr('Carte de fidélité')}</div>
                     </div>
                     {numero && <div className="wb-cf-numero">N° {numero}</div>}
                   </div>
                   <div className="wb-cf-bas">
                     <div style={{ minWidth: 0 }}>
-                      <span className="wb-cf-lbl">Récompense</span>
+                      <span className="wb-cf-lbl">{tr('Récompense')}</span>
                       <span className="wb-cf-val">{recompense}</span>
                     </div>
                     <div className="wb-cf-compte">
-                      <span className="wb-cf-lbl">Tampons</span>
+                      <span className="wb-cf-lbl">{tr('Tampons')}</span>
                       <span key={saut} className={`wb-cf-val wb-cf-gros${saut ? ' wb-cf-saute' : ''}`}>{nPleins}/{requis}</span>
                     </div>
                   </div>
@@ -445,7 +447,7 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
                 <div className="wb-cf-fond" /><div className="wb-cf-lignes" /><div className="wb-cf-grain" />
                 <div className="wb-cf-bande" />
                 <div className="wb-cf-panneau" data-complet={complet ? 'oui' : 'non'}>
-                  <div className="wb-cf-panneau-titre">Vos tampons <span key={saut} className={saut ? 'wb-cf-saute' : ''}>{nPleins} / {requis}</span></div>
+                  <div className="wb-cf-panneau-titre">{tr('Vos tampons')} <span key={saut} className={saut ? 'wb-cf-saute' : ''}>{nPleins} / {requis}</span></div>
                   <div ref={grille} className="wb-cf-grille" aria-label={libelleCases} role="img">
                     {Array.from({ length: requis }, (_, i) => {
                       const dore = i === requis - 1

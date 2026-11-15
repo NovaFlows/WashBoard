@@ -5,6 +5,7 @@ import { Feuille, BOUTON, PRESSION, corps, corpsFort } from '@/components/dashbo
 import { confirmerEnvoi, annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import { libelleGenre, messageWhatsapp, nomFichierDocument, partagerPdf, type Document } from '@/lib/documents'
 import { whatsappDigits } from '@/lib/phone'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // Ce qu'on peut encore faire d'un document, une fois ouvert — extrait de `DocumentsV2.tsx` le
 // 2026-09-28 pour que la Fiche entreprise puisse ouvrir la MÊME feuille sur une facture
@@ -18,8 +19,8 @@ import { whatsappDigits } from '@/lib/phone'
 
 const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' })
 
-const jourCourt = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+const jourCourt = (iso: string, loc = 'fr-FR') =>
+  new Date(iso).toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' })
 
 /** Le pictogramme WhatsApp, exporté pour que le panneau bureau de `DocumentsV2.tsx`
  *  (`FicheDocumentBureauV2`) puisse réutiliser exactement le même trait plutôt que de le
@@ -47,6 +48,8 @@ export default function FeuilleActionsDocumentV2({
   onSupprimer: () => void
   onClose: () => void
 }) {
+  const loc = useLocale()
+  const t = useT()
   const devis = d.genre === 'devis'
   const client = d.contenu.client.entreprise || d.contenu.client.nom
   const secondaire = `${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`
@@ -59,7 +62,7 @@ export default function FeuilleActionsDocumentV2({
           className={`${BOUTON} w-full text-white`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          Télécharger le PDF
+          {t('Télécharger le PDF')}
         </a>
         {d.contenu.client.telephone && (
           <a
@@ -68,7 +71,7 @@ export default function FeuilleActionsDocumentV2({
             style={PRESSION}
           >
             <Phone size={16} strokeWidth={2} aria-hidden />
-            Appeler {client}
+            {t('Appeler')} {client}
           </a>
         )}
         {/* WhatsApp : c'est par là que les clients des laveurs répondent. Le PDF n'y est pas
@@ -90,10 +93,10 @@ export default function FeuilleActionsDocumentV2({
               if (partage === 'annule') return
               const cible = `${libelleGenre(d.genre)} ${d.numero ?? ''}`.trim()
               if (partage === 'envoye') {
-                confirmerEnvoi({ titre: 'PDF envoyé', detail: `${cible} pour ${client}` })
+                confirmerEnvoi({ titre: t('PDF envoyé'), detail: `${cible} pour ${client}` })
                 return
               }
-              annoncerApresRetour({ titre: 'Message envoyé', detail: `${cible} pour ${client}` })
+              annoncerApresRetour({ titre: t('Message envoyé'), detail: `${cible} pour ${client}` })
               // Repli (ordinateur, navigateur trop ancien) : `wa.me` ne transporte qu'un
               // message, le lien y est donc indispensable — sinon le client n'a rien.
               window.open(
@@ -105,11 +108,11 @@ export default function FeuilleActionsDocumentV2({
             style={PRESSION}
           >
             <IconeWhatsapp />
-            Envoyer le PDF (WhatsApp…)
+            {t('Envoyer le PDF (WhatsApp…)')}
           </button>
         )}
         <button type="button" onClick={onEnvoyer} disabled={occupe} className={secondaire} style={PRESSION}>
-          {d.envoye_le ? 'Renvoyer par email' : 'Envoyer par email'}
+          {d.envoye_le ? 'Renvoyer par email' : t('Envoyer par email')}
         </button>
 
         {devis && d.statut !== 'transforme' && (
@@ -124,15 +127,15 @@ export default function FeuilleActionsDocumentV2({
                 className={`${BOUTON} w-full text-white`}
                 style={{ background: 'var(--v2-color-vert)', ...PRESSION }}
               >
-                Transformer en facture
+                {t('Transformer en facture')}
               </button>
             ) : (
               <div className="flex gap-2.5">
                 <button type="button" onClick={() => onRepondre('accepte')} disabled={occupe} className={`${secondaire} flex-1`} style={PRESSION}>
-                  Accepté
+                  {t('Accepté')}
                 </button>
                 <button type="button" onClick={() => onRepondre('refuse')} disabled={occupe} className={`${secondaire} flex-1`} style={PRESSION}>
-                  Refusé
+                  {t('Refusé')}
                 </button>
               </div>
             )}
@@ -143,7 +146,7 @@ export default function FeuilleActionsDocumentV2({
               className={`${BOUTON} w-full text-[color:var(--v2-color-rouge)]`}
               style={PRESSION}
             >
-              Supprimer ce devis
+              {t('Supprimer ce devis')}
             </button>
           </>
         )}
@@ -154,7 +157,7 @@ export default function FeuilleActionsDocumentV2({
             {d.paye_le ? (
               <>
                 <p className={`mt-1 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>
-                  Encaissée le {jourCourt(d.paye_le)} · comptée dans vos chiffres
+                  {t('Encaissée le')} {jourCourt(d.paye_le, loc)} {t('· comptée dans vos chiffres')}
                 </p>
                 <button
                   type="button"
@@ -162,7 +165,7 @@ export default function FeuilleActionsDocumentV2({
                   disabled={occupe}
                   className={`h-11 self-start text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)] underline`}
                 >
-                  Finalement, pas encore payée
+                  {t('Finalement, pas encore payée')}
                 </button>
               </>
             ) : (
@@ -173,12 +176,11 @@ export default function FeuilleActionsDocumentV2({
                 className={`${BOUTON} w-full text-white`}
                 style={{ background: 'var(--v2-color-vert)', ...PRESSION }}
               >
-                Marquer payée
+                {t('Marquer payée')}
               </button>
             )}
             <p className={`mt-1 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              Une facture émise ne se modifie ni ne se supprime : sa numérotation doit rester
-              continue. Une erreur se corrige par un avoir.
+              {t('Une facture émise ne se modifie ni ne se supprime : sa numérotation doit rester continue. Une erreur se corrige par un avoir.')}
             </p>
           </>
         )}

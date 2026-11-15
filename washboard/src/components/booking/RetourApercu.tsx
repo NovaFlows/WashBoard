@@ -3,12 +3,14 @@
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { usePwaStandalone } from '@/hooks/usePwaStandalone'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Dans la PWA installée, la page de réservation ouverte depuis l'application (« Voir »)
 // n'a ni barre d'adresse ni bouton retour : sans ceci, le laveur n'a aucun moyen de
 // revenir. Un client, lui, ouvre la page dans son navigateur : jamais en mode installé,
 // il ne voit donc jamais ce bouton.
 export default function RetourApercu() {
+  const t = useT()
   const router = useRouter()
   const isPwa = usePwaStandalone()
   if (!isPwa) return null
@@ -23,7 +25,7 @@ export default function RetourApercu() {
       style={{ top: 'calc(env(safe-area-inset-top, 0px) + 10px)' }}
     >
       <ArrowLeft size={16} strokeWidth={2.4} aria-hidden />
-      Retour
+      {t('Retour')}
     </button>
   )
 }

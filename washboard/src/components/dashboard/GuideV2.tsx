@@ -12,6 +12,7 @@ import { FilAriane } from '@/components/dashboard/ParametresFormV2'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import { redemarrerVisite } from '@/lib/visiteGuidee'
 import { estEcranRail } from '@/lib/grandEcran'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Guide d'utilisation » — refonte 2026 (Alexandre, 2026-09-27 : « c'est la même qu'avant la
 // refonte PWA »). Même contenu que le site, à la virgule près : `lib/guide.ts` reste la seule
@@ -93,6 +94,7 @@ type Props = {
 }
 
 export default function GuideV2({ liste }: Props) {
+  const tr = useT()
   const grandEcran = useGrandEcran()
   const router = useRouter()
   const [recherche, setRecherche] = useState('')
@@ -138,25 +140,25 @@ export default function GuideV2({ liste }: Props) {
     <div className={grandEcran ? '[font-family:var(--font-archivo)]' : 'max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]'}>
       {grandEcran ? (
         <div className="pb-3">
-          <FilAriane label="Réglages" href="/dashboard/parametres/reglages" />
-          <h1 className={`text-[20px] leading-none ${titre}`}>Guide d’utilisation</h1>
+          <FilAriane label={tr('Réglages')} href="/dashboard/parametres/reglages" />
+          <h1 className={`text-[20px] leading-none ${titre}`}>{tr('Guide d’utilisation')}</h1>
           <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Comment marche WashBoard, question par question
+            {tr('Comment marche WashBoard, question par question')}
           </p>
         </div>
       ) : (
         <div className="flex items-center gap-1 pb-2">
           <Link
             href="/dashboard/parametres"
-            aria-label="Retour à Plus"
+            aria-label={tr('Retour à Plus')}
             className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
           >
             <ChevronLeft size={22} strokeWidth={2} />
           </Link>
           <div className="min-w-0 flex-1">
-            <h1 className={`text-[24px] leading-none ${titre}`}>Guide d’utilisation</h1>
+            <h1 className={`text-[24px] leading-none ${titre}`}>{tr('Guide d’utilisation')}</h1>
             <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Comment marche WashBoard, question par question
+              {tr('Comment marche WashBoard, question par question')}
             </p>
           </div>
         </div>
@@ -173,8 +175,8 @@ export default function GuideV2({ liste }: Props) {
           inputMode="search"
           value={recherche}
           onChange={e => setRecherche(e.target.value)}
-          placeholder="Congés, tarifs, avis Google…"
-          aria-label="Rechercher dans le guide"
+          placeholder={tr('Congés, tarifs, avis Google…')}
+          aria-label={tr('Rechercher dans le guide')}
           className={`${CHAMP} pl-10`}
         />
       </div>
@@ -205,28 +207,27 @@ export default function GuideV2({ liste }: Props) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M3 12a9 9 0 1 0 2.64-6.36M3 4v5h5" />
           </svg>
-          Revoir le tuto de l’application
+          {tr('Revoir le tuto de l’application')}
         </button>
       )}
 
       {cherche && (
         <p className={`mt-2 px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`} aria-live="polite">
-          {total === 0 ? 'Aucune réponse.' : `${total} réponse${total > 1 ? 's' : ''}`}
+          {total === 0 ? tr('Aucune réponse.') : `${total} réponse${total > 1 ? 's' : ''}`}
         </p>
       )}
 
       {total === 0 && cherche ? (
         <div className="mt-4 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-7">
           <p className={`text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Rien trouvé pour cette recherche. Essayez un autre mot, ou posez directement votre
-            question à l’équipe.
+            {tr('Rien trouvé pour cette recherche. Essayez un autre mot, ou posez directement votre question à l’équipe.')}
           </p>
           <Link
             href="/dashboard/assistance"
             className={`mt-4 flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] px-4 text-[15px] ${corpsFort} text-white`}
             style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
           >
-            Poser ma question
+            {tr('Poser ma question')}
           </Link>
         </div>
       ) : (
@@ -261,7 +262,7 @@ export default function GuideV2({ liste }: Props) {
           className={`mt-[26px] flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] px-4 text-[15px] ${corpsFort}`}
           style={PRESSION}
         >
-          Poser une question à l’équipe
+          {tr('Poser une question à l’équipe')}
         </Link>
       )}
     </div>

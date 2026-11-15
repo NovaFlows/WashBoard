@@ -402,7 +402,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
       return bandeau('choisir-formule', fermer => etat(
         'accent',
         t('Essai terminé — vous êtes sur l’offre Découverte, gratuite. Choisissez votre formule quand vous voulez.'),
-        'Voir les offres', fermer,
+        t('Voir les offres'), fermer,
       ))
     }
 
@@ -411,7 +411,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
       return bandeau(`resilie-${cancelsAt}`, fermer => etat(
         'rouge',
         t('Abonnement résilié — valable jusqu’au {date}', { date: formatDateFR(cancelsAt, loc) }),
-        'Réactiver', fermer,
+        t('Réactiver'), fermer,
       ))
     }
 
@@ -427,7 +427,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
       return bandeau('expire', fermer => etat(
         'rouge',
         t('Votre période d’essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.'),
-        'Voir les offres', fermer,
+        t('Voir les offres'), fermer,
       ))
     }
 
@@ -440,7 +440,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
         return bandeau(`carte-${daysLeft}`, fermer => etat(
           'vert',
           daysLeft > 1 ? t('✓ Carte enregistrée — facturation dans {n} jours', { n: daysLeft }) : t('✓ Carte enregistrée — facturation dans {n} jour', { n: daysLeft }),
-          'Gérer', fermer,
+          t('Gérer'), fermer,
         ))
       }
 
@@ -451,7 +451,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
       return bandeau(`essai-${daysLeft}`, fermer => etat(
         isUrgent ? 'ambre' : 'accent',
         daysLeft > 1 ? t('Essai gratuit — {n} jours restants', { n: daysLeft }) : t('Essai gratuit — {n} jour restant', { n: daysLeft }),
-        'Voir l’abonnement', fermer,
+        t('Voir l’abonnement'), fermer,
       ))
     }
 

@@ -236,8 +236,8 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
                   <p className={`text-[15.5px] ${nom}`}>{t('Réservation le jour même')}</p>
                   <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                     {jourMeme
-                      ? 'Vos clients peuvent réserver pour aujourd’hui. Le premier créneau tient compte du temps de route depuis votre position.'
-                      : 'Vos clients réservent à partir de demain.'}
+                      ? t('Vos clients peuvent réserver pour aujourd’hui. Le premier créneau tient compte du temps de route depuis votre position.')
+                      : t('Vos clients réservent à partir de demain.')}
                   </p>
                 </div>
                 <Interrupteur
@@ -301,7 +301,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
         <ConfirmationSuppression
           titre={`Retirer ${libellePlage(retrait)} le ${NOMS_JOURS[retrait.day_of_week].toLowerCase()} ?`}
           texte={t('Ce jour-là, plus de créneaux sur cette plage.')}
-          remarque="Les rendez-vous déjà pris ne sont pas touchés."
+          remarque={t('Les rendez-vous déjà pris ne sont pas touchés.')}
           enCours={retraitEnCours}
           erreur={retraitErreur}
           libelleAction="Retirer"

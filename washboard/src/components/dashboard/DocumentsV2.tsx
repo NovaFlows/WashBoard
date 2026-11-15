@@ -22,6 +22,7 @@ import {
 import { aujourdhuiParis } from '@/lib/chiffresPeriode'
 import { confirmerEnvoi, annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import { whatsappDigits } from '@/lib/phone'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // « Devis et factures » — refonte 2026, destination NEUVE (Alexandre, 2026-09-27 : « on va
 // créer une section nouveau devis facture qui existe pas pour en générer un ou une »).
@@ -54,8 +55,8 @@ const COULEUR_TON = { gris: 'var(--v2-color-gris)', ambre: 'var(--v2-color-ambre
  *  feuille mobile. */
 const FILTRE_CHAMP = `h-10 rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`
 
-const jourCourt = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+const jourCourt = (iso: string, loc = 'fr-FR') =>
+  new Date(iso).toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' })
 
 /** Le statut à l'écran, point + mot : un devis périmé se lit d'un coup d'œil (le prix ne tient
  *  plus, il faut le refaire) et prime sur `libelleStatut()` quand c'est le cas. Extrait pour
@@ -93,6 +94,7 @@ function FeuillePaiement({ numero, montant, occupe, onRepondre, onClose }: {
   onRepondre: (paye: boolean) => void
   onClose: () => void
 }) {
+  const tr = useT()
   const secondaire = `${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`
   return (
     <Feuille
@@ -108,14 +110,13 @@ function FeuillePaiement({ numero, montant, occupe, onRepondre, onClose }: {
           className={`${BOUTON} w-full text-white`}
           style={{ background: 'var(--v2-color-vert)', ...PRESSION }}
         >
-          Oui, encaissée
+          {tr('Oui, encaissée')}
         </button>
         <button type="button" onClick={() => onRepondre(false)} disabled={occupe} className={secondaire} style={PRESSION}>
-          Pas encore
+          {tr('Pas encore')}
         </button>
         <p className={`mt-1 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Seules les factures encaissées comptent dans vos chiffres. Une facture en attente reste
-          dans votre liste, et vous la marquerez payée le jour où l’argent arrive.
+          {tr('Seules les factures encaissées comptent dans vos chiffres. Une facture en attente reste dans votre liste, et vous la marquerez payée le jour où l’argent arrive.')}
         </p>
       </div>
     </Feuille>
@@ -128,11 +129,12 @@ function FeuillePaiement({ numero, montant, occupe, onRepondre, onClose }: {
  *  parent. Le « + » tapé ici même remplace l'adresse au lieu de l'empiler (BarreBasV2), sinon
  *  un retour ne ferait que revenir à cet écran. */
 function FlecheRetourDocuments() {
+  const tr = useT()
   const router = useRouter()
   return (
     <Link
       href="/dashboard/chiffres"
-      aria-label="Retour à Chiffres"
+      aria-label={tr('Retour à Chiffres')}
       onClick={e => {
         if (typeof window !== 'undefined' && window.history.length > 1) {
           e.preventDefault()
@@ -146,8 +148,8 @@ function FlecheRetourDocuments() {
   )
 }
 
-const dateLongue = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+const dateLongue = (iso: string, loc = 'fr-FR') =>
+  new Date(iso).toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' })
 
 /** Une ligne de la liste bureau (planche Documents, `.client-row`) — avatar carré D/F plutôt que
  *  les initiales du client : c'est le TYPE de document qui se reconnaît d'un coup d'œil dans
@@ -159,6 +161,7 @@ function LigneDocumentBureauV2({ document: d, aujourdhui, selectionnee, onOuvrir
   selectionnee: boolean
   onOuvrir: () => void
 }) {
+  const loc = useLocale()
   const client = d.contenu.client.entreprise || d.contenu.client.nom
   const { ton } = statutAffiche(d, aujourdhui)
   return (
@@ -181,7 +184,7 @@ function LigneDocumentBureauV2({ document: d, aujourdhui, selectionnee, onOuvrir
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className={`truncate text-[15px] ${nom}`}>{`${libelleGenre(d.genre)} ${d.numero ?? ''}`.trim()}</span>
           <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {client} · {jourCourt(d.emis_le ?? d.created_at)}
+            {client} · {jourCourt(d.emis_le ?? d.created_at, loc)}
           </span>
         </span>
         <span className={`shrink-0 text-[14px] ${corpsFort} tabular-nums`} style={{ color: COULEUR_TON[ton] }}>
@@ -219,6 +222,8 @@ function FicheDocumentBureauV2({
   onPayer: (paye: boolean) => void
   onSupprimer: () => void
 }) {
+  const loc = useLocale()
+  const tr = useT()
   const devis = d.genre === 'devis'
   const client = d.contenu.client.entreprise || d.contenu.client.nom
   const { label, ton } = statutAffiche(d, aujourdhui)
@@ -240,7 +245,7 @@ function FicheDocumentBureauV2({
           </span>
         </div>
 
-        <h3 className={`mt-5 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Lignes</h3>
+        <h3 className={`mt-5 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{tr('Lignes')}</h3>
         <div className="mt-2 divide-y divide-[color:var(--v2-filet)] overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)]">
           {d.contenu.lignes.map((l, i) => (
             <div key={i} className="flex items-center gap-3 px-4 py-3">
@@ -257,18 +262,18 @@ function FicheDocumentBureauV2({
           ))}
         </div>
         <div className="mt-1 flex items-center justify-between border-t border-[color:var(--v2-filet)] px-1 py-2.5">
-          <span className={corpsFort}>Total</span>
+          <span className={corpsFort}>{tr('Total')}</span>
           <span className={`text-[20px] ${titre} tabular-nums`}>{euros.format(d.contenu.totaux.ttc)}</span>
         </div>
         {devis && d.contenu.valableJusquau && (
           <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Valable jusqu’au {dateLongue(d.contenu.valableJusquau)}
+            {tr('Valable jusqu’au')} {dateLongue(d.contenu.valableJusquau, loc)}
           </p>
         )}
 
         {(d.contenu.client.telephone || d.contenu.client.adresseFacturation) && (
           <>
-            <h3 className={`mt-5 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Client</h3>
+            <h3 className={`mt-5 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{tr('Client')}</h3>
             <div className="mt-2 flex flex-col gap-2.5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 py-3">
               {d.contenu.client.telephone && (
                 <span className="flex items-center gap-2.5">
@@ -292,12 +297,12 @@ function FicheDocumentBureauV2({
             className={`${BOUTON} w-full text-white`}
             style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
           >
-            Télécharger le PDF
+            {tr('Télécharger le PDF')}
           </a>
           {d.contenu.client.telephone && (
             <a href={`tel:${d.contenu.client.telephone}`} className={`${secondaire} gap-2`} style={PRESSION}>
               <Phone size={16} strokeWidth={2} aria-hidden />
-              Appeler {client}
+              {tr('Appeler')} {client}
             </a>
           )}
           {d.contenu.client.telephone && (
@@ -317,10 +322,10 @@ function FicheDocumentBureauV2({
                 if (partage === 'annule') return
                 const cible = `${libelleGenre(d.genre)} ${d.numero ?? ''}`.trim()
                 if (partage === 'envoye') {
-                  confirmerEnvoi({ titre: 'PDF envoyé', detail: `${cible} pour ${client}` })
+                  confirmerEnvoi({ titre: tr('PDF envoyé'), detail: `${cible} pour ${client}` })
                   return
                 }
-                annoncerApresRetour({ titre: 'Message envoyé', detail: `${cible} pour ${client}` })
+                annoncerApresRetour({ titre: tr('Message envoyé'), detail: `${cible} pour ${client}` })
                 window.open(
                   `https://wa.me/${whatsappDigits(d.contenu.client.telephone!)}?text=${encodeURIComponent(messageWhatsapp(d, lien, nomLaveur))}`,
                   '_blank', 'noopener',
@@ -330,11 +335,11 @@ function FicheDocumentBureauV2({
               style={PRESSION}
             >
               <IconeWhatsapp />
-              Envoyer le PDF (WhatsApp…)
+              {tr('Envoyer le PDF (WhatsApp…)')}
             </button>
           )}
           <button type="button" onClick={onEnvoyer} disabled={occupe} className={secondaire} style={PRESSION}>
-            {d.envoye_le ? 'Renvoyer par email' : 'Envoyer par email'}
+            {d.envoye_le ? 'Renvoyer par email' : tr('Envoyer par email')}
           </button>
 
           {devis && d.statut !== 'transforme' && (
@@ -347,15 +352,15 @@ function FicheDocumentBureauV2({
                   className={`${BOUTON} w-full text-white`}
                   style={{ background: 'var(--v2-color-vert)', ...PRESSION }}
                 >
-                  Transformer en facture
+                  {tr('Transformer en facture')}
                 </button>
               ) : (
                 <div className="flex gap-2.5">
                   <button type="button" onClick={() => onRepondre('accepte')} disabled={occupe} className={`${secondaire} flex-1`} style={PRESSION}>
-                    Accepté
+                    {tr('Accepté')}
                   </button>
                   <button type="button" onClick={() => onRepondre('refuse')} disabled={occupe} className={`${secondaire} flex-1`} style={PRESSION}>
-                    Refusé
+                    {tr('Refusé')}
                   </button>
                 </div>
               )}
@@ -366,7 +371,7 @@ function FicheDocumentBureauV2({
                 className={`${BOUTON} w-full text-[color:var(--v2-color-rouge)]`}
                 style={PRESSION}
               >
-                Supprimer ce devis
+                {tr('Supprimer ce devis')}
               </button>
             </>
           )}
@@ -376,7 +381,7 @@ function FicheDocumentBureauV2({
               {d.paye_le ? (
                 <>
                   <p className={`mt-1 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>
-                    Encaissée le {jourCourt(d.paye_le)} · comptée dans vos chiffres
+                    {tr('Encaissée le')} {jourCourt(d.paye_le, loc)} {tr('· comptée dans vos chiffres')}
                   </p>
                   <button
                     type="button"
@@ -384,7 +389,7 @@ function FicheDocumentBureauV2({
                     disabled={occupe}
                     className={`h-11 self-start text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)] underline`}
                   >
-                    Finalement, pas encore payée
+                    {tr('Finalement, pas encore payée')}
                   </button>
                 </>
               ) : (
@@ -395,12 +400,11 @@ function FicheDocumentBureauV2({
                   className={`${BOUTON} w-full text-white`}
                   style={{ background: 'var(--v2-color-vert)', ...PRESSION }}
                 >
-                  Marquer payée
+                  {tr('Marquer payée')}
                 </button>
               )}
               <p className={`mt-1 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                Une facture émise ne se modifie ni ne se supprime : sa numérotation doit rester
-                continue. Une erreur se corrige par un avoir.
+                {tr('Une facture émise ne se modifie ni ne se supprime : sa numérotation doit rester continue. Une erreur se corrige par un avoir.')}
               </p>
             </>
           )}
@@ -420,18 +424,19 @@ type PropsDocuments = {
  *  sur le site). Sous cette offre, l'écran entier est remplacé par la carte
  *  d'offre : ne pas proposer d'écrire un document qu'on ne pourra pas émettre. */
 export default function DocumentsV2(props: PropsDocuments) {
+  const tr = useT()
   const { peut } = useOffre()
   if (peut('facturation')) return <DocumentsOuvertsV2 {...props} />
   return (
     <div className="max-w-3xl mx-auto -mx-3 sm:-mx-4 -mt-6 px-3 sm:px-4 pt-3 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
       <div className="flex items-center gap-1 pb-2">
         <FlecheRetourDocuments />
-        <h1 className={`text-[24px] leading-none ${titre}`}>Devis et factures</h1>
+        <h1 className={`text-[24px] leading-none ${titre}`}>{tr('Devis et factures')}</h1>
       </div>
       <div className="mt-2">
         <OffreVerrouilleeV2
-          titre="Éditez des devis et des factures conformes"
-          description="Mentions légales, SIRET, TVA, numérotation continue : des documents que votre comptable accepte."
+          titre={tr('Éditez des devis et des factures conformes')}
+          description={tr('Mentions légales, SIRET, TVA, numérotation continue : des documents que votre comptable accepte.')}
           feature="facturation"
         />
       </div>
@@ -444,6 +449,8 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
   /** Signature du message WhatsApp : le client doit savoir qui lui écrit. */
   nomLaveur: string
 }) {
+  const loc = useLocale()
+  const tr = useT()
   const [aujourdhui] = useState(() => aujourdhuiParis(Date.now()))
   const [documents, setDocuments] = useState<Document[] | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -551,7 +558,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
     setOccupe(false)
     setPaiement(null)
     if (!r.ok) { setErreur(r.message); return }
-    setMessage(paye ? 'Facture encaissée : elle compte dans vos chiffres.' : 'Facture remise en attente de paiement.')
+    setMessage(paye ? tr('Facture encaissée : elle compte dans vos chiffres.') : tr('Facture remise en attente de paiement.'))
     await charger()
   }
 
@@ -698,7 +705,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
       {suppression && (
         <ConfirmationSuppression
           titre={`Supprimer le devis ${suppression.numero} ?`}
-          texte="Il disparaît de votre liste. Le client garde le PDF que vous lui avez envoyé."
+          texte={tr('Il disparaît de votre liste. Le client garde le PDF que vous lui avez envoyé.')}
           enCours={suppressionEnCours}
           erreur={suppressionErreur}
           onConfirmer={confirmerSuppression}
@@ -713,8 +720,8 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
       <div className="space-y-5 pb-6 bg-[color:var(--v2-color-fond)] text-[color:var(--v2-color-encre)] [font-family:var(--font-archivo)]">
         <div className="flex items-center gap-1 pb-2">
           <div className="min-w-0 flex-1">
-            <h1 className={`text-[21px] ${titre}`}>Documents</h1>
-            <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Devis et factures</p>
+            <h1 className={`text-[21px] ${titre}`}>{tr('Documents')}</h1>
+            <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Devis et factures')}</p>
           </div>
           <button
             type="button"
@@ -723,7 +730,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
             style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
           >
             <Plus size={16} strokeWidth={2.4} aria-hidden />
-            Nouveau
+            {tr('Nouveau')}
           </button>
         </div>
 
@@ -733,7 +740,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
         )}
 
         {documents === null ? (
-          <p className={`py-10 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Chargement…</p>
+          <p className={`py-10 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Chargement…')}</p>
         ) : (
           <>
             <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3">
@@ -745,8 +752,8 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                     inputMode="search"
                     value={rechercheDoc}
                     onChange={e => setRechercheDoc(e.target.value)}
-                    placeholder="N°, client ou montant"
-                    aria-label="Rechercher un document"
+                    placeholder={tr('N°, client ou montant')}
+                    aria-label={tr('Rechercher un document')}
                     autoComplete="off"
                     className={`${FILTRE_CHAMP} w-full pl-9 pr-3 placeholder:text-[color:var(--v2-color-gris)] [&::-webkit-search-cancel-button]:hidden`}
                   />
@@ -754,40 +761,40 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                 <select
                   value={filtreType}
                   onChange={e => setFiltreType(e.target.value as '' | GenreDocument)}
-                  aria-label="Filtrer par type"
+                  aria-label={tr('Filtrer par type')}
                   className={`${FILTRE_CHAMP} w-auto px-3`}
                 >
-                  <option value="">Type · tous</option>
-                  <option value="devis">Devis</option>
-                  <option value="facture">Facture</option>
+                  <option value="">{tr('Type · tous')}</option>
+                  <option value="devis">{tr('Devis')}</option>
+                  <option value="facture">{tr('Facture')}</option>
                 </select>
                 <select
                   value={filtreEtat}
                   onChange={e => setFiltreEtat(e.target.value)}
-                  aria-label="Filtrer par état"
+                  aria-label={tr('Filtrer par état')}
                   className={`${FILTRE_CHAMP} w-auto px-3`}
                 >
-                  <option value="">État · tous</option>
+                  <option value="">{tr('État · tous')}</option>
                   {etatsOptions.map(e => <option key={e} value={e}>{e}</option>)}
                 </select>
                 <select
                   value={filtrePeriode}
                   onChange={e => setFiltrePeriode(e.target.value as typeof filtrePeriode)}
-                  aria-label="Filtrer par période"
+                  aria-label={tr('Filtrer par période')}
                   className={`${FILTRE_CHAMP} w-auto px-3`}
                 >
-                  <option value="">Période · toute</option>
-                  <option value="mois">Ce mois-ci</option>
-                  <option value="mois-1">Mois dernier</option>
-                  <option value="annee">Cette année</option>
+                  <option value="">{tr('Période · toute')}</option>
+                  <option value="mois">{tr('Ce mois-ci')}</option>
+                  <option value="mois-1">{tr('Mois dernier')}</option>
+                  <option value="annee">{tr('Cette année')}</option>
                 </select>
                 <select
                   value={filtreClient}
                   onChange={e => setFiltreClient(e.target.value)}
-                  aria-label="Filtrer par client"
+                  aria-label={tr('Filtrer par client')}
                   className={`${FILTRE_CHAMP} w-auto px-3`}
                 >
-                  <option value="">Client · tous</option>
+                  <option value="">{tr('Client · tous')}</option>
                   {clientsOptions.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <div className="flex h-10 items-center gap-1.5 rounded-[var(--v2-radius-pilule)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3">
@@ -796,8 +803,8 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                     inputMode="numeric"
                     value={filtreMontantMin}
                     onChange={e => setFiltreMontantMin(e.target.value)}
-                    placeholder="min"
-                    aria-label="Montant minimum"
+                    placeholder={tr('min')}
+                    aria-label={tr('Montant minimum')}
                     className={`w-12 bg-transparent text-center text-[13px] ${corps} text-[color:var(--v2-color-encre)] outline-none`}
                   />
                   <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>–</span>
@@ -806,8 +813,8 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                     inputMode="numeric"
                     value={filtreMontantMax}
                     onChange={e => setFiltreMontantMax(e.target.value)}
-                    placeholder="max"
-                    aria-label="Montant maximum"
+                    placeholder={tr('max')}
+                    aria-label={tr('Montant maximum')}
                     className={`w-12 bg-transparent text-center text-[13px] ${corps} text-[color:var(--v2-color-encre)] outline-none`}
                   />
                   <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>€</span>
@@ -823,7 +830,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                 <>
                   {' dont '}
                   <span className={`${corpsFort} tabular-nums`} style={{ color: 'var(--v2-color-ambre)' }}>{euros.format(impayeFiltre)}</span>
-                  {' impayés'}
+                  {tr(' impayés')}
                 </>
               )}
             </p>
@@ -831,11 +838,9 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
             {documents.length === 0 ? (
               <div className="flex h-[420px] items-center justify-center rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] px-8 text-center">
                 <div className="max-w-[420px]">
-                  <p className={`text-[22px] leading-snug ${titre}`}>Rien pour l’instant</p>
+                  <p className={`text-[22px] leading-snug ${titre}`}>{tr('Rien pour l’instant')}</p>
                   <p className={`mt-2.5 text-[13.5px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-                    Un client demande un prix pour des tapis, un canapé, une remise en état ? Faites-lui
-                    un devis. Un chantier est arrivé par le bouche-à-oreille, sans passer par votre
-                    page ? Faites la facture ici.
+                    {tr('Un client demande un prix pour des tapis, un canapé, une remise en état ? Faites-lui un devis. Un chantier est arrivé par le bouche-à-oreille, sans passer par votre page ? Faites la facture ici.')}
                   </p>
                   <div className="mt-4 flex justify-center gap-2.5">
                     <button
@@ -844,7 +849,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                       className={`${BOUTON} text-white`}
                       style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
                     >
-                      Nouveau devis
+                      {tr('Nouveau devis')}
                     </button>
                     <button
                       type="button"
@@ -852,7 +857,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                       className={`${BOUTON} border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
                       style={PRESSION}
                     >
-                      Nouvelle facture
+                      {tr('Nouvelle facture')}
                     </button>
                   </div>
                 </div>
@@ -862,7 +867,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                 <div className="h-full w-[380px] shrink-0 overflow-y-auto rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
                   {documentsFiltres.length === 0 ? (
                     <p className={`px-4 py-7 text-center text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                      Aucun document ne correspond à ces filtres.
+                      {tr('Aucun document ne correspond à ces filtres.')}
                     </p>
                   ) : (
                     <ul className="divide-y divide-[color:var(--v2-filet)]">
@@ -888,12 +893,12 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                       occupe={occupe}
                       onEnvoyer={() => void agir(async () => {
                         const r = await envoyerDocument(ouvert.id)
-                        if (r.ok) confirmerEnvoi({ titre: 'Email envoyé', detail: `${libelleGenre(ouvert.genre)} ${ouvert.numero ?? ''} pour ${ouvert.contenu.client.nom}`.replace(/\s+/g, ' ').trim() })
+                        if (r.ok) confirmerEnvoi({ titre: tr('Email envoyé'), detail: `${libelleGenre(ouvert.genre)} ${ouvert.numero ?? ''} pour ${ouvert.contenu.client.nom}`.replace(/\s+/g, ' ').trim() })
                         return r
-                      }, 'Envoyé au client.')}
+                      }, tr('Envoyé au client.'))}
                       onRepondre={statut => void agir(
                         () => repondreDevis(ouvert.id, statut),
-                        statut === 'accepte' ? 'Devis accepté. Vous pouvez le transformer en facture.' : 'Devis marqué refusé.',
+                        statut === 'accepte' ? tr('Devis accepté. Vous pouvez le transformer en facture.') : tr('Devis marqué refusé.'),
                         { fermer: statut === 'refuse' },
                       )}
                       onFacturer={() => void facturer(ouvert)}
@@ -904,7 +909,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                     <div className="flex h-full flex-col items-center justify-center gap-2.5 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-6 text-center">
                       <FileText size={22} strokeWidth={1.8} className="text-[color:var(--v2-color-gris)]" aria-hidden />
                       <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                        Sélectionnez un document pour voir sa fiche.
+                        {tr('Sélectionnez un document pour voir sa fiche.')}
                       </p>
                     </div>
                   )}
@@ -924,15 +929,15 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
       <div className="flex items-center gap-1 pb-2">
         <FlecheRetourDocuments />
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[24px] leading-none ${titre}`}>Devis et factures</h1>
+          <h1 className={`text-[24px] leading-none ${titre}`}>{tr('Devis et factures')}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Écrits à la main, sans rendez-vous
+            {tr('Écrits à la main, sans rendez-vous')}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setNouveau('devis')}
-          aria-label="Nouveau devis ou nouvelle facture"
+          aria-label={tr('Nouveau devis ou nouvelle facture')}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.94] motion-reduce:transition-none"
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
@@ -948,14 +953,12 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
       )}
 
       {documents === null ? (
-        <p className={`py-10 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Chargement…</p>
+        <p className={`py-10 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Chargement…')}</p>
       ) : documents.length === 0 ? (
         <div className="mt-4 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-7">
-          <p className={`text-[15px] ${corpsFort}`}>Rien pour l’instant</p>
+          <p className={`text-[15px] ${corpsFort}`}>{tr('Rien pour l’instant')}</p>
           <p className={`mt-1.5 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Un client demande un prix pour des tapis, un canapé, une remise en état ? Faites-lui un
-            devis. Un chantier est arrivé par le bouche-à-oreille, sans passer par votre page ?
-            Faites la facture ici.
+            {tr('Un client demande un prix pour des tapis, un canapé, une remise en état ? Faites-lui un devis. Un chantier est arrivé par le bouche-à-oreille, sans passer par votre page ? Faites la facture ici.')}
           </p>
           <div className="mt-4 flex gap-2.5">
             <button
@@ -964,7 +967,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
               className={`${BOUTON} flex-1 text-white`}
               style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
             >
-              Nouveau devis
+              {tr('Nouveau devis')}
             </button>
             <button
               type="button"
@@ -972,7 +975,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
               className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              Nouvelle facture
+              {tr('Nouvelle facture')}
             </button>
           </div>
         </div>
@@ -985,13 +988,13 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                 type="search"
                 value={rechercheDoc}
                 onChange={e => setRechercheDoc(e.target.value)}
-                placeholder="N°, client ou montant"
-                aria-label="Rechercher un document"
+                placeholder={tr('N°, client ou montant')}
+                aria-label={tr('Rechercher un document')}
                 className={`${CHAMP} pl-10`}
               />
             </div>
-            <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-0.5 sm:-mx-4 sm:px-4" role="radiogroup" aria-label="Afficher">
-              {([['tous', 'Tous'], ['devis', 'Devis'], ['facture', 'Factures'], ['impayees', 'Impayées']] as const).map(([valeur, libelle]) => (
+            <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-0.5 sm:-mx-4 sm:px-4" role="radiogroup" aria-label={tr('Afficher')}>
+              {([['tous', 'Tous'], ['devis', 'Devis'], ['facture', 'Factures'], ['impayees', tr('Impayées')]] as const).map(([valeur, libelle]) => (
                 <button
                   key={valeur}
                   type="button"
@@ -1006,14 +1009,14 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
             </div>
             {rechercheMobileActive && (
               <p className={`px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`} role="status">
-                {documentsMobile.length} document{documentsMobile.length > 1 ? 's' : ''} · {euros.format(documentsMobile.reduce((t, d) => t + d.contenu.totaux.ttc, 0))}
+                {documentsMobile.length} {tr('document')}{documentsMobile.length > 1 ? 's' : ''} · {euros.format(documentsMobile.reduce((t, d) => t + d.contenu.totaux.ttc, 0))}
               </p>
             )}
           </div>
 
           {documentsMobile.length === 0 && (
             <p className={`mt-6 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Aucun document ne correspond.
+              {tr('Aucun document ne correspond.')}
             </p>
           )}
 
@@ -1034,7 +1037,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
                             {d.contenu.client.entreprise || d.contenu.client.nom}
                           </span>
                           <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                            {d.numero} · {d.emis_le ? jourCourt(d.emis_le) : jourCourt(d.created_at)}
+                            {d.numero} · {d.emis_le ? jourCourt(d.emis_le, loc) : jourCourt(d.created_at, loc)}
                           </span>
                         </span>
                         <span className="flex shrink-0 flex-col items-end gap-0.5">
@@ -1060,12 +1063,12 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
           occupe={occupe}
           onEnvoyer={() => void agir(async () => {
             const r = await envoyerDocument(ouvert.id)
-            if (r.ok) confirmerEnvoi({ titre: 'Email envoyé', detail: `${libelleGenre(ouvert.genre)} ${ouvert.numero ?? ''} pour ${ouvert.contenu.client.nom}`.replace(/\s+/g, ' ').trim() })
+            if (r.ok) confirmerEnvoi({ titre: tr('Email envoyé'), detail: `${libelleGenre(ouvert.genre)} ${ouvert.numero ?? ''} pour ${ouvert.contenu.client.nom}`.replace(/\s+/g, ' ').trim() })
             return r
-          }, 'Envoyé au client.')}
+          }, tr('Envoyé au client.'))}
           onRepondre={statut => void agir(
             () => repondreDevis(ouvert.id, statut),
-            statut === 'accepte' ? 'Devis accepté. Vous pouvez le transformer en facture.' : 'Devis marqué refusé.',
+            statut === 'accepte' ? tr('Devis accepté. Vous pouvez le transformer en facture.') : tr('Devis marqué refusé.'),
             // La feuille reste ouverte : « Transformer en facture » y prend la place des deux
             // boutons de réponse, et c'est le geste suivant.
             { fermer: statut === 'refuse' },

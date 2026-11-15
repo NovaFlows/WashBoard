@@ -11,6 +11,13 @@ import { landing3 } from './en/landing3'
 import { demo } from './en/demo'
 import { demo2 } from './en/demo2'
 import { demo3 } from './en/demo3'
+import { tb0 } from './en/tb0'
+import { tb1 } from './en/tb1'
+import { tb2 } from './en/tb2'
+import { tb3 } from './en/tb3'
+import { tb4 } from './en/tb4'
+import { tb5 } from './en/tb5'
+import { tc0 } from './en/tc0'
 
 // Une partie par fichier : pour traduire un nouvel écran, ajouter `./en/<partie>.ts` ici.
-export const en: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3, ...demo, ...demo2, ...demo3 }
+export const en: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3, ...demo, ...demo2, ...demo3, ...tb0, ...tb1, ...tb2, ...tb3, ...tb4, ...tb5, ...tc0 }

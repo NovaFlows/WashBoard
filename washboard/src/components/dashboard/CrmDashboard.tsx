@@ -17,6 +17,7 @@ import { caCumule, delaisDeReservation } from '@/lib/graphiquesCrm'
 import { repartitionSources } from '@/lib/sourceDecouverte'
 import CaCumule from '@/components/dashboard/CaCumule'
 import DelaiReservation from '@/components/dashboard/DelaiReservation'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // Tableau de bord des réservations.
 //
@@ -70,8 +71,8 @@ const JOURS_COURTS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const nombre = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
 const euros = (v: number) => `${nombre.format(Math.round(v))} €`
 
-function dateCourte(d: Date): string {
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: FUSEAU })
+function dateCourte(d: Date, loc = 'fr-FR'): string {
+  return d.toLocaleDateString(loc, { day: 'numeric', month: 'short', timeZone: FUSEAU })
 }
 
 // ── Indicateurs ─────────────────────────────────────────────────────────────
@@ -189,6 +190,8 @@ async function captureSvgAsBase64(container: HTMLDivElement | null): Promise<{ b
 // ── Composant ───────────────────────────────────────────────────────────────
 
 export default function CrmDashboard({ bookings, period }: { bookings: Booking[]; period: CrmPeriodState }) {
+  const loc = useLocale()
+  const t = useT()
   const graphCaRef = useRef<HTMLDivElement>(null)
   const graphVolumeRef = useRef<HTMLDivElement>(null)
   const [exporting, setExporting] = useState(false)
@@ -223,8 +226,8 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
   const libelleEcart = !precedente ? ''
     : period.type === 'year'  ? `vs ${precedente.year}`
     : period.type === 'month' ? `vs ${crmPeriodLabel(precedente)}`
-    : period.type === 'week'  ? 'vs semaine précédente'
-    : 'vs la veille'
+    : period.type === 'week'  ? t('vs semaine précédente')
+    : t('vs la veille')
   // Une période en cours n'est pas terminée : ses chiffres vont encore bouger.
   // On le dit, plutôt que de laisser croire à un effondrement face à un mois
   // complet — septembre au 12 contre tout août, c'est « −100 % » qui ne veut rien dire.
@@ -283,7 +286,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
         maintenant,
         (rang, jour) => period.type === 'month' ? String(rang)
           : period.type === 'week' ? JOURS_COURTS[rang - 1]
-          : dateCourte(jour),
+          : dateCourte(jour, loc),
       )
     : null
   const delais = delaisDeReservation(displayBookings)
@@ -291,7 +294,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
   // Par prestation : volume, part du volume et chiffre d'affaires réalisé.
   const parPrestation = Object.values(
     displayBookings.reduce<Record<string, { nom: string; nombre: number; ca: number }>>((acc, b) => {
-      const nom = b.services?.name ?? 'Prestation supprimée'
+      const nom = b.services?.name ?? t('Prestation supprimée')
       acc[nom] ??= { nom, nombre: 0, ca: 0 }
       acc[nom].nombre++
       if (comptePourLeCA(b)) acc[nom].ca += effectivePrice(b)
@@ -311,7 +314,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
   const finSemaine = new Date(period.weekStart); finSemaine.setDate(period.weekStart.getDate() + 6)
   const titreFrise = period.type === 'year'  ? `${period.year}, par mois`
                    : period.type === 'month' ? `${MOIS_COURTS[period.month]} ${period.year}, par jour`
-                   : period.type === 'week'  ? `Semaine du ${dateCourte(period.weekStart)} au ${dateCourte(finSemaine)}`
+                   : period.type === 'week'  ? `Semaine du ${dateCourte(period.weekStart, loc)} au ${dateCourte(finSemaine, loc)}`
                    : '6 derniers mois'
 
   async function handleExport() {
@@ -323,20 +326,20 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
       wb.created = new Date()
 
       // ── Feuille 1 : les réservations ─────────────────────────────────────
-      const ws = wb.addWorksheet('Réservations')
+      const ws = wb.addWorksheet(t('Réservations'))
       ws.columns = [
         { header: 'Type',        key: 'clienttype', width: 16 },
         { header: 'Nom',         key: 'name',       width: 22 },
-        { header: 'Société',     key: 'company',    width: 22 },
+        { header: t('Société'),     key: 'company',    width: 22 },
         { header: 'Email',       key: 'email',      width: 32 },
-        { header: 'Téléphone',   key: 'phone',      width: 16 },
+        { header: t('Téléphone'),   key: 'phone',      width: 16 },
         { header: 'Prestation',  key: 'service',    width: 24 },
-        { header: 'Prix (€)',    key: 'price',      width: 12 },
-        { header: 'Durée (min)', key: 'duration',   width: 14 },
+        { header: t('Prix (€)'),    key: 'price',      width: 12 },
+        { header: t('Durée (min)'), key: 'duration',   width: 14 },
         { header: 'Date RDV',    key: 'scheduled',  width: 22 },
         { header: 'Adresse',     key: 'address',    width: 40 },
         { header: 'Statut',      key: 'status',     width: 14 },
-        { header: 'Créé le',     key: 'created',    width: 14 },
+        { header: t('Créé le'),     key: 'created',    width: 14 },
       ]
       const entete = ws.getRow(1)
       entete.height = 24
@@ -356,10 +359,10 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
           service:    b.services?.name ?? '',
           price:      effectivePrice(b),
           duration:   b.services?.duration_minutes ?? '',
-          scheduled:  new Date(b.scheduled_at).toLocaleString('fr-FR', { timeZone: FUSEAU }),
+          scheduled:  new Date(b.scheduled_at).toLocaleString(loc, { timeZone: FUSEAU }),
           address:    b.address ?? '',
           status:     STATUTS[getStatusKey(b) as CleStatut]?.label ?? b.status,
-          created:    new Date(b.created_at).toLocaleDateString('fr-FR', { timeZone: FUSEAU }),
+          created:    new Date(b.created_at).toLocaleDateString(loc, { timeZone: FUSEAU }),
         })
         row.getCell('price').numFmt = '#,##0.00'
       })
@@ -367,7 +370,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
       // ── Feuille 2 : la synthèse ──────────────────────────────────────────
       // Les répartitions sont écrites en vrais tableaux, que l'on peut trier
       // et recalculer ; seules les deux frises restent des images.
-      const cs = wb.addWorksheet('Synthèse')
+      const cs = wb.addWorksheet(t('Synthèse'))
       cs.columns = [{ width: 30 }, { width: 14 }, { width: 10 }, { width: 14 }]
       const titre = (ligne: number, texte: string) => {
         cs.getCell(`A${ligne}`).value = texte
@@ -384,18 +387,18 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
       cs.getCell('A1').font = { bold: true, size: 14 }
       let ligne = tableau(3, ['Indicateur', 'Valeur'], [
         ["Chiffre d'affaires (€)", Math.round(resume.ca)],
-        ['Réservations', resume.total],
+        [t('Réservations'), resume.total],
         ['dont en attente', resume.enAttente],
         ['Panier moyen (€)', Math.round(resume.panierMoyen)],
         ['Taux de confirmation (%)', resume.tauxConfirmation],
       ])
 
       titre(ligne, 'Par prestation')
-      ligne = tableau(ligne + 1, ['Prestation', 'Réservations', 'Part (%)', 'CA (€)'],
+      ligne = tableau(ligne + 1, ['Prestation', t('Réservations'), 'Part (%)', 'CA (€)'],
         parPrestation.map(p => [p.nom, p.nombre, p.part, Math.round(p.ca)]))
 
       titre(ligne, 'Par statut')
-      ligne = tableau(ligne + 1, ['Statut', 'Réservations', 'Part (%)'],
+      ligne = tableau(ligne + 1, ['Statut', t('Réservations'), 'Part (%)'],
         parStatut.map(s => [s.label, s.nombre, Math.round(s.part)]))
 
       const [imgCa, imgVolume] = await Promise.all([
@@ -403,7 +406,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
         captureSvgAsBase64(graphVolumeRef.current),
       ])
       const LARGEUR = 620
-      for (const [img, libelle] of [[imgCa, "Chiffre d'affaires"], [imgVolume, 'Réservations']] as const) {
+      for (const [img, libelle] of [[imgCa, "Chiffre d'affaires"], [imgVolume, t('Réservations')]] as const) {
         if (!img) continue
         titre(ligne, `${libelle} — ${titreFrise}`)
         const hauteur = Math.round((img.srcH / img.srcW) * LARGEUR)
@@ -429,8 +432,8 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
     return (
       <div className="text-center py-16">
         <BarChart3 size={40} strokeWidth={1.5} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-        <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-1">Pas encore de données</h2>
-        <p className="text-sm text-slate-400 dark:text-slate-500">Les statistiques apparaîtront dès votre première réservation</p>
+        <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-1">{t('Pas encore de données')}</h2>
+        <p className="text-sm text-slate-400 dark:text-slate-500">{t('Les statistiques apparaîtront dès votre première réservation')}</p>
       </div>
     )
   }
@@ -445,11 +448,11 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
         <div>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">CRM</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Tableau de bord de vos réservations · {crmPeriodLabel(period).toLowerCase()}{enCours ? ', en cours' : ''} · {nombre.format(resume.total)} résultat{resume.total !== 1 ? 's' : ''}
+            {t('Tableau de bord de vos réservations ·')} {crmPeriodLabel(period).toLowerCase()}{enCours ? ', en cours' : ''} · {nombre.format(resume.total)} {t('résultat')}{resume.total !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800" role="group" aria-label="Type de client">
+          <div className="flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800" role="group" aria-label={t('Type de client')}>
             {(['all', 'individual', 'professional'] as const).map(f => (
               <button key={f} onClick={() => setClientFilter(f)} aria-pressed={clientFilter === f}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
@@ -463,12 +466,12 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
           </div>
           <button onClick={handleExport} disabled={exporting}
             className="flex items-center gap-2 whitespace-nowrap px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:text-slate-400">
-            {exporting ? <><Spinner /> Export en cours…</> : (
+            {exporting ? <><Spinner /> {t('Export en cours…')}</> : (
               <>
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Exporter Excel
+                {t('Exporter Excel')}
               </>
             )}
           </button>
@@ -477,31 +480,31 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
 
       {/* Indicateurs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Indicateur label="Chiffre d'affaires" valeur={euros(resume.ca)}
+        <Indicateur label={t('Chiffre d\'affaires')} valeur={euros(resume.ca)}
           ecart={ecartPct(resume.ca, resumePrecedent?.ca ?? 0)} libelleEcart={libelleEcart}
-          detail="Réservations confirmées et terminées" />
-        <Indicateur label="Réservations" valeur={nombre.format(resume.total)}
+          detail={t('Réservations confirmées et terminées')} />
+        <Indicateur label={t('Réservations')} valeur={nombre.format(resume.total)}
           ecart={ecartPct(resume.total, resumePrecedent?.total ?? 0)} libelleEcart={libelleEcart}
-          detail={resume.enAttente > 0 ? `dont ${nombre.format(resume.enAttente)} en attente` : 'Aucune en attente'} />
-        <Indicateur label="Panier moyen" valeur={euros(resume.panierMoyen)}
+          detail={resume.enAttente > 0 ? `dont ${nombre.format(resume.enAttente)} en attente` : t('Aucune en attente')} />
+        <Indicateur label={t('Panier moyen')} valeur={euros(resume.panierMoyen)}
           ecart={ecartPct(resume.panierMoyen, resumePrecedent?.panierMoyen ?? 0)} libelleEcart={libelleEcart}
-          detail="Par réservation confirmée ou terminée" />
-        <Indicateur label="Taux de confirmation" valeur={`${resume.tauxConfirmation} %`}
+          detail={t('Par réservation confirmée ou terminée')} />
+        <Indicateur label={t('Taux de confirmation')} valeur={`${resume.tauxConfirmation} %`}
           ecart={resumePrecedent && resumePrecedent.total > 0
             ? { valeur: resume.tauxConfirmation - resumePrecedent.tauxConfirmation, unite: 'pts' } : null}
           libelleEcart={libelleEcart}
-          detail="Confirmées ou terminées, sur le total" />
+          detail={t('Confirmées ou terminées, sur le total')} />
       </div>
 
       {/* Activité : une mesure par graphique, sur la même frise. */}
       {chartData !== null && (
         <div className={`${carte} p-4 sm:p-5`}>
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Chiffre d&apos;affaires</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('Chiffre d’affaires')}</h2>
             <span className="text-xs text-slate-400 dark:text-slate-500">{titreFrise}</span>
           </div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
-            En euros, hors réservations en attente ou annulées
+            {t('En euros, hors réservations en attente ou annulées')}
           </p>
           <div ref={graphCaRef}>
             {chartData.some(l => l.ca > 0) ? (
@@ -509,15 +512,15 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
             ) : (
               // Un graphique vide gradué « 0 – 1 – 2 € » ne dit rien : on l'écrit.
               <div className="h-[150px] flex flex-col items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800/40 px-4 text-center">
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Aucun chiffre d&apos;affaires réalisé sur cette période</p>
-                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Une réservation en attente n&apos;y compte qu&apos;une fois confirmée</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('Aucun chiffre d’affaires réalisé sur cette période')}</p>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t('Une réservation en attente n’y compte qu’une fois confirmée')}</p>
               </div>
             )}
           </div>
 
           <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Réservations</h2>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Toutes, quel que soit leur statut</p>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('Réservations')}</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{t('Toutes, quel que soit leur statut')}</p>
             <div ref={graphVolumeRef}>
               <Colonnes donnees={chartData} cle="reservations" teinte={TEINTE_VOLUME}
                 formater={v => `${nombre.format(v)} réservation${v > 1 ? 's' : ''}`} hauteur={110} />
@@ -527,14 +530,14 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
           {/* Les valeurs exactes, sans avoir à survoler chaque barre. */}
           <details className="mt-4 group">
             <summary className="text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200">
-              Afficher les valeurs
+              {t('Afficher les valeurs')}
             </summary>
             <div className="mt-2 overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800">
-                    <th className="py-1.5 font-medium">Période</th>
-                    <th className="py-1.5 font-medium text-right">Réservations</th>
+                    <th className="py-1.5 font-medium">{t('Période')}</th>
+                    <th className="py-1.5 font-medium text-right">{t('Réservations')}</th>
                     <th className="py-1.5 font-medium text-right">CA</th>
                   </tr>
                 </thead>
@@ -565,9 +568,9 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
 
       {sourcesClients.reponses > 0 && (
         <div className={`${carte} p-4 sm:p-5`}>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">D&apos;où viennent vos clients</h2>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('D’où viennent vos clients')}</h2>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
-            {nombre.format(sourcesClients.reponses)} réponse{sourcesClients.reponses > 1 ? 's' : ''} sur {nombre.format(displayBookings.length)} rendez-vous de la période
+            {nombre.format(sourcesClients.reponses)} {t('réponse')}{sourcesClients.reponses > 1 ? 's' : ''} {t('sur')} {nombre.format(displayBookings.length)} {t('rendez-vous de la période')}
           </p>
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {sourcesClients.lignes.map(l => (
@@ -588,10 +591,10 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Par prestation */}
         <div className={`${carte} p-4 sm:p-5`}>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Par prestation</h2>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Réservations, part du total et chiffre d&apos;affaires</p>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('Par prestation')}</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{t('Réservations, part du total et chiffre d’affaires')}</p>
           {parPrestation.length === 0 ? (
-            <p className="text-xs text-slate-400 py-6 text-center">Aucune donnée</p>
+            <p className="text-xs text-slate-400 py-6 text-center">{t('Aucune donnée')}</p>
           ) : (
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
               {parPrestation.map(p => (
@@ -617,10 +620,10 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
 
         {/* Par statut */}
         <div className={`${carte} p-4 sm:p-5`}>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Par statut</h2>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Où en sont les réservations de la période</p>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('Par statut')}</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{t('Où en sont les réservations de la période')}</p>
           {parStatut.length === 0 ? (
-            <p className="text-xs text-slate-400 py-6 text-center">Aucune donnée</p>
+            <p className="text-xs text-slate-400 py-6 text-center">{t('Aucune donnée')}</p>
           ) : (
             <>
               {/* Une barre empilée : la part de chaque statut se lit d'un coup
@@ -656,15 +659,15 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
       <div className={`${carte} p-4 sm:p-5`}>
         <div className="flex items-baseline justify-between mb-2">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            {isFiltered ? 'Réservations filtrées' : 'Dernières réservations'}
+            {isFiltered ? t('Réservations filtrées') : t('Dernières réservations')}
           </h2>
           {isFiltered && (
-            <span className="text-xs text-slate-400 dark:text-slate-500">{nombre.format(resume.total)} résultat{resume.total !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{nombre.format(resume.total)} {t('résultat')}{resume.total !== 1 ? 's' : ''}</span>
           )}
         </div>
 
         {recentBookings.length === 0 ? (
-          <p className="text-xs text-slate-400 text-center py-6">Aucune réservation dans cette catégorie</p>
+          <p className="text-xs text-slate-400 text-center py-6">{t('Aucune réservation dans cette catégorie')}</p>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {recentBookings.map(b => {
@@ -676,7 +679,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
                     type="button"
                     onClick={() => setOpenClient(b.client_email)}
                     aria-label={`Voir la fiche de ${b.client_name}`}
-                    title="Voir la fiche client"
+                    title={t('Voir la fiche client')}
                     className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-semibold text-slate-500 shrink-0 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1651E8]"
                   >
                     {b.is_professional ? <Building2 size={15} strokeWidth={2} /> : b.client_name.charAt(0).toUpperCase()}
@@ -691,7 +694,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
                       )}
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
-                      {b.is_professional && b.company_name ? b.client_name + ' · ' : ''}{b.services?.name ?? '—'} · {dateCourte(date)} à {formatHeure(date)}
+                      {b.is_professional && b.company_name ? b.client_name + ' · ' : ''}{b.services?.name ?? '—'} · {dateCourte(date, loc)} à {formatHeure(date)}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">

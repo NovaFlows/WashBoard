@@ -5,6 +5,7 @@ import { Feuille, CHAMP, corps } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied } from '@/components/dashboard/ReglageAutomatismeV2'
 import { normaliserSlug } from '@/lib/lienReservation'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Changer son lien de réservation — feuille du bas de « Mes liens » (PWA). Même
 // réglage que l'ancien écran (`ParametresFormV1`), mêmes règles, même route : voir
@@ -26,6 +27,7 @@ type Props = {
 }
 
 export default function FeuilleLienV2({ slug, prefixe, onContinuer, onClose }: Props) {
+  const t = useT()
   const [saisie, setSaisie] = useState(slug)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -39,12 +41,12 @@ export default function FeuilleLienV2({ slug, prefixe, onContinuer, onClose }: P
 
   return (
     <Feuille
-      titre="Changer mon lien"
+      titre={t('Changer mon lien')}
       onClose={onClose}
-      pied={<Pied enCours={false} libelle="Continuer" onClose={onClose} formulaire="lien-reservation" />}
+      pied={<Pied enCours={false} libelle={t('Continuer')} onClose={onClose} formulaire="lien-reservation" />}
     >
       <form id="lien-reservation" onSubmit={valider} noValidate>
-        <Bloc titre="Fin de votre lien">
+        <Bloc titre={t('Fin de votre lien')}>
           <div className="flex items-center gap-1.5">
             <span className={`shrink-0 text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>{prefixe}</span>
             <input
@@ -56,7 +58,7 @@ export default function FeuilleLienV2({ slug, prefixe, onContinuer, onClose }: P
               spellCheck={false}
               value={saisie}
               onChange={e => { setSaisie(e.target.value); setErreur(null) }}
-              aria-label="Fin de votre lien de réservation"
+              aria-label={t('Fin de votre lien de réservation')}
               aria-invalid={!!erreur}
               aria-describedby="lien-reservation-aide"
               className={CHAMP}
@@ -64,7 +66,7 @@ export default function FeuilleLienV2({ slug, prefixe, onContinuer, onClose }: P
           </div>
           {erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
           <p id="lien-reservation-aide" className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Lettres minuscules, chiffres et tirets, de 3 à 40 caractères.
+            {t('Lettres minuscules, chiffres et tirets, de 3 à 40 caractères.')}
           </p>
         </Bloc>
       </form>

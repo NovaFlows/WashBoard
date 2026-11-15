@@ -11,6 +11,7 @@ import { sansChoixDeType } from '@/lib/prestation'
 import { appliquerPrestations, basculerPrestation, MAX_PRESTATIONS, prestationsCompatibles, typesCommuns } from '@/lib/plusieursPrestations'
 import MentionLieuAdapte from './MentionLieuAdapte'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type Props = {
   services: Service[]
@@ -50,6 +51,7 @@ const VEHICLE_IMAGES: Record<string, string> = {
 const UNCATEGORIZED = '__none__'
 
 export default function StepService({ services, categories, selected, factureApresPrestation = false, clientsProAutorises = true, onNext, accent = '#2563eb', vehicule3D = true, auCentre = false, plusieurs = false, couleurSilhouette = false }: Props) {
+  const tr = useT()
   const [isPro,     setIsPro]     = useState(false)
   // Les prestations cochées : la première est celle de la réservation (une seule hors option « plusieurs »).
   const [serviceIds, setServiceIds] = useState<string[]>(() => selected.service_id ? [selected.service_id] : [])
@@ -224,7 +226,7 @@ export default function StepService({ services, categories, selected, factureApr
               : 'text-slate-500 dark:text-slate-400'
           }`}
         >
-          <User size={15} strokeWidth={2} /> Particulier
+          <User size={15} strokeWidth={2} /> {tr('Particulier')}
         </button>
         <button
           onClick={() => { setIsPro(true) }}
@@ -234,7 +236,7 @@ export default function StepService({ services, categories, selected, factureApr
               : 'text-slate-500 dark:text-slate-400'
           }`}
         >
-          <Building2 size={15} strokeWidth={2} /> Professionnel
+          <Building2 size={15} strokeWidth={2} /> {tr('Professionnel')}
         </button>
       </div>
       )}
@@ -242,8 +244,8 @@ export default function StepService({ services, categories, selected, factureApr
       {isPro && (
         <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-400">
           {factureApresPrestation
-            ? 'Une facture à vos informations société vous sera envoyée une fois la prestation réalisée.'
-            : 'Vos informations société figureront sur le récapitulatif de votre réservation.'}
+            ? tr('Une facture à vos informations société vous sera envoyée une fois la prestation réalisée.')
+            : tr('Vos informations société figureront sur le récapitulatif de votre réservation.')}
         </div>
       )}
 
@@ -272,12 +274,12 @@ export default function StepService({ services, categories, selected, factureApr
         </div>
       )}
 
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">{plusieurs ? 'Choisissez vos prestations' : 'Choisissez votre prestation'}</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{plusieurs ? 'Vous pouvez en choisir plusieurs : prix et durée s’additionnent.' : 'Sélectionnez le type de lavage souhaité'}</p>
+      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">{plusieurs ? tr('Choisissez vos prestations') : tr('Choisissez votre prestation')}</h2>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{plusieurs ? tr('Vous pouvez en choisir plusieurs : prix et durée s’additionnent.') : tr('Sélectionnez le type de lavage souhaité')}</p>
 
       <div className="flex flex-col gap-3 mb-6">
         {visibleServices.length === 0 && (
-          <p className="text-sm text-slate-400 dark:text-slate-500 py-6 text-center">Aucune prestation dans cette catégorie.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 py-6 text-center">{tr('Aucune prestation dans cette catégorie.')}</p>
         )}
         {visibleServices.map((service) => {
           const isSelected = serviceIds.includes(service.id)
@@ -319,20 +321,20 @@ export default function StepService({ services, categories, selected, factureApr
                   </div>
                   <div className="flex items-center gap-1 mt-0.5">
                     <Clock size={11} className="text-slate-400 shrink-0" />
-                    <span className="text-xs text-slate-400">{service.duration_minutes} min</span>
+                    <span className="text-xs text-slate-400">{service.duration_minutes} {tr('min')}</span>
                   </div>
                   {service.description && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">{service.description}</p>
                   )}
                   <MentionLieuAdapte service={service} auCentre={auCentre} className="mt-1.5" />
-                  {incompatible && <p className="text-xs text-slate-400 mt-1.5">Ne se fait pas avec les prestations déjà choisies.</p>}
+                  {incompatible && <p className="text-xs text-slate-400 mt-1.5">{tr('Ne se fait pas avec les prestations déjà choisies.')}</p>}
                 </div>
 
                 {/* Prix + radio */}
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <div className="text-right">
                     {hasPriceOverrides(service) && (
-                      <p className="text-xs text-slate-400 leading-none mb-0.5">à partir de</p>
+                      <p className="text-xs text-slate-400 leading-none mb-0.5">{tr('à partir de')}</p>
                     )}
                     <span className="text-lg font-bold text-slate-800 dark:text-slate-100" style={isSelected ? { color: accent } : undefined}>
                       {hasPriceOverrides(service) ? minVehiclePrice(service) : service.price}€
@@ -354,10 +356,10 @@ export default function StepService({ services, categories, selected, factureApr
       {/* Sélection des types — panier multi-types (1 SUV + 1 monospace, etc.) */}
       {selectedService && (
         <div className="mb-6 scroll-mt-4" ref={sectionTypes}>
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Votre sélection</p>
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{tr('Votre sélection')}</p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">{sansChoixDeType(typesDispo)
-            ? 'Indiquez le nombre de véhicules.'
-            : 'Ajoutez un ou plusieurs éléments, de types différents si besoin.'}</p>
+            ? tr('Indiquez le nombre de véhicules.')
+            : tr('Ajoutez un ou plusieurs éléments, de types différents si besoin.')}</p>
           {vehicule3D && typesDispo.some(t => silhouettePour(t, typeInfo(selectedService, t).name, couleurSilhouette)) && (() => {
             const enPanier = Object.keys(basket).filter(t => (basket[t] ?? 0) > 0)
             const affiche = dernier && enPanier.includes(dernier) ? dernier : enPanier[enPanier.length - 1] ?? null
@@ -387,7 +389,7 @@ export default function StepService({ services, categories, selected, factureApr
                   )}
                   <div className="flex-1">
                     <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{info.name}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">{price}€/unité</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{price}{tr('€/unité')}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -431,7 +433,7 @@ export default function StepService({ services, categories, selected, factureApr
                 )
               })}
               <div className="border-t border-slate-200 dark:border-slate-700 pt-1.5 mt-0.5 flex justify-between text-sm font-bold text-slate-900 dark:text-slate-100">
-                <span>Total ({basketCount} élément{basketCount > 1 ? 's' : ''})</span>
+                <span>{tr('Total (')}{basketCount} {tr('élément')}{basketCount > 1 ? 's' : ''})</span>
                 <span>{basketTotal}€</span>
               </div>
             </div>
@@ -441,9 +443,9 @@ export default function StepService({ services, categories, selected, factureApr
           {basketCount > 0 && hasVehicleInBasket && (
             <div className="mt-4">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Modèle de vos véhicules <span className="text-red-500">*</span>
+                {tr('Modèle de vos véhicules')} <span className="text-red-500">*</span>
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">Obligatoire — aide le laveur à identifier votre véhicule (ex. « Peugeot 208 grise »).</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-2.5">{tr('Obligatoire — aide le laveur à identifier votre véhicule (ex. « Peugeot 208 grise »).')}</p>
               <div className="space-y-2">
                 {Object.entries(basket)
                   .filter(([type]) => isVehicleType(type))
@@ -458,7 +460,7 @@ export default function StepService({ services, categories, selected, factureApr
                           <input
                             value={models[type]?.[i] ?? ''}
                             onChange={e => setModel(type, i, e.target.value)}
-                            placeholder="Modèle du véhicule"
+                            placeholder={tr('Modèle du véhicule')}
                             className="flex-1 min-w-0 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-slate-300"
                           />
                         </div>
@@ -473,7 +475,7 @@ export default function StepService({ services, categories, selected, factureApr
 
       {selectedService && basketCount > 0 && hasVehicleInBasket && !allModelsFilled && (
         <p className="text-xs text-amber-600 dark:text-amber-500 mb-2 text-center">
-          Renseignez le modèle de chaque véhicule pour continuer.
+          {tr('Renseignez le modèle de chaque véhicule pour continuer.')}
         </p>
       )}
       <button
@@ -483,7 +485,7 @@ export default function StepService({ services, categories, selected, factureApr
         className="w-full py-3 px-4 text-white font-semibold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90 text-sm"
         style={{ backgroundColor: accent }}
       >
-        Continuer
+        {tr('Continuer')}
       </button>
     </div>
   )

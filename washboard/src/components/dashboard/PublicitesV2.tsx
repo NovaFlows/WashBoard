@@ -13,6 +13,7 @@ import {
   inventaireFormats, synthese, joursDepuisBudget, budgetAVerifier, SEUIL_FIABILITE,
   type BilanCreation, type CampagneAffichee, type Format, type Plateforme,
 } from '@/lib/campagne'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // « Publicités » — l'écran de l'application installée (v2).
 //
@@ -49,10 +50,10 @@ const titre = `${police} [font-weight:var(--v2-type-titre-poids)] [font-stretch:
 const CHAMP = `h-11 w-full rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[15px] ${corps} text-[color:var(--v2-color-encre)] outline-none focus:border-[color:var(--v2-color-accent)]`
 const ETIQUETTE = `mb-1.5 block text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`
 
-function jourCourt(iso: string): string {
+function jourCourt(iso: string, loc = 'fr-FR'): string {
   const d = new Date(`${iso}T12:00:00Z`)
   const j = d.getUTCDate()
-  const m = d.toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' })
+  const m = d.toLocaleDateString(loc, { month: 'short', timeZone: 'UTC' })
   return `${j === 1 ? '1er' : j} ${m}`
 }
 
@@ -126,6 +127,7 @@ function LienCopiable({ lien }: { lien: string }) {
 // ── Une vidéo ───────────────────────────────────────────────────────────────
 
 function Video({ b, rang, lien }: { b: BilanCreation; rang: number; lien: string }) {
+  const t = useT()
   const meilleure = rang === 1 && b.reservations > 0
   const part = b.partReservations ?? 0
 
@@ -146,25 +148,25 @@ function Video({ b, rang, lien }: { b: BilanCreation; rang: number; lien: string
             className={`shrink-0 rounded-[var(--v2-radius-pilule)] px-2 py-0.5 text-[11px] ${corpsFort}`}
             style={{ background: 'var(--v2-color-vert)', color: 'var(--v2-color-surface)' }}
           >
-            Meilleure
+            {t('Meilleure')}
           </span>
         )}
       </div>
 
       <div className="mt-1 pl-8">
-        <Mesure label="Visites" valeur={String(b.visites)} />
-        <Mesure label="Clients" valeur={String(b.reservations)} />
+        <Mesure label={t('Visites')} valeur={String(b.visites)} />
+        <Mesure label={t('Clients')} valeur={String(b.reservations)} />
         {/* Sous le seuil, le taux ne s'affiche pas : 1 client sur 3 visites
             donne 33 % et ressemble à un succès, alors que c'est du hasard.
             L'afficher ferait couper la bonne vidéo. */}
         <Mesure
-          label="Transformation"
-          valeur={b.fiable ? pourcent(b.tauxConversion) : 'Peu de données'}
+          label={t('Transformation')}
+          valeur={b.fiable ? pourcent(b.tauxConversion) : t('Peu de données')}
           aide={b.fiable ? undefined : `dès ${SEUIL_FIABILITE} visites`}
           pale={!b.fiable}
         />
         <Mesure
-          label="Encaissé"
+          label={t('Encaissé')}
           valeur={`${formatEuros(b.chiffreAffaires)} €`}
           aide={b.coutParReservation === null
             ? undefined
@@ -184,7 +186,7 @@ function Video({ b, rang, lien }: { b: BilanCreation; rang: number; lien: string
               />
             </div>
             <p className={`mt-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {pourcent(b.partReservations)} des clients de la campagne
+              {pourcent(b.partReservations)} {t('des clients de la campagne')}
             </p>
           </div>
         )}
@@ -205,6 +207,7 @@ function FeuilleCampagne({ campagne, onClose, onFait }: {
   onClose: () => void
   onFait: () => void
 }) {
+  const t = useT()
   const [nomChamp, setNomChamp] = useState(campagne?.nom ?? '')
   const [plateforme, setPlateforme] = useState<Plateforme>(campagne?.plateforme ?? 'meta')
   const [budget, setBudget] = useState(campagne ? String(campagne.budget) : '')
@@ -224,7 +227,7 @@ function FeuilleCampagne({ campagne, onClose, onFait }: {
     setEnCours(false)
     if (!res.ok) {
       const corpsRep = await res.json().catch(() => ({}))
-      setErreur(corpsRep.error ?? 'Impossible d’enregistrer')
+      setErreur(corpsRep.error ?? t('Impossible d’enregistrer'))
       return
     }
     onFait()
@@ -232,7 +235,7 @@ function FeuilleCampagne({ campagne, onClose, onFait }: {
 
   return (
     <Feuille
-      titre={campagne ? 'Modifier la campagne' : 'Nouvelle campagne'}
+      titre={campagne ? t('Modifier la campagne') : 'Nouvelle campagne'}
       onClose={onClose}
       verrou="campagnes"
       pied={
@@ -242,7 +245,7 @@ function FeuilleCampagne({ campagne, onClose, onFait }: {
           className={`${BOUTON} w-full`}
           style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-surface)' }}
         >
-          {enCours ? 'Enregistrement…' : campagne ? 'Enregistrer' : 'Créer la campagne'}
+          {enCours ? 'Enregistrement…' : campagne ? 'Enregistrer' : t('Créer la campagne')}
         </button>
       }
     >
@@ -252,14 +255,14 @@ function FeuilleCampagne({ campagne, onClose, onFait }: {
         )}
 
         <div>
-          <label className={ETIQUETTE} htmlFor="v2-camp-nom">Nom</label>
+          <label className={ETIQUETTE} htmlFor="v2-camp-nom">{t('Nom')}</label>
           <input id="v2-camp-nom" className={CHAMP} value={nomChamp} maxLength={120}
-            onChange={e => setNomChamp(e.target.value)} placeholder="Pub Rentrée" />
+            onChange={e => setNomChamp(e.target.value)} placeholder={t('Pub Rentrée')} />
         </div>
 
         {!campagne && (
           <div>
-            <label className={ETIQUETTE} htmlFor="v2-camp-plateforme">Plateforme</label>
+            <label className={ETIQUETTE} htmlFor="v2-camp-plateforme">{t('Plateforme')}</label>
             <select id="v2-camp-plateforme" className={CHAMP} value={plateforme}
               onChange={e => setPlateforme(e.target.value as Plateforme)}>
               {PLATEFORMES.map(p => <option key={p.cle} value={p.cle}>{p.label}</option>)}
@@ -268,24 +271,22 @@ function FeuilleCampagne({ campagne, onClose, onFait }: {
         )}
 
         <div>
-          <label className={ETIQUETTE} htmlFor="v2-camp-budget">Budget dépensé à ce jour (€)</label>
+          <label className={ETIQUETTE} htmlFor="v2-camp-budget">{t('Budget dépensé à ce jour (€)')}</label>
           <input id="v2-camp-budget" className={CHAMP} value={budget} inputMode="decimal"
             onChange={e => setBudget(e.target.value)} placeholder="80" />
           <p className={`mt-1.5 text-[12.5px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-            Le montant TOTAL dépensé depuis le début. Recopiez-le depuis votre gestionnaire de
-            publicités : c’est lui qui sert à calculer ce que chaque client vous a coûté. WashBoard
-            ne va pas le chercher tout seul.
+            {t('Le montant TOTAL dépensé depuis le début. Recopiez-le depuis votre gestionnaire de publicités : c’est lui qui sert à calculer ce que chaque client vous a coûté. WashBoard ne va pas le chercher tout seul.')}
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={ETIQUETTE} htmlFor="v2-camp-debut">Début</label>
+            <label className={ETIQUETTE} htmlFor="v2-camp-debut">{t('Début')}</label>
             <input id="v2-camp-debut" type="date" className={CHAMP} value={debut}
               onChange={e => setDebut(e.target.value)} />
           </div>
           <div>
-            <label className={ETIQUETTE} htmlFor="v2-camp-fin">Fin</label>
+            <label className={ETIQUETTE} htmlFor="v2-camp-fin">{t('Fin')}</label>
             <input id="v2-camp-fin" type="date" className={CHAMP} value={fin}
               onChange={e => setFin(e.target.value)} />
           </div>
@@ -300,16 +301,15 @@ function FeuilleCampagne({ campagne, onClose, onFait }: {
           disabled={!fin}
           className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-accent)] disabled:opacity-40`}
         >
-          Sans fin prévue
+          {t('Sans fin prévue')}
         </button>
 
         <p
           className={`rounded-[var(--v2-radius-bouton)] px-3 py-2.5 text-[12.5px] leading-relaxed ${corps}`}
           style={{ background: 'var(--v2-color-fond)', color: 'var(--v2-color-gris)' }}
         >
-          <span className={corpsFort} style={{ color: 'var(--v2-color-encre)' }}>Vos liens ne changent jamais.</span>{' '}
-          Rallonger la campagne ou corriger le budget ne touche pas à l’adresse déjà en ligne dans
-          votre publicité : l’algorithme de la plateforme ne repart pas de zéro.
+          <span className={corpsFort} style={{ color: 'var(--v2-color-encre)' }}>{t('Vos liens ne changent jamais.')}</span>{' '}
+          {t('Rallonger la campagne ou corriger le budget ne touche pas à l’adresse déjà en ligne dans votre publicité : l’algorithme de la plateforme ne repart pas de zéro.')}
         </p>
       </div>
     </Feuille>
@@ -321,6 +321,7 @@ function FeuilleVideo({ campagneId, onClose, onFait }: {
   onClose: () => void
   onFait: () => void
 }) {
+  const t = useT()
   const [nomChamp, setNomChamp] = useState('')
   const [format, setFormat] = useState<Format>('video')
   const [budget, setBudget] = useState('')
@@ -338,7 +339,7 @@ function FeuilleVideo({ campagneId, onClose, onFait }: {
     setEnCours(false)
     if (!res.ok) {
       const corpsRep = await res.json().catch(() => ({}))
-      setErreur(corpsRep.error ?? 'Impossible d’ajouter cette vidéo')
+      setErreur(corpsRep.error ?? t('Impossible d’ajouter cette vidéo'))
       return
     }
     onFait()
@@ -346,8 +347,8 @@ function FeuilleVideo({ campagneId, onClose, onFait }: {
 
   return (
     <Feuille
-      titre="Ajouter une vidéo"
-      sousTitre="Un lien par vidéo, pour savoir laquelle marche"
+      titre={t('Ajouter une vidéo')}
+      sousTitre={t('Un lien par vidéo, pour savoir laquelle marche')}
       onClose={onClose}
       verrou="campagnes"
       pied={
@@ -367,13 +368,13 @@ function FeuilleVideo({ campagneId, onClose, onFait }: {
         )}
 
         <div>
-          <label className={ETIQUETTE} htmlFor="v2-crea-nom">Nom de la vidéo</label>
+          <label className={ETIQUETTE} htmlFor="v2-crea-nom">{t('Nom de la vidéo')}</label>
           <input id="v2-crea-nom" className={CHAMP} value={nomChamp} maxLength={120}
-            onChange={e => setNomChamp(e.target.value)} placeholder="Avant/après Clio" />
+            onChange={e => setNomChamp(e.target.value)} placeholder={t('Avant/après Clio')} />
         </div>
 
         <div>
-          <label className={ETIQUETTE} htmlFor="v2-crea-format">Format</label>
+          <label className={ETIQUETTE} htmlFor="v2-crea-format">{t('Format')}</label>
           <select id="v2-crea-format" className={CHAMP} value={format}
             onChange={e => setFormat(e.target.value as Format)}>
             {FORMATS.map(f => <option key={f.cle} value={f.cle}>{f.label}</option>)}
@@ -381,13 +382,11 @@ function FeuilleVideo({ campagneId, onClose, onFait }: {
         </div>
 
         <div>
-          <label className={ETIQUETTE} htmlFor="v2-crea-budget">Budget de cette vidéo (€)</label>
+          <label className={ETIQUETTE} htmlFor="v2-crea-budget">{t('Budget de cette vidéo (€)')}</label>
           <input id="v2-crea-budget" className={CHAMP} value={budget} inputMode="decimal"
-            onChange={e => setBudget(e.target.value)} placeholder="Laissez vide si vous ne savez pas" />
+            onChange={e => setBudget(e.target.value)} placeholder={t('Laissez vide si vous ne savez pas')} />
           <p className={`mt-1.5 text-[12.5px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-            Meta répartit souvent le budget tout seul entre vos vidéos : dans ce cas, laissez vide.
-            Les visites et les clients seront comptés quand même, seul le coût par client restera
-            inconnu.
+            {t('Meta répartit souvent le budget tout seul entre vos vidéos : dans ce cas, laissez vide. Les visites et les clients seront comptés quand même, seul le coût par client restera inconnu.')}
           </p>
         </div>
       </div>
@@ -403,6 +402,8 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
   onRafraichir: () => void
   onModifier: () => void
 }) {
+  const loc = useLocale()
+  const t = useT()
   const [ouvert, setOuvert] = useState(false)
   const [ajout, setAjout] = useState(false)
   const aujourdHui = new Date().toLocaleDateString('en-CA')
@@ -420,8 +421,8 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
           <div className="min-w-0 flex-1">
             <p className={`truncate text-[17px] ${nom}`}>{c.nom}</p>
             <p className={`mt-0.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {labelPlateforme(c.plateforme)} · du {jourCourt(c.debut)}
-              {c.fin ? ` au ${jourCourt(c.fin)}` : ', sans fin prévue'}
+              {labelPlateforme(c.plateforme)} {t('· du')} {jourCourt(c.debut, loc)}
+              {c.fin ? ` au ${jourCourt(c.fin, loc)}` : t(', sans fin prévue')}
               {c.creations.length > 0 && ` · ${inventaireFormats(c.creations.map(x => x.creation))}`}
             </p>
           </div>
@@ -431,23 +432,23 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
               ? { background: 'color-mix(in srgb, var(--v2-color-vert) 12%, transparent)', color: 'var(--v2-color-vert)' }
               : { background: 'var(--v2-filet-fort)', color: 'var(--v2-color-gris)' }}
           >
-            {active ? 'En cours' : 'Terminée'}
+            {active ? 'En cours' : t('Terminée')}
           </span>
         </div>
 
         <div className="mt-2">
-          <Mesure label="Dépensé" valeur={`${formatEuros(c.budget)} €`} />
-          <Mesure label="Encaissé" valeur={`${formatEuros(b.chiffreAffaires)} €`} />
+          <Mesure label={t('Dépensé')} valeur={`${formatEuros(c.budget)} €`} />
+          <Mesure label={t('Encaissé')} valeur={`${formatEuros(b.chiffreAffaires)} €`} />
           <Mesure
-            label="Retour"
+            label={t('Retour')}
             valeur={mesurable ? multiple(b.retour) : '—'}
             couleur={couleur}
             aide={b.coutParReservation === null
               ? undefined
               : `${formatEuros(Math.round(b.coutParReservation * 100) / 100)} € par client`}
           />
-          <Mesure label="Visites" valeur={String(b.visites)} />
-          <Mesure label="Clients" valeur={String(b.reservations)} />
+          <Mesure label={t('Visites')} valeur={String(b.visites)} />
+          <Mesure label={t('Clients')} valeur={String(b.reservations)} />
         </div>
 
         {/* Un budget figé sur une campagne qui tourne encore rend le retour
@@ -463,16 +464,15 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
           >
             <AlertTriangle size={14} strokeWidth={2.5} className="mt-0.5 shrink-0" style={{ color: 'var(--v2-color-ambre)' }} />
             <span className={`text-[12.5px] leading-relaxed ${corps}`} style={{ color: 'var(--v2-color-ambre)' }}>
-              Ce budget date de {jours} jours et la campagne tourne toujours. Tant qu’il n’est pas
-              actualisé, le retour affiché monte tout seul.{' '}
-              <span className={corpsFort}>Mettre à jour</span>
+              {t('Ce budget date de')} {jours} {t('jours et la campagne tourne toujours. Tant qu’il n’est pas actualisé, le retour affiché monte tout seul.')}{' '}
+              <span className={corpsFort}>{t('Mettre à jour')}</span>
             </span>
           </button>
         )}
 
         {b.reservations > 0 && (
           <p className={`mt-2 text-[14px] leading-relaxed ${corps}`}>
-            {formatEuros(c.budget)} € dépensés, <span className={corpsFort}>{formatEuros(b.chiffreAffaires)} € de lavages</span> réservés.
+            {formatEuros(c.budget)} {t('€ dépensés,')} <span className={corpsFort}>{formatEuros(b.chiffreAffaires)} {t('€ de lavages')}</span> {t('réservés.')}
           </p>
         )}
       </div>
@@ -480,16 +480,14 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
       <div className="px-4">
         <Repliable
           id={`videos-${c.id}`}
-          titre={c.creations.length === 0 ? 'Suivre chaque vidéo' : 'Vos vidéos'}
+          titre={c.creations.length === 0 ? t('Suivre chaque vidéo') : t('Vos vidéos')}
           resume={c.creations.length === 0 ? 'aucune' : `${c.creations.length}`}
           ouvert={ouvert}
           onBascule={() => setOuvert(o => !o)}
         >
           {c.creations.length === 0 ? (
             <p className={`text-[13px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-              Une campagne qui diffuse trois vidéos ne vous donne qu’une moyenne. Déclarez-les ici,
-              collez le lien de chacune sous la vidéo correspondante, et vous verrez laquelle amène
-              vos clients — au lieu de couper les trois ensemble.
+              {t('Une campagne qui diffuse trois vidéos ne vous donne qu’une moyenne. Déclarez-les ici, collez le lien de chacune sous la vidéo correspondante, et vous verrez laquelle amène vos clients — au lieu de couper les trois ensemble.')}
             </p>
           ) : (
             <ul>
@@ -509,9 +507,9 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
               tout l'écran. */}
           {c.creations.length > 0 && c.reste.visites > 0 && (
             <p className={`mt-3 text-[12px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-              {c.reste.visites} visite{c.reste.visites > 1 ? 's' : ''}
+              {c.reste.visites} {t('visite')}{c.reste.visites > 1 ? 's' : ''}
               {c.reste.reservations > 0 && ` et ${c.reste.reservations} client${c.reste.reservations > 1 ? 's' : ''}`}
-              {' '}sans vidéo identifiée — arrivées par le lien de la campagne.
+              {' '}{t('sans vidéo identifiée — arrivées par le lien de la campagne.')}
             </p>
           )}
 
@@ -521,12 +519,12 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
             className={`mt-3 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[var(--v2-radius-bouton)] border border-dashed border-[color:var(--v2-filet-fort)] text-[14px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
           >
             <Plus size={15} strokeWidth={2.5} />
-            Ajouter une vidéo
+            {t('Ajouter une vidéo')}
           </button>
 
           <div className="mt-3 border-t border-[color:var(--v2-filet)] pt-2">
             <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Lien de la campagne entière
+              {t('Lien de la campagne entière')}
             </p>
             <LienCopiable lien={lienCampagne(baseUrl, c.cle, c.plateforme)} />
           </div>
@@ -555,6 +553,7 @@ export type PublicitesProps = {
 }
 
 export default function PublicitesV2({ campagnes, baseUrl, indisponible }: PublicitesProps) {
+  const t = useT()
   const router = useRouter()
   const grandEcran = useGrandEcran()
   const [feuille, setFeuille] = useState<{ quoi: 'creer' } | { quoi: 'modifier'; c: CampagneAffichee } | null>(null)
@@ -566,9 +565,9 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
   const couleur = couleurRetour(totaux.retour, totaux.reservations)
 
   const sousTitre = indisponible
-    ? 'Pas encore activé'
+    ? t('Pas encore activé')
     : campagnes.length === 0
-      ? 'Aucune campagne'
+      ? t('Aucune campagne')
       : `${campagnes.length} campagne${campagnes.length > 1 ? 's' : ''} · ${formatEuros(totaux.budget)} € dépensés`
 
   return (
@@ -583,13 +582,13 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
       <div className="flex items-center gap-1 pb-3">
         <Link
           href="/dashboard/clients"
-          aria-label="Retour à Clients"
+          aria-label={t('Retour à Clients')}
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[21px] leading-none ${titre}`}>Publicités</h1>
+          <h1 className={`text-[21px] leading-none ${titre}`}>{t('Publicités')}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{sousTitre}</p>
         </div>
         {/* Bouton d'ajout d'en-tête (maquette, écran 33) : seulement en grand écran, et
@@ -604,7 +603,7 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
             style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)' }}
           >
             <Plus size={16} strokeWidth={2.5} aria-hidden />
-            Nouvelle campagne
+            {t('Nouvelle campagne')}
           </button>
         )}
       </div>
@@ -619,10 +618,9 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
               <Clock size={16} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className={`text-[15px] ${nom}`}>Le suivi des publicités n’est pas encore activé</p>
+              <p className={`text-[15px] ${nom}`}>{t('Le suivi des publicités n’est pas encore activé')}</p>
               <p className={`mt-1 text-[13.5px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-                Rien n’est cassé de votre côté. Vos visites et vos réservations continuent d’être
-                enregistrées normalement.
+                {t('Rien n’est cassé de votre côté. Vos visites et vos réservations continuent d’être enregistrées normalement.')}
               </p>
             </div>
           </div>
@@ -632,15 +630,15 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
           {campagnes.length > 0 && (
             <Carte>
               <div className="p-4">
-                <Mesure label="Dépensé" valeur={`${formatEuros(totaux.budget)} €`} />
-                <Mesure label="Encaissé" valeur={`${formatEuros(totaux.chiffreAffaires)} €`} />
+                <Mesure label={t('Dépensé')} valeur={`${formatEuros(totaux.budget)} €`} />
+                <Mesure label={t('Encaissé')} valeur={`${formatEuros(totaux.chiffreAffaires)} €`} />
                 <Mesure
-                  label="Retour"
+                  label={t('Retour')}
                   valeur={totaux.reservations > 0 ? multiple(totaux.retour) : '—'}
                   couleur={couleur}
                 />
                 <Mesure
-                  label="Clients"
+                  label={t('Clients')}
                   valeur={String(totaux.reservations)}
                   aide={totaux.coutParReservation === null
                     ? undefined
@@ -648,11 +646,11 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
                 />
                 {totaux.reservations > 0 && totaux.retour !== null && (
                   <p className={`mt-2 border-t border-[color:var(--v2-filet)] pt-3 text-[14px] leading-relaxed ${corps}`}>
-                    Pour 1 € de publicité, vous avez encaissé{' '}
+                    {t('Pour 1 € de publicité, vous avez encaissé')}{' '}
                     <span className={corpsFort} style={couleur ? { color: couleur } : undefined}>
                       {formatEuros(Math.round(totaux.retour * 100) / 100)} €
                     </span>{' '}
-                    de lavages.
+                    {t('de lavages.')}
                   </p>
                 )}
               </div>
@@ -690,11 +688,10 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
                 style={{ color: 'var(--v2-filet-fort)' }}
               />
               <p className={`relative text-[19px] leading-snug ${nom}`}>
-                Avec WashBoard, suivez chaque campagne de pub
+                {t('Avec WashBoard, suivez chaque campagne de pub')}
               </p>
               <p className={`relative mx-auto mt-2 max-w-[18rem] text-[13.5px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-                Ce que vous dépensez, ce que ça vous rapporte, et laquelle de vos vidéos amène
-                vraiment des clients.
+                {t('Ce que vous dépensez, ce que ça vous rapporte, et laquelle de vos vidéos amène vraiment des clients.')}
               </p>
               <button
                 type="button"
@@ -702,7 +699,7 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
                 className={`${BOUTON} relative mx-auto mt-5 w-full max-w-[16rem]`}
                 style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-surface)' }}
               >
-                Créer ma première campagne
+                {t('Créer ma première campagne')}
               </button>
             </div>
           )}
@@ -713,9 +710,9 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
               style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
             >
               <span className="min-w-0 flex-1">
-                <span className={`block text-[15px] ${nom}`}>Voir le bilan</span>
+                <span className={`block text-[15px] ${nom}`}>{t('Voir le bilan')}</span>
                 <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                  Tout additionné, vos meilleures vidéos, vos plateformes
+                  {t('Tout additionné, vos meilleures vidéos, vos plateformes')}
                 </span>
               </span>
               <ChevronRight size={17} strokeWidth={2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
@@ -756,7 +753,7 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
           }}
         >
           <Plus size={20} strokeWidth={2.5} aria-hidden />
-          Campagne
+          {t('Campagne')}
         </button>
       )}
 

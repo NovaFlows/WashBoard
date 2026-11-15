@@ -19,6 +19,7 @@ import type { AcompteDu } from './EncartAcompte'
 import type { FideliteDue } from './CarteApresReservation'
 import EncartFidelite, { useApercuFidelite } from './EncartFidelite'
 import type { CentreAutoPublic } from '@/lib/centreAuto'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Mappe le step réel du formulaire sur le nom d'étape suivi côté analytics
 // (voir migration 003 booking_funnel_events).
@@ -114,6 +115,7 @@ export type FormState = Partial<BookingFormData>
 
 // step 1 = Prestation, 2 = Options (si dispo), 3 = Créneau, 4 = Coordonnées, 5 = Confirmation
 export default function LegacyBookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', promotion = null, acompte = null, fideliteProposee = false, centreAuto = null }: Props) {
+  const tr = useT()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormState>({})
   const [bookingId, setBookingId] = useState<string | null>(null)
@@ -192,8 +194,8 @@ export default function LegacyBookingForm({ washer, services, categories, availa
 
   // Stepper : 4 étapes si options dispo, 3 sinon
   const STEPS = hasAddons
-    ? ['Prestation', 'Options', 'Créneau', 'Coordonnées']
-    : ['Prestation', 'Créneau', 'Coordonnées']
+    ? ['Prestation', 'Options', tr('Créneau'), tr('Coordonnées')]
+    : ['Prestation', tr('Créneau'), tr('Coordonnées')]
 
   // Mappe le step réel sur la position dans le stepper
   function stepperPos(s: number): number {
@@ -243,7 +245,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
         body: JSON.stringify(payload),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
+      if (!res.ok) throw new Error(json.error ?? tr('Erreur lors de la réservation'))
       setBookingId(json.data.id)
       setJeton(json.data.jeton ?? null)
       // Montant recalculé par le serveur, jamais repris du formulaire.
@@ -267,7 +269,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
         value: Number.isFinite(montant) && montant > 0 ? montant : undefined,
       })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Une erreur est survenue')
+      setError(e instanceof Error ? e.message : tr('Une erreur est survenue'))
     } finally {
       setLoading(false)
     }
@@ -290,10 +292,9 @@ export default function LegacyBookingForm({ washer, services, categories, availa
           est un client perdu pour le laveur. */}
       {estProposition && (
         <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 px-4 sm:px-6 py-3 text-sm">
-          <p className="font-bold">Aperçu — cette page n&apos;est pas encore active</p>
+          <p className="font-bold">{tr('Aperçu — cette page n’est pas encore active')}</p>
           <p className="text-xs mt-0.5 leading-relaxed">
-            Elle montre à quoi ressemblerait la page de réservation de {washer.name}.
-            Aucune réservation ne peut être enregistrée pour l&apos;instant.
+            {tr('Elle montre à quoi ressemblerait la page de réservation de')} {washer.name}{tr('. Aucune réservation ne peut être enregistrée pour l’instant.')}
           </p>
         </div>
       )}
@@ -395,11 +396,10 @@ export default function LegacyBookingForm({ washer, services, categories, availa
             {disposEnEchec ? (
               <>
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  Impossible d&apos;afficher les disponibilités
+                  {tr('Impossible d’afficher les disponibilités')}
                 </p>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-5">
-                  Vérifiez votre connexion : nous préférons ne rien proposer plutôt
-                  qu&apos;un horaire déjà pris.
+                  {tr('Vérifiez votre connexion : nous préférons ne rien proposer plutôt qu’un horaire déjà pris.')}
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <button
@@ -407,7 +407,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
                     onClick={() => setStep(hasAddons ? 2 : 1)}
                     className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
-                    Retour
+                    {tr('Retour')}
                   </button>
                   <button
                     type="button"
@@ -415,13 +415,13 @@ export default function LegacyBookingForm({ washer, services, categories, availa
                     className="px-4 py-2 rounded-lg text-sm font-bold text-white"
                     style={{ backgroundColor: accent }}
                   >
-                    Réessayer
+                    {tr('Réessayer')}
                   </button>
                 </div>
               </>
             ) : (
               <p className="text-sm text-slate-500 dark:text-slate-400" role="status">
-                Recherche des créneaux disponibles…
+                {tr('Recherche des créneaux disponibles…')}
               </p>
             )}
           </div>
@@ -468,26 +468,24 @@ export default function LegacyBookingForm({ washer, services, categories, availa
               </svg>
             </div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-              Voilà à quoi ressemblerait votre page
+              {tr('Voilà à quoi ressemblerait votre page')}
             </h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm mx-auto mb-6">
-              Vos prestations, vos tarifs et vos horaires y sont déjà. Activez-la
-              pour que vos clients puissent réserver et que les rendez-vous
-              tombent dans votre agenda.
+              {tr('Vos prestations, vos tarifs et vos horaires y sont déjà. Activez-la pour que vos clients puissent réserver et que les rendez-vous tombent dans votre agenda.')}
             </p>
             <a
               href="/signup"
               className="inline-block px-6 py-3 text-white text-sm font-semibold rounded-xl transition-opacity hover:opacity-90"
               style={{ backgroundColor: accent }}
             >
-              Activer ma page — 1 mois offert
+              {tr('Activer ma page — 1 mois offert')}
             </a>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">Sans carte bancaire</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">{tr('Sans carte bancaire')}</p>
             <button
               onClick={() => setStep(3)}
               className="block mx-auto mt-5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             >
-              ← Revenir aux créneaux
+              {tr('← Revenir aux créneaux')}
             </button>
           </div>
         )}

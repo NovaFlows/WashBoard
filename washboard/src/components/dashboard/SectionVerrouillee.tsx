@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useT } from '@/components/i18n/I18nProvider'
 
 /** Enveloppe un réglage que l'offre du laveur ne comprend pas.
  *
@@ -21,6 +24,7 @@ export function SectionVerrouillee({ verrouille, planLabel, children }: {
   planLabel: string
   children: React.ReactNode
 }) {
+  const t = useT()
   if (!verrouille) return <>{children}</>
 
   return (
@@ -55,7 +59,7 @@ export function SectionVerrouillee({ verrouille, planLabel, children }: {
             <rect x="5" y="11" width="14" height="10" rx="2" />
             <path d="M8 11V7a4 4 0 1 1 8 0v4" />
           </svg>
-          Inclus dans l’offre {planLabel}
+          {t('Inclus dans l’offre')} {planLabel}
         </Link>
       </div>
     </div>

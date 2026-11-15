@@ -13,6 +13,7 @@ import {
   joursDepuisBudget, budgetAVerifier,
   type BilanCreation, type CampagneAffichee, type Format, type Plateforme,
 } from '@/lib/campagne'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // ════════════════════════════════════════════════════════════════════════════
 // L'écran des publicités, dans l'onglet CRM
@@ -44,10 +45,10 @@ const ICONE_FORMAT: Record<Format, typeof Play> = {
   video: Play, image: ImageIcon, carrousel: Images, autre: Megaphone,
 }
 
-function jourCourt(iso: string): string {
+function jourCourt(iso: string, loc = 'fr-FR'): string {
   const d = new Date(`${iso}T12:00:00Z`)
   const jour = d.getUTCDate()
-  const mois = d.toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' })
+  const mois = d.toLocaleDateString(loc, { month: 'short', timeZone: 'UTC' })
   // « 1er », pas « 1 » : le français l'exige, et c'est le genre de détail qui
   // décide si un écran a l'air fini ou bâclé.
   return `${jour === 1 ? '1er' : jour} ${mois}`
@@ -124,6 +125,7 @@ function LigneCreation({ b, rang, lien, onSupprimer }: {
   lien: string
   onSupprimer: (id: string) => void
 }) {
+  const t = useT()
   const Icone = ICONE_FORMAT[b.creation.format]
   // La barre montre la PART DES CLIENTS, pas le taux : c'est la grandeur qui
   // additionne à 100 % entre les vidéos, donc la seule qu'on peut comparer
@@ -151,7 +153,7 @@ function LigneCreation({ b, rang, lien, onSupprimer }: {
             <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">{b.creation.nom}</p>
             {meilleure && (
               <span className={`${SURTITRE} shrink-0 px-1.5 py-0.5 rounded text-white`} style={{ backgroundColor: VERT }}>
-                Meilleure
+                {t('Meilleure')}
               </span>
             )}
           </div>
@@ -161,19 +163,19 @@ function LigneCreation({ b, rang, lien, onSupprimer }: {
               « Peu de données » se coupent sur trois lignes. Un intitulé
               haché se relit au lieu de se lire. */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 mt-2">
-            <Chiffre label="Visites" valeur={String(b.visites)} />
-            <Chiffre label="Clients" valeur={String(b.reservations)} />
+            <Chiffre label={t('Visites')} valeur={String(b.visites)} />
+            <Chiffre label={t('Clients')} valeur={String(b.reservations)} />
             {/* Sous le seuil, le taux n'est pas affiché : 1 sur 3 donne 33 % et
                 ressemble à un succès, alors que c'est du hasard. Le cacher
                 empêche de couper la bonne vidéo sur un chiffre inventé. */}
             <Chiffre
-              label={b.fiable ? 'Transformation' : 'Peu de données'}
+              label={b.fiable ? 'Transformation' : t('Peu de données')}
               valeur={b.fiable ? pourcent(b.tauxConversion) : '—'}
               aide={b.fiable ? undefined : `dès ${SEUIL_FIABILITE} visites`}
               discret={!b.fiable}
             />
             <Chiffre
-              label="Encaissé"
+              label={t('Encaissé')}
               valeur={`${formatEuros(b.chiffreAffaires)} €`}
               aide={b.coutParReservation === null
                 ? undefined
@@ -190,7 +192,7 @@ function LigneCreation({ b, rang, lien, onSupprimer }: {
                 />
               </div>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                {pourcent(b.partReservations)} des clients de la campagne
+                {pourcent(b.partReservations)} {t('des clients de la campagne')}
               </p>
             </div>
           )}
@@ -216,6 +218,7 @@ const LABEL = 'block text-xs font-semibold text-slate-600 dark:text-slate-300 mb
 
 /** Le formulaire d'ajout d'une vidéo. Un seul champ obligatoire. */
 function FormCreation({ campagneId, onFait }: { campagneId: string; onFait: () => void }) {
+  const t = useT()
   const [nom, setNom] = useState('')
   const [format, setFormat] = useState<Format>('video')
   const [budget, setBudget] = useState('')
@@ -233,7 +236,7 @@ function FormCreation({ campagneId, onFait }: { campagneId: string; onFait: () =
     setEnCours(false)
     if (!res.ok) {
       const corps = await res.json().catch(() => ({}))
-      setErreur(corps.error ?? 'Impossible d’ajouter cette vidéo')
+      setErreur(corps.error ?? t('Impossible d’ajouter cette vidéo'))
       return
     }
     setNom(''); setBudget('')
@@ -245,18 +248,18 @@ function FormCreation({ campagneId, onFait }: { campagneId: string; onFait: () =
       {erreur && <p className="text-xs text-red-600 dark:text-red-400">{erreur}</p>}
 
       <div>
-        <label className={LABEL} htmlFor={`crea-nom-${campagneId}`}>Nom de la vidéo</label>
+        <label className={LABEL} htmlFor={`crea-nom-${campagneId}`}>{t('Nom de la vidéo')}</label>
         <input
           id={`crea-nom-${campagneId}`} className={CHAMP} value={nom} maxLength={120}
           onChange={e => setNom(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && nom.trim() && !enCours) ajouter() }}
-          placeholder="Avant/après Clio"
+          placeholder={t('Avant/après Clio')}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={LABEL} htmlFor={`crea-format-${campagneId}`}>Format</label>
+          <label className={LABEL} htmlFor={`crea-format-${campagneId}`}>{t('Format')}</label>
           <select id={`crea-format-${campagneId}`} className={CHAMP} value={format}
             onChange={e => setFormat(e.target.value as Format)}>
             {FORMATS.map(f => <option key={f.cle} value={f.cle}>{f.label}</option>)}
@@ -264,7 +267,7 @@ function FormCreation({ campagneId, onFait }: { campagneId: string; onFait: () =
         </div>
         <div>
           <label className={LABEL} htmlFor={`crea-budget-${campagneId}`}>
-            Budget <span className="font-normal text-slate-400">(si connu)</span>
+            {t('Budget')} <span className="font-normal text-slate-400">{t('(si connu)')}</span>
           </label>
           <input id={`crea-budget-${campagneId}`} className={CHAMP} value={budget}
             onChange={e => setBudget(e.target.value)} inputMode="decimal" placeholder="—" />
@@ -275,14 +278,13 @@ function FormCreation({ campagneId, onFait }: { campagneId: string; onFait: () =
           budget tout seul entre les publicités d'une campagne. Sans cette
           phrase, le laveur cherche un chiffre qu'il n'a pas, et abandonne. */}
       <p className="text-[11px] text-slate-400 dark:text-slate-500">
-        Laissez le budget vide si Meta répartit lui-même votre budget : les visites et les
-        réservations seront comptées quand même, seul le coût par client restera inconnu.
+        {t('Laissez le budget vide si Meta répartit lui-même votre budget : les visites et les réservations seront comptées quand même, seul le coût par client restera inconnu.')}
       </p>
 
       <button onClick={ajouter} disabled={enCours || !nom.trim()}
         className="px-4 py-2.5 text-white text-sm font-semibold rounded-xl transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-40"
         style={{ backgroundColor: BLEU }}>
-        {enCours ? 'Ajout…' : 'Ajouter cette vidéo'}
+        {enCours ? 'Ajout…' : t('Ajouter cette vidéo')}
       </button>
     </div>
   )
@@ -304,6 +306,7 @@ function FormModification({ c, onFait, onAnnuler }: {
   onFait: () => void
   onAnnuler: () => void
 }) {
+  const t = useT()
   const [nom, setNom] = useState(c.nom)
   const [budget, setBudget] = useState(String(c.budget))
   const [debut, setDebut] = useState(c.debut)
@@ -322,7 +325,7 @@ function FormModification({ c, onFait, onAnnuler }: {
     setEnCours(false)
     if (!res.ok) {
       const corps = await res.json().catch(() => ({}))
-      setErreur(corps.error ?? 'Impossible d’enregistrer cette modification')
+      setErreur(corps.error ?? t('Impossible d’enregistrer cette modification'))
       return
     }
     onFait()
@@ -333,30 +336,28 @@ function FormModification({ c, onFait, onAnnuler }: {
       {erreur && <p className="text-xs text-red-600 dark:text-red-400">{erreur}</p>}
 
       <div>
-        <label className={LABEL} htmlFor={`mod-nom-${c.id}`}>Nom</label>
+        <label className={LABEL} htmlFor={`mod-nom-${c.id}`}>{t('Nom')}</label>
         <input id={`mod-nom-${c.id}`} className={CHAMP} value={nom} maxLength={120}
           onChange={e => setNom(e.target.value)} />
       </div>
 
       <div>
-        <label className={LABEL} htmlFor={`mod-budget-${c.id}`}>Budget dépensé à ce jour (€)</label>
+        <label className={LABEL} htmlFor={`mod-budget-${c.id}`}>{t('Budget dépensé à ce jour (€)')}</label>
         <input id={`mod-budget-${c.id}`} className={CHAMP} value={budget}
           onChange={e => setBudget(e.target.value)} inputMode="decimal" />
         <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 leading-relaxed">
-          Le montant TOTAL dépensé depuis le début, pas celui d’hier. Recopiez-le depuis le
-          gestionnaire de publicités et remettez-le à jour de temps en temps : c’est lui qui sert
-          à calculer ce que chaque client vous a coûté.
+          {t('Le montant TOTAL dépensé depuis le début, pas celui d’hier. Recopiez-le depuis le gestionnaire de publicités et remettez-le à jour de temps en temps : c’est lui qui sert à calculer ce que chaque client vous a coûté.')}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={LABEL} htmlFor={`mod-debut-${c.id}`}>Début</label>
+          <label className={LABEL} htmlFor={`mod-debut-${c.id}`}>{t('Début')}</label>
           <input id={`mod-debut-${c.id}`} type="date" className={CHAMP} value={debut}
             onChange={e => setDebut(e.target.value)} />
         </div>
         <div>
-          <label className={LABEL} htmlFor={`mod-fin-${c.id}`}>Fin</label>
+          <label className={LABEL} htmlFor={`mod-fin-${c.id}`}>{t('Fin')}</label>
           <input id={`mod-fin-${c.id}`} type="date" className={CHAMP} value={fin}
             onChange={e => setFin(e.target.value)} />
           {/* Vider la date de fin remet la campagne en durée indéterminée, ce
@@ -365,16 +366,14 @@ function FormModification({ c, onFait, onAnnuler }: {
           {fin && (
             <button onClick={() => setFin('')}
               className="text-[11px] text-slate-500 dark:text-slate-400 underline mt-1.5 hover:text-slate-700 dark:hover:text-slate-200">
-              Retirer la date de fin (campagne sans fin prévue)
+              {t('Retirer la date de fin (campagne sans fin prévue)')}
             </button>
           )}
         </div>
       </div>
 
       <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed bg-white dark:bg-slate-900 rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700">
-        <strong>Vos liens ne changent pas.</strong> Vous pouvez rallonger la campagne ou corriger
-        le budget sans retoucher à votre publicité : l’adresse déjà en ligne reste valable, et
-        l’algorithme de la plateforme ne repart pas de zéro.
+        <strong>{t('Vos liens ne changent pas.')}</strong> {t('Vous pouvez rallonger la campagne ou corriger le budget sans retoucher à votre publicité : l’adresse déjà en ligne reste valable, et l’algorithme de la plateforme ne repart pas de zéro.')}
       </p>
 
       <div className="flex items-center gap-2">
@@ -385,7 +384,7 @@ function FormModification({ c, onFait, onAnnuler }: {
         </button>
         <button onClick={onAnnuler}
           className="px-4 py-2.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
-          Annuler
+          {t('Annuler')}
         </button>
       </div>
     </div>
@@ -400,6 +399,8 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
   onSupprimer: (id: string) => void
   onRafraichir: () => void
 }) {
+  const loc = useLocale()
+  const t = useT()
   const [ouvert, setOuvert] = useState(false)
   const [ajout, setAjout] = useState(false)
   const [edition, setEdition] = useState(false)
@@ -422,8 +423,8 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
         <div className="min-w-0">
           <p className="font-bold text-slate-900 dark:text-slate-100 truncate">{c.nom}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {labelPlateforme(c.plateforme)} · du {jourCourt(c.debut)}
-            {c.fin ? ` au ${jourCourt(c.fin)}` : ', en cours'}
+            {labelPlateforme(c.plateforme)} {t('· du')} {jourCourt(c.debut, loc)}
+            {c.fin ? ` au ${jourCourt(c.fin, loc)}` : ', en cours'}
             {c.creations.length > 0 && ` · ${inventaireFormats(c.creations.map(x => x.creation))}`}
           </p>
         </div>
@@ -435,7 +436,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
             }`}
           >
-            {active ? 'En cours' : 'Terminée'}
+            {active ? 'En cours' : t('Terminée')}
           </span>
           <button
             onClick={() => setEdition(e => !e)}
@@ -453,18 +454,18 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
-        <Chiffre label="Dépensé" valeur={`${formatEuros(c.budget)} €`} />
-        <Chiffre label="Encaissé" valeur={`${formatEuros(b.chiffreAffaires)} €`} />
+        <Chiffre label={t('Dépensé')} valeur={`${formatEuros(c.budget)} €`} />
+        <Chiffre label={t('Encaissé')} valeur={`${formatEuros(b.chiffreAffaires)} €`} />
         <Chiffre
-          label="Retour"
+          label={t('Retour')}
           valeur={mesurable ? multiple(b.retour) : '—'}
           aide={b.coutParReservation === null
             ? undefined
             : `${formatEuros(Math.round(b.coutParReservation * 100) / 100)} € / client`}
           accent={couleur}
         />
-        <Chiffre label="Visites" valeur={String(b.visites)} />
-        <Chiffre label="Clients" valeur={String(b.reservations)} />
+        <Chiffre label={t('Visites')} valeur={String(b.visites)} />
+        <Chiffre label={t('Clients')} valeur={String(b.reservations)} />
       </div>
 
       {/* Un budget figé sur une campagne qui tourne encore ne rend pas l'écran
@@ -480,9 +481,8 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
         >
           <AlertTriangle size={14} strokeWidth={2.5} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
           <span className="text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed">
-            Ce budget date de {joursBudget} jours et la campagne tourne toujours. Tant qu’il n’est
-            pas actualisé, le retour affiché monte tout seul et vous paraît meilleur qu’il ne l’est.
-            <span className="underline font-semibold"> Mettre à jour</span>
+            {t('Ce budget date de')} {joursBudget} {t('jours et la campagne tourne toujours. Tant qu’il n’est pas actualisé, le retour affiché monte tout seul et vous paraît meilleur qu’il ne l’est.')}
+            <span className="underline font-semibold"> {t('Mettre à jour')}</span>
           </span>
         </button>
       )}
@@ -491,9 +491,9 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
           tableau, il lit une conclusion. */}
       {b.reservations > 0 && (
         <p className="mt-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-          {formatEuros(c.budget)} € dépensés, <strong>{formatEuros(b.chiffreAffaires)} € de lavages</strong> réservés
+          {formatEuros(c.budget)} {t('€ dépensés,')} <strong>{formatEuros(b.chiffreAffaires)} {t('€ de lavages')}</strong> {t('réservés')}
           {b.tauxConversion !== null && b.visites >= SEUIL_FIABILITE
-            && <> — {pourcent(b.tauxConversion)} des visiteurs ont réservé</>}.
+            && <> — {pourcent(b.tauxConversion)} {t('des visiteurs ont réservé')}</>}.
         </p>
       )}
 
@@ -506,7 +506,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
         >
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
             {c.creations.length === 0
-              ? 'Suivre chaque vidéo séparément'
+              ? t('Suivre chaque vidéo séparément')
               : `Vos vidéos (${c.creations.length})`}
           </span>
           <ChevronDown
@@ -519,9 +519,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
           <div className="mt-3">
             {c.creations.length === 0 ? (
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Une campagne qui diffuse trois vidéos ne vous donne qu’une moyenne. Déclarez-les
-                ici, collez le lien de chacune sous la vidéo correspondante, et vous verrez
-                laquelle amène vos clients — au lieu de couper les trois ensemble.
+                {t('Une campagne qui diffuse trois vidéos ne vous donne qu’une moyenne. Déclarez-les ici, collez le lien de chacune sous la vidéo correspondante, et vous verrez laquelle amène vos clients — au lieu de couper les trois ensemble.')}
               </p>
             ) : (
               <ul className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -543,10 +541,9 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
                 aurait raison de ne plus croire l'écran. */}
             {c.creations.length > 0 && c.reste.visites > 0 && (
               <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
-                {c.reste.visites} visite{c.reste.visites > 1 ? 's' : ''}
+                {c.reste.visites} {t('visite')}{c.reste.visites > 1 ? 's' : ''}
                 {c.reste.reservations > 0 && ` et ${c.reste.reservations} client${c.reste.reservations > 1 ? 's' : ''}`}
-                {' '}sans vidéo identifiée — du trafic arrivé par le lien de la campagne, avant que
-                vous ne déclariez vos vidéos ou par une vidéo retirée depuis.
+                {' '}{t('sans vidéo identifiée — du trafic arrivé par le lien de la campagne, avant que vous ne déclariez vos vidéos ou par une vidéo retirée depuis.')}
               </p>
             )}
 
@@ -558,7 +555,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
                   className="mt-3 w-full py-2.5 border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-xs font-semibold transition-colors inline-flex items-center justify-center gap-1.5"
                 >
                   <Plus size={14} strokeWidth={2.5} />
-                  Ajouter une vidéo
+                  {t('Ajouter une vidéo')}
                 </button>
               )}
           </div>
@@ -568,7 +565,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
       {/* ── Le lien de la campagne entière ──────────────────────────────── */}
       <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
         <p className={`${SURTITRE} text-slate-400 dark:text-slate-500 mb-2`}>
-          Lien de la campagne {c.creations.length > 0 && <span className="font-medium normal-case tracking-normal">— à n’utiliser que si vous ne suivez pas les vidéos une par une</span>}
+          {t('Lien de la campagne')} {c.creations.length > 0 && <span className="font-medium normal-case tracking-normal">{t('— à n’utiliser que si vous ne suivez pas les vidéos une par une')}</span>}
         </p>
         <div className="flex items-center gap-2">
           <LigneLien lien={lienCampagne(baseUrl, c.cle, c.plateforme)} libelle={`Copier le lien de ${c.nom}`} />
@@ -576,7 +573,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
             onClick={() => onSupprimer(c.id)}
             className="shrink-0 px-2.5 py-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
           >
-            Supprimer
+            {t('Supprimer')}
           </button>
         </div>
       </div>
@@ -602,6 +599,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
    *  service. L'écran le dit au lieu d'offrir un formulaire qui échouerait. */
   indisponible?: boolean
 }) {
+  const t = useT()
   const router = useRouter()
   const [ouvert, setOuvert] = useState(campagnes.length === 0 && !indisponible)
   const [filtre, setFiltre] = useState<Filtre>('toutes')
@@ -640,7 +638,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
     setEnCours(false)
     if (!res.ok) {
       const corps = await res.json().catch(() => ({}))
-      setErreur(corps.error ?? 'Impossible de créer cette campagne')
+      setErreur(corps.error ?? t('Impossible de créer cette campagne'))
       return
     }
     setNom(''); setBudget(''); setFin(''); setOuvert(false)
@@ -650,7 +648,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
   async function supprimer(id: string) {
     const res = await fetch(`/api/campagnes/${id}`, { method: 'DELETE' })
     if (res.ok) router.refresh()
-    else setErreur('Impossible de supprimer cette campagne')
+    else setErreur(t('Impossible de supprimer cette campagne'))
   }
 
   const couleurTotal = couleurRetour(totaux.retour, totaux.reservations)
@@ -659,9 +657,9 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Publicités</h1>
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('Publicités')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Ce que vous dépensez, ce que ça rapporte, et laquelle de vos vidéos y est pour quelque chose.
+            {t('Ce que vous dépensez, ce que ça rapporte, et laquelle de vos vidéos y est pour quelque chose.')}
           </p>
         </div>
         {!ouvert && !indisponible && (
@@ -669,7 +667,7 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
             className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 text-white text-sm font-semibold rounded-xl transition-transform duration-150 ease-out active:scale-[0.97]"
             style={{ backgroundColor: BLEU }}>
             <Plus size={16} strokeWidth={2.5} />
-            <span className="hidden sm:inline">Nouvelle campagne</span>
+            <span className="hidden sm:inline">{t('Nouvelle campagne')}</span>
           </button>
         )}
       </div>
@@ -694,17 +692,13 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
             </span>
             <div className="min-w-0">
               <p className="font-bold text-slate-900 dark:text-slate-100">
-                Le suivi des publicités n’est pas encore activé
+                {t('Le suivi des publicités n’est pas encore activé')}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                Rien n’est cassé de votre côté : cette partie du CRM attend une dernière mise en
-                service. Vos visites et vos réservations continuent d’être enregistrées
-                normalement.
+                {t('Rien n’est cassé de votre côté : cette partie du CRM attend une dernière mise en service. Vos visites et vos réservations continuent d’être enregistrées normalement.')}
               </p>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                En revanche, l’origine publicitaire d’un clic n’est pas encore conservée : une
-                campagne lancée aujourd’hui ne sera comptée qu’à partir de l’activation. Si vous
-                prévoyez d’en lancer une, attendez-la.
+                {t('En revanche, l’origine publicitaire d’un clic n’est pas encore conservée : une campagne lancée aujourd’hui ne sera comptée qu’à partir de l’activation. Si vous prévoyez d’en lancer une, attendez-la.')}
               </p>
             </div>
           </div>
@@ -715,15 +709,15 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
       {campagnes.length > 0 && (
         <div className={`${CARTE} p-4 sm:p-5`}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Chiffre label="Dépensé" valeur={`${formatEuros(totaux.budget)} €`} />
-            <Chiffre label="Encaissé" valeur={`${formatEuros(totaux.chiffreAffaires)} €`} accent={accent} />
+            <Chiffre label={t('Dépensé')} valeur={`${formatEuros(totaux.budget)} €`} />
+            <Chiffre label={t('Encaissé')} valeur={`${formatEuros(totaux.chiffreAffaires)} €`} accent={accent} />
             <Chiffre
-              label="Retour"
+              label={t('Retour')}
               valeur={totaux.reservations > 0 ? multiple(totaux.retour) : '—'}
               accent={couleurTotal}
             />
             <Chiffre
-              label="Clients"
+              label={t('Clients')}
               valeur={String(totaux.reservations)}
               aide={totaux.coutParReservation === null
                 ? undefined
@@ -733,11 +727,11 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
 
           {totaux.reservations > 0 && totaux.retour !== null && (
             <p className="mt-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              Pour 1 € de publicité, vous avez encaissé{' '}
+              {t('Pour 1 € de publicité, vous avez encaissé')}{' '}
               <strong style={couleurTotal ? { color: couleurTotal } : undefined}>
                 {formatEuros(Math.round(totaux.retour * 100) / 100)} €
               </strong>{' '}
-              de lavages.
+              {t('de lavages.')}
             </p>
           )}
         </div>
@@ -746,24 +740,24 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
       {/* ── Le formulaire de campagne ────────────────────────────────────── */}
       {ouvert && !indisponible && (
         <div className={`${CARTE} p-5 space-y-4`}>
-          <p className="font-bold text-slate-900 dark:text-slate-100">Nouvelle campagne</p>
+          <p className="font-bold text-slate-900 dark:text-slate-100">{t('Nouvelle campagne')}</p>
 
           <div>
-            <label className={LABEL} htmlFor="camp-nom">Nom de la campagne</label>
+            <label className={LABEL} htmlFor="camp-nom">{t('Nom de la campagne')}</label>
             <input id="camp-nom" className={CHAMP} value={nom} onChange={e => setNom(e.target.value)}
-              placeholder="Pub Rentrée" maxLength={120} />
+              placeholder={t('Pub Rentrée')} maxLength={120} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={LABEL} htmlFor="camp-plateforme">Plateforme</label>
+              <label className={LABEL} htmlFor="camp-plateforme">{t('Plateforme')}</label>
               <select id="camp-plateforme" className={CHAMP} value={plateforme}
                 onChange={e => setPlateforme(e.target.value as Plateforme)}>
                 {PLATEFORMES.map(p => <option key={p.cle} value={p.cle}>{p.label}</option>)}
               </select>
             </div>
             <div>
-              <label className={LABEL} htmlFor="camp-budget">Budget dépensé (€)</label>
+              <label className={LABEL} htmlFor="camp-budget">{t('Budget dépensé (€)')}</label>
               <input id="camp-budget" className={CHAMP} value={budget} onChange={e => setBudget(e.target.value)}
                 inputMode="decimal" placeholder="80" />
             </div>
@@ -771,11 +765,11 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={LABEL} htmlFor="camp-debut">Début</label>
+              <label className={LABEL} htmlFor="camp-debut">{t('Début')}</label>
               <input id="camp-debut" type="date" className={CHAMP} value={debut} onChange={e => setDebut(e.target.value)} />
             </div>
             <div>
-              <label className={LABEL} htmlFor="camp-fin">Fin (laissez vide si sans fin prévue)</label>
+              <label className={LABEL} htmlFor="camp-fin">{t('Fin (laissez vide si sans fin prévue)')}</label>
               <input id="camp-fin" type="date" className={CHAMP} value={fin} onChange={e => setFin(e.target.value)} />
             </div>
           </div>
@@ -788,18 +782,13 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
               sert, et que rien ne l'oblige à viser juste du premier coup. */}
           <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 leading-relaxed">
             <p>
-              <strong>À quoi sert ce montant :</strong> à calculer ce que chaque client vous a
-              coûté, et combien d’euros vous rentrent pour un euro dépensé. Sans lui, on sait
-              compter vos réservations, pas vous dire si elles valaient le prix.
+              <strong>{t('À quoi sert ce montant :')}</strong> {t('à calculer ce que chaque client vous a coûté, et combien d’euros vous rentrent pour un euro dépensé. Sans lui, on sait compter vos réservations, pas vous dire si elles valaient le prix.')}
             </p>
             <p>
-              Recopiez le montant dépensé affiché par la plateforme. WashBoard ne va pas le
-              chercher tout seul — nous n’avons pas accès à votre compte publicitaire.
+              {t('Recopiez le montant dépensé affiché par la plateforme. WashBoard ne va pas le chercher tout seul — nous n’avons pas accès à votre compte publicitaire.')}
             </p>
             <p>
-              <strong>Vous pourrez le corriger à tout moment</strong>, et rallonger la campagne,
-              sans que votre lien change. Si vous n’avez pas de date de fin en tête, laissez-la
-              vide : la campagne restera « en cours ».
+              <strong>{t('Vous pourrez le corriger à tout moment')}</strong>{t(', et rallonger la campagne, sans que votre lien change. Si vous n’avez pas de date de fin en tête, laissez-la vide : la campagne restera « en cours ».')}
             </p>
           </div>
 
@@ -807,12 +796,12 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
             <button onClick={creer} disabled={enCours}
               className="px-5 py-3 text-white text-sm font-semibold rounded-xl transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-40"
               style={{ backgroundColor: BLEU }}>
-              {enCours ? 'Création…' : 'Créer la campagne'}
+              {enCours ? t('Création…') : t('Créer la campagne')}
             </button>
             {campagnes.length > 0 && (
               <button onClick={() => { setOuvert(false); setErreur(null) }}
                 className="px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
-                Annuler
+                {t('Annuler')}
               </button>
             )}
           </div>
@@ -855,13 +844,13 @@ export default function CampagnesView({ campagnes, baseUrl, accent, indisponible
 
       {campagnes.length > 0 && visibles.length === 0 && (
         <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">
-          Aucune campagne {filtre === 'encours' ? 'en cours' : 'terminée'}.
+          {t('Aucune campagne')} {filtre === 'encours' ? 'en cours' : t('terminée')}.
         </p>
       )}
 
       {campagnes.length === 0 && !ouvert && !indisponible && (
         <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">
-          Aucune campagne pour l’instant.
+          {t('Aucune campagne pour l’instant.')}
         </p>
       )}
     </div>

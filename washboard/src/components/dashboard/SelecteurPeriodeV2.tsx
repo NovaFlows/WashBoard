@@ -5,6 +5,7 @@ import {
   contientAujourdhui, deplacer, plageDe,
   type PeriodeChiffres, type PeriodType,
 } from '@/lib/chiffresPeriode'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Sélecteur de période de l'écran Chiffres (refonte 2026), commun aux trois
 // onglets : le type (Jour · Semaine · Mois · Année) et les flèches
@@ -32,12 +33,13 @@ type Props = {
 }
 
 export default function SelecteurPeriodeV2({ periode, aujourdhui, onChange }: Props) {
+  const tr = useT()
   const { label } = plageDe(periode)
   const surAujourdhui = contientAujourdhui(periode, aujourdhui)
 
   return (
     <div className="space-y-1">
-      <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Période">
+      <div className="flex gap-2 overflow-x-auto" role="group" aria-label={tr('Période')}>
         {TYPES.map(t => (
           <button
             key={t.cle}
@@ -59,7 +61,7 @@ export default function SelecteurPeriodeV2({ periode, aujourdhui, onChange }: Pr
         <button
           type="button"
           onClick={() => onChange(deplacer(periode, -1, aujourdhui))}
-          aria-label="Période précédente"
+          aria-label={tr('Période précédente')}
           className="h-11 w-11 -ml-2.5 flex items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} aria-hidden />
@@ -74,7 +76,7 @@ export default function SelecteurPeriodeV2({ periode, aujourdhui, onChange }: Pr
           type="button"
           onClick={() => onChange(deplacer(periode, 1, aujourdhui))}
           disabled={surAujourdhui}
-          aria-label="Période suivante"
+          aria-label={tr('Période suivante')}
           className="h-11 w-11 -mr-2.5 flex items-center justify-center text-[color:var(--v2-color-encre)] disabled:text-[color:var(--v2-color-encre-pale)]"
         >
           <ChevronRight size={22} strokeWidth={2} aria-hidden />

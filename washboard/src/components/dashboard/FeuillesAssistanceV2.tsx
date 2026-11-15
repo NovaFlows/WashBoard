@@ -7,6 +7,7 @@ import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Pied } from '@/components/dashboard/ReglageAutomatismeV2'
 import { estClavierTactile, shouldSendOnEnter } from '@/lib/composerKeyboard'
 import { formatSupportDate, type SupportThread } from '@/lib/support'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Feuilles du bas de « Aide et assistance » (PWA) : poser une nouvelle question, et lire /
 // poursuivre une conversation avec l'équipe. Même logique d'envoi que l'écran du site
@@ -21,6 +22,7 @@ const CHAMP_TEXTE = `${CHAMP} h-auto min-h-[7.5rem] resize-none py-3 leading-snu
 export function FeuilleNouvelleQuestionV2({
   erreur, onEnvoyer, onClose,
 }: { erreur: Erreur | null; onEnvoyer: (texte: string) => void; onClose: () => void }) {
+  const tr = useT()
   const [texte, setTexte] = useState(erreur?.texte ?? '')
 
   function valider(e: React.FormEvent) {
@@ -31,18 +33,18 @@ export function FeuilleNouvelleQuestionV2({
 
   return (
     <Feuille
-      titre="Nouvelle question"
-      sousTitre="Une personne de l’équipe vous répond en moins de 24 h."
+      titre={tr('Nouvelle question')}
+      sousTitre={tr('Une personne de l’équipe vous répond en moins de 24 h.')}
       onClose={onClose}
-      pied={<Pied enCours={false} libelle="Envoyer" onClose={onClose} formulaire="assistance-nouvelle" />}
+      pied={<Pied enCours={false} libelle={tr('Envoyer')} onClose={onClose} formulaire="assistance-nouvelle" />}
     >
       <form id="assistance-nouvelle" onSubmit={valider} noValidate>
-        <label htmlFor="assistance-texte" className="sr-only">Décrivez ce qui vous bloque</label>
+        <label htmlFor="assistance-texte" className="sr-only">{tr('Décrivez ce qui vous bloque')}</label>
         <textarea
           id="assistance-texte"
           value={texte}
           onChange={e => setTexte(e.target.value)}
-          placeholder="Décrivez ce qui vous bloque…"
+          placeholder={tr('Décrivez ce qui vous bloque…')}
           rows={5}
           autoFocus
           className={CHAMP_TEXTE}
@@ -66,6 +68,7 @@ export function BullesConversationV2({ fil, erreur, finRef }: {
    *  sait si son conteneur défile lui-même (la feuille) ou délègue à un parent (le panneau). */
   finRef: React.RefObject<HTMLDivElement | null>
 }) {
+  const tr = useT()
   return (
     <div className="space-y-2.5 pb-1">
       {fil.messages.map((m, i) => {
@@ -88,7 +91,7 @@ export function BullesConversationV2({ fil, erreur, finRef }: {
               </p>
             </div>
             {dernier && moi && fil.vuParEquipe && (
-              <p className={`mr-1 mt-1 text-[11px] ${corps} text-[color:var(--v2-color-gris)]`}>Vu</p>
+              <p className={`mr-1 mt-1 text-[11px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Vu')}</p>
             )}
           </div>
         )
@@ -106,6 +109,7 @@ export function ComposerReponseV2({ texte, onChange, onEnvoyer }: {
   onChange: (texte: string) => void
   onEnvoyer: () => void
 }) {
+  const tr = useT()
   function auTouche(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (!shouldSendOnEnter(e, estClavierTactile())) return
     e.preventDefault()
@@ -113,20 +117,20 @@ export function ComposerReponseV2({ texte, onChange, onEnvoyer }: {
   }
   return (
     <form onSubmit={e => { e.preventDefault(); onEnvoyer() }} className="flex items-end gap-2.5">
-      <label htmlFor="assistance-reponse" className="sr-only">Votre message</label>
+      <label htmlFor="assistance-reponse" className="sr-only">{tr('Votre message')}</label>
       <textarea
         id="assistance-reponse"
         value={texte}
         onChange={e => onChange(e.target.value)}
         onKeyDown={auTouche}
-        placeholder="Votre message…"
+        placeholder={tr('Votre message…')}
         rows={2}
         className={`${CHAMP} h-auto min-h-[3.25rem] resize-none py-2.5 leading-snug`}
       />
       <button
         type="submit"
         disabled={!texte.trim()}
-        aria-label="Envoyer"
+        aria-label={tr('Envoyer')}
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.94] disabled:opacity-40 motion-reduce:transition-none"
         style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
       >

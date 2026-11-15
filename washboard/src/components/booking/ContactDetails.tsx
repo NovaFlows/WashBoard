@@ -6,6 +6,7 @@ import { formatPrice } from '@/lib/pricing'
 import EncartAcompte from './EncartAcompte'
 import { normalizePhone, PAYS_TELEPHONE, type PaysTelephone } from '@/lib/phone'
 import BookingAction from './BookingAction'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type Contact = Pick<BookingFormData, 'client_name' | 'client_email' | 'client_phone'> & {
   notes?: string; company_name?: string; siret?: string; billing_address?: string; hp?: string; is_professional: boolean
@@ -35,6 +36,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
   /** Pays du laveur (d'après son téléphone) : un client luxembourgeois ou québécois tape son numéro sans zéro de tête. */
   pays?: PaysTelephone
 }) {
+  const t = useT()
   const ref = useRef<HTMLFormElement>(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -75,28 +77,28 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
       ...(acompte ? { acompte_accepte: true } : {}),
     })
   }}>
-    <h2 className="wb-booking-title mb-1!">Vos coordonnées</h2>
-    <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mb-5">Pour confirmer le rendez-vous et vous prévenir le jour J.</p>
+    <h2 className="wb-booking-title mb-1!">{t('Vos coordonnées')}</h2>
+    <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mb-5">{t('Pour confirmer le rendez-vous et vous prévenir le jour J.')}</p>
     <div className="space-y-5">
-      <div><label className={label} htmlFor="booking-name">Nom et prénom</label><input id="booking-name" autoComplete="name" required minLength={2} value={name} onChange={e => setName(e.target.value)} className={input} /></div>
-      <div><label className={label} htmlFor="booking-phone">Téléphone</label><input id="booking-phone" autoComplete="tel" type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder={exemplePhone} className={input} />
-        {!!phone && !phoneNormalise && <p className="text-xs text-zinc-500 mt-1">Indiquez un numéro valide (ex. {exemplePhone}) ou au format international (+33…).</p>}</div>
-      <div><label className={label} htmlFor="booking-email">Email <span className="font-normal text-zinc-500">pour recevoir le récapitulatif</span></label><input id="booking-email" autoComplete="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={input} /></div>
+      <div><label className={label} htmlFor="booking-name">{t('Nom et prénom')}</label><input id="booking-name" autoComplete="name" required minLength={2} value={name} onChange={e => setName(e.target.value)} className={input} /></div>
+      <div><label className={label} htmlFor="booking-phone">{t('Téléphone')}</label><input id="booking-phone" autoComplete="tel" type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder={exemplePhone} className={input} />
+        {!!phone && !phoneNormalise && <p className="text-xs text-zinc-500 mt-1">{t('Indiquez un numéro valide (ex.')} {exemplePhone}{t(') ou au format international (+33…).')}</p>}</div>
+      <div><label className={label} htmlFor="booking-email">{t('Email')} <span className="font-normal text-zinc-500">{t('pour recevoir le récapitulatif')}</span></label><input id="booking-email" autoComplete="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={input} /></div>
       {vehicles.map((v, i) => isVehicle(v.type) && <div key={`${v.type}-${i}`}>
-        <label className={label} htmlFor={`booking-model-${i}`}>Modèle {vehicles.length > 1 ? `· ${v.label ?? v.type} ${i + 1}` : 'du véhicule'}</label>
-        <input id={`booking-model-${i}`} required value={v.models?.[0] ?? ''} placeholder="Ex. Peugeot 208 grise" className={input}
+        <label className={label} htmlFor={`booking-model-${i}`}>{t('Modèle')} {vehicles.length > 1 ? `· ${v.label ?? v.type} ${i + 1}` : t('du véhicule')}</label>
+        <input id={`booking-model-${i}`} required value={v.models?.[0] ?? ''} placeholder={t('Ex. Peugeot 208 grise')} className={input}
           onChange={e => onChange({ vehicles_detail: vehicles.map((item, index) => index === i ? { ...item, models: [e.target.value] } : item) })} />
       </div>)}
-      {clientsProAutorises && <label className="flex items-center gap-3 text-sm cursor-pointer"><input type="checkbox" checked={pro} onChange={e => setPro(e.target.checked)} className="wb-booking-checkbox" />Je réserve pour une entreprise</label>}
+      {clientsProAutorises && <label className="flex items-center gap-3 text-sm cursor-pointer"><input type="checkbox" checked={pro} onChange={e => setPro(e.target.checked)} className="wb-booking-checkbox" />{t('Je réserve pour une entreprise')}</label>}
       {pro && <>
-        <div><label className={label} htmlFor="booking-company">Nom de l’entreprise</label><input id="booking-company" autoComplete="organization" required minLength={2} value={company} onChange={e => setCompany(e.target.value)} className={input} />
-          <p className="text-xs text-zinc-500 mt-2">{factureApresPrestation ? 'La facture sera établie à ce nom.' : 'Le récapitulatif sera établi à ce nom.'}</p></div>
-        <div><label className={label} htmlFor="booking-siret">SIRET, n° BCE (Belgique) ou n° IDE (Suisse)</label><input id="booking-siret" required value={siret} onChange={e => setSiret(e.target.value)} className={input} /><p className="text-xs text-zinc-500 mt-2">14 chiffres pour identifier votre entreprise (Suisse : CHE-123.456.789).</p></div>
-        <div><label className={label} htmlFor="booking-billing">Adresse de facturation <span className="text-zinc-500 font-normal">facultatif</span></label><input id="booking-billing" value={billing} onChange={e => setBilling(e.target.value)} className={input} placeholder="Adresse du lavage si vide" /></div>
+        <div><label className={label} htmlFor="booking-company">{t('Nom de l’entreprise')}</label><input id="booking-company" autoComplete="organization" required minLength={2} value={company} onChange={e => setCompany(e.target.value)} className={input} />
+          <p className="text-xs text-zinc-500 mt-2">{factureApresPrestation ? t('La facture sera établie à ce nom.') : t('Le récapitulatif sera établi à ce nom.')}</p></div>
+        <div><label className={label} htmlFor="booking-siret">{t('SIRET, n° BCE (Belgique) ou n° IDE (Suisse)')}</label><input id="booking-siret" required value={siret} onChange={e => setSiret(e.target.value)} className={input} /><p className="text-xs text-zinc-500 mt-2">{t('14 chiffres pour identifier votre entreprise (Suisse : CHE-123.456.789).')}</p></div>
+        <div><label className={label} htmlFor="booking-billing">{t('Adresse de facturation')} <span className="text-zinc-500 font-normal">{t('facultatif')}</span></label><input id="booking-billing" value={billing} onChange={e => setBilling(e.target.value)} className={input} placeholder={t('Adresse du lavage si vide')} /></div>
       </>}
-      <details><summary className="text-sm underline underline-offset-2 cursor-pointer py-2">Ajouter une précision pour le laveur</summary><label className="sr-only" htmlFor="booking-notes">Note pour le laveur</label><textarea id="booking-notes" value={notes} maxLength={1000} onChange={e => setNotes(e.target.value)} className={input} placeholder="Code portail, accès…" rows={3} /></details>
+      <details><summary className="text-sm underline underline-offset-2 cursor-pointer py-2">{t('Ajouter une précision pour le laveur')}</summary><label className="sr-only" htmlFor="booking-notes">{t('Note pour le laveur')}</label><textarea id="booking-notes" value={notes} maxLength={1000} onChange={e => setNotes(e.target.value)} className={input} placeholder={t('Code portail, accès…')} rows={3} /></details>
     </div>
-    <div aria-hidden="true" className="absolute w-px h-px overflow-hidden -left-[9999px]"><label>Ne pas remplir ce champ<input name="wb-confirm-c7f3" tabIndex={-1} autoComplete="off" data-lpignore="true" data-1p-ignore="true" value={hp} onChange={e => setHp(e.target.value)} /></label></div>
+    <div aria-hidden="true" className="absolute w-px h-px overflow-hidden -left-[9999px]"><label>{t('Ne pas remplir ce champ')}<input name="wb-confirm-c7f3" tabIndex={-1} autoComplete="off" data-lpignore="true" data-1p-ignore="true" value={hp} onChange={e => setHp(e.target.value)} /></label></div>
     <div className="mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-700 text-sm leading-relaxed">
       {fidelite && <div className="mb-4">{fidelite}</div>}
       {acompte
@@ -104,15 +106,15 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
           <EncartAcompte montant={acompte.montant} conditions={acompte.conditions} moyens={acompte.moyens} />
           <label className="mt-3 flex items-start gap-3 cursor-pointer">
             <input type="checkbox" required checked={acompteAccepte} onChange={e => setAcompteAccepte(e.target.checked)} className="wb-booking-checkbox mt-0.5 shrink-0" />
-            <span>J’ai lu et j’accepte les conditions de l’acompte.</span>
+            <span>{t('J’ai lu et j’accepte les conditions de l’acompte.')}</span>
           </label>
         </>
-        : <><p className="font-semibold">Rien à payer maintenant</p><p className="text-zinc-500 dark:text-zinc-400 mt-1">Vous réglez {formatPrice(total)} sur place, une fois le lavage terminé.</p></>}
-      {whatsappHref && <><p className="font-semibold mt-3">Un empêchement ?</p><p className="text-zinc-500 dark:text-zinc-400">Écrivez au laveur sur WhatsApp pour décaler ou annuler.</p></>}
+        : <><p className="font-semibold">{t('Rien à payer maintenant')}</p><p className="text-zinc-500 dark:text-zinc-400 mt-1">{t('Vous réglez')} {formatPrice(total)} {t('sur place, une fois le lavage terminé.')}</p></>}
+      {whatsappHref && <><p className="font-semibold mt-3">{t('Un empêchement ?')}</p><p className="text-zinc-500 dark:text-zinc-400">{t('Écrivez au laveur sur WhatsApp pour décaler ou annuler.')}</p></>}
     </div>
     {error && <p role="alert" className="mt-4 p-3 rounded-xl bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 text-sm">{error}</p>}
     <BookingAction target={actionTarget} accent={accent} disabled={!pret || loading} onClick={() => ref.current?.requestSubmit()}>
-      {loading ? 'Envoi en cours…' : pret ? 'Confirmer la réservation' : valid ? 'Acceptez les conditions de l’acompte' : 'Complétez vos coordonnées'}
+      {loading ? 'Envoi en cours…' : pret ? t('Confirmer la réservation') : valid ? t('Acceptez les conditions de l’acompte') : t('Complétez vos coordonnées')}
     </BookingAction>
   </form>
 }

@@ -11,6 +11,7 @@ import {
   dateDansNJours, ligneVide, saisieNeuve, totalDocument, validerDocument,
   VALIDITE_DEVIS_JOURS, type GenreDocument, type LigneSaisie, type SaisieDocument,
 } from '@/lib/documents'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Nouveau devis · Nouvelle facture » — feuille du bas de l'écran Devis et factures (PWA).
 //
@@ -35,6 +36,7 @@ function LigneSaisieV2({
   onChange: (l: LigneSaisie) => void
   onRetirer: () => void
 }) {
+  const t = useT()
   // Le prix vit en texte tant qu'on tape : « 12, » n'est pas encore un nombre, et le
   // convertir à chaque frappe empêcherait d'écrire la virgule.
   const [prix, setPrix] = useState(() => (ligne.prixUnitaireTtc ? String(ligne.prixUnitaireTtc).replace('.', ',') : ''))
@@ -47,7 +49,7 @@ function LigneSaisieV2({
           type="text"
           value={ligne.designation}
           onChange={e => onChange({ ...ligne, designation: e.target.value })}
-          placeholder="Nettoyage canapé 3 places"
+          placeholder={t('Nettoyage canapé 3 places')}
           aria-label={`Désignation de la ligne ${index + 1}`}
           className={CHAMP}
         />
@@ -66,7 +68,7 @@ function LigneSaisieV2({
         {/* Largeur portée par le conteneur : le champ est en `w-full`, un `w-16` sur lui
             perdrait l'arbitrage Tailwind selon l'ordre du CSS, pas celui des classes. */}
         <label className="flex shrink-0 items-center gap-2">
-          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Qté</span>
+          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Qté')}</span>
           <span className="block w-[68px]">
             <input
               type="text"
@@ -122,6 +124,7 @@ export default function FeuilleDocumentV2({
   onEnregistrer: (saisie: SaisieDocument) => Promise<string | null>
   onClose: () => void
 }) {
+  const t = useT()
   const [saisie, setSaisie] = useState<SaisieDocument>(() => ({ ...saisieNeuve(genreInitial, aujourdhui), ...prefill }))
   const [remise, setRemise] = useState('')
   const [enCours, setEnCours] = useState(false)
@@ -176,15 +179,15 @@ export default function FeuilleDocumentV2({
 
   return (
     <Feuille
-      titre={devis ? 'Nouveau devis' : 'Nouvelle facture'}
+      titre={devis ? t('Nouveau devis') : 'Nouvelle facture'}
       sousTitre={devis
-        ? 'Un prix engageant, valable un temps donné. Il ne compte pas tant que le client n’a pas dit oui.'
-        : 'Une facture pour un travail fait hors de votre page de réservation.'}
+        ? t('Un prix engageant, valable un temps donné. Il ne compte pas tant que le client n’a pas dit oui.')
+        : t('Une facture pour un travail fait hors de votre page de réservation.')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle={devis ? 'Créer le devis' : 'Créer la facture'} onClose={onClose} formulaire="document-nouveau" />}
+      pied={<Pied enCours={enCours} libelle={devis ? t('Créer le devis') : t('Créer la facture')} onClose={onClose} formulaire="document-nouveau" />}
     >
       <form id="document-nouveau" onSubmit={soumettre} noValidate>
-        <div className="flex gap-2 pb-1" role="group" aria-label="Type de document">
+        <div className="flex gap-2 pb-1" role="group" aria-label={t('Type de document')}>
           {(['devis', 'facture'] as const).map(g => (
             <button
               key={g}
@@ -199,13 +202,13 @@ export default function FeuilleDocumentV2({
           ))}
         </div>
 
-        <Bloc titre="Le client">
+        <Bloc titre={t('Le client')}>
           <input
             type="text"
             value={saisie.clientNom}
             onChange={e => modifier({ clientNom: e.target.value })}
-            placeholder="Marie Martin"
-            aria-label="Nom du client"
+            placeholder={t('Marie Martin')}
+            aria-label={t('Nom du client')}
             className={CHAMP}
           />
           <input
@@ -214,8 +217,8 @@ export default function FeuilleDocumentV2({
             autoCapitalize="none"
             value={saisie.clientEmail}
             onChange={e => modifier({ clientEmail: e.target.value })}
-            placeholder="marie@exemple.fr"
-            aria-label="Email du client"
+            placeholder={t('marie@exemple.fr')}
+            aria-label={t('Email du client')}
             className={`${CHAMP} mt-2`}
           />
           <input
@@ -224,12 +227,11 @@ export default function FeuilleDocumentV2({
             value={saisie.clientTelephone}
             onChange={e => modifier({ clientTelephone: e.target.value })}
             placeholder="06 12 34 56 78"
-            aria-label="Téléphone du client"
+            aria-label={t('Téléphone du client')}
             className={`${CHAMP} mt-2`}
           />
           <p className={`mt-1.5 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Le téléphone sert à envoyer le document sur WhatsApp, l’email à l’envoyer d’ici.
-            Sans l’un ni l’autre, il reste téléchargeable.
+            {t('Le téléphone sert à envoyer le document sur WhatsApp, l’email à l’envoyer d’ici. Sans l’un ni l’autre, il reste téléchargeable.')}
           </p>
           {/* Même champ d'adresse que le reste de la PWA (`AdresseV2`) : suggestions Google
               en ligne, sous le champ, pour ne pas être rognées par la feuille qui défile. */}
@@ -238,7 +240,7 @@ export default function FeuilleDocumentV2({
               id="document-adresse-client"
               valeur={saisie.clientAdresse}
               onChange={v => modifier({ clientAdresse: v })}
-              placeholder="Adresse du client"
+              placeholder={t('Adresse du client')}
             />
           </div>
           {/* Même besoin que la réservation publique (StepService.tsx, qui le demande déjà au
@@ -248,8 +250,8 @@ export default function FeuilleDocumentV2({
             type="text"
             value={saisie.clientVehicule}
             onChange={e => modifier({ clientVehicule: e.target.value })}
-            placeholder="Véhicule (facultatif) — Peugeot 208 grise"
-            aria-label="Véhicule du client"
+            placeholder={t('Véhicule (facultatif) — Peugeot 208 grise')}
+            aria-label={t('Véhicule du client')}
             className={`${CHAMP} mt-2`}
           />
           <button
@@ -259,7 +261,7 @@ export default function FeuilleDocumentV2({
             className={`${puce(saisie.professionnel)} mt-2.5`}
             style={PRESSION}
           >
-            C’est un professionnel
+            {t('C’est un professionnel')}
           </button>
           {saisie.professionnel && (
             <>
@@ -267,8 +269,8 @@ export default function FeuilleDocumentV2({
                 type="text"
                 value={saisie.entreprise}
                 onChange={e => modifier({ entreprise: e.target.value })}
-                placeholder="Nom de l’entreprise"
-                aria-label="Entreprise du client"
+                placeholder={t('Nom de l’entreprise')}
+                aria-label={t('Entreprise du client')}
                 className={`${CHAMP} mt-2`}
               />
               <input
@@ -276,17 +278,17 @@ export default function FeuilleDocumentV2({
                 inputMode="numeric"
                 value={saisie.siret}
                 onChange={e => modifier({ siret: e.target.value })}
-                placeholder="SIRET (facultatif)"
-                aria-label="SIRET du client"
+                placeholder={t('SIRET (facultatif)')}
+                aria-label={t('SIRET du client')}
                 className={`${CHAMP} mt-2`}
               />
             </>
           )}
         </Bloc>
 
-        <Bloc titre="Les lignes" aide="Prix TTC">
+        <Bloc titre={t('Les lignes')} aide={t('Prix TTC')}>
           {prestations.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Ajouter une de mes prestations">
+            <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={t('Ajouter une de mes prestations')}>
               {prestations.slice(0, 6).map(p => (
                 <button
                   key={p.id}
@@ -319,11 +321,11 @@ export default function FeuilleDocumentV2({
             style={{ color: 'var(--v2-color-accent)' }}
           >
             <Plus size={16} strokeWidth={2.4} aria-hidden />
-            Ajouter une ligne
+            {t('Ajouter une ligne')}
           </button>
         </Bloc>
 
-        <Bloc titre="Remise" aide="Facultative">
+        <Bloc titre={t('Remise')} aide={t('Facultative')}>
           <div className="relative">
             <input
               type="text"
@@ -331,7 +333,7 @@ export default function FeuilleDocumentV2({
               value={remise}
               onChange={e => { setRemise(e.target.value); setErreur(null) }}
               placeholder="0,00"
-              aria-label="Remise en euros"
+              aria-label={t('Remise en euros')}
               className={`${CHAMP} pr-8 text-right tabular-nums`}
             />
             <span
@@ -343,14 +345,14 @@ export default function FeuilleDocumentV2({
           </div>
         </Bloc>
 
-        <Bloc titre="La prestation">
+        <Bloc titre={t('La prestation')}>
           <label className="block">
-            <span className={ETIQUETTE}>{devis ? 'Date prévue (facultative)' : 'Date de la prestation'}</span>
+            <span className={ETIQUETTE}>{devis ? t('Date prévue (facultative)') : t('Date de la prestation')}</span>
             <input
               type="date"
               value={saisie.date ?? ''}
               onChange={e => modifier({ date: e.target.value || null })}
-              aria-label="Date de la prestation"
+              aria-label={t('Date de la prestation')}
               className={CHAMP}
             />
           </label>
@@ -359,40 +361,40 @@ export default function FeuilleDocumentV2({
               id="document-lieu"
               valeur={saisie.lieu}
               onChange={v => modifier({ lieu: v })}
-              placeholder="Lieu de la prestation (facultatif)"
+              placeholder={t('Lieu de la prestation (facultatif)')}
             />
           </div>
         </Bloc>
 
         {devis && (
-          <Bloc titre="Valable jusqu’au">
+          <Bloc titre={t('Valable jusqu’au')}>
             <input
               type="date"
               value={saisie.valableJusquau ?? ''}
               min={aujourdhui}
               onChange={e => modifier({ valableJusquau: e.target.value || null })}
-              aria-label="Valable jusqu’au"
+              aria-label={t('Valable jusqu’au')}
               className={CHAMP}
             />
             <p className={`mt-1.5 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              Passé cette date, votre prix ne vous engage plus.
+              {t('Passé cette date, votre prix ne vous engage plus.')}
             </p>
           </Bloc>
         )}
 
-        <Bloc titre="Mot pour le client" aide="Facultatif">
+        <Bloc titre={t('Mot pour le client')} aide={t('Facultatif')}>
           <textarea
             value={saisie.note}
             onChange={e => modifier({ note: e.target.value })}
             rows={3}
-            placeholder="Intervention sur une demi-journée. Prévoir un point d’eau."
-            aria-label="Mot pour le client"
+            placeholder={t('Intervention sur une demi-journée. Prévoir un point d’eau.')}
+            aria-label={t('Mot pour le client')}
             className={`${CHAMP} h-auto py-2.5 leading-snug`}
           />
         </Bloc>
 
         <div className="flex items-baseline justify-between border-t border-[color:var(--v2-filet)] pt-3">
-          <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Total à payer</span>
+          <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Total à payer')}</span>
           <span className={`text-[22px] ${corpsFort} tabular-nums`}>{euros.format(total)}</span>
         </div>
 

@@ -12,6 +12,7 @@ import {
   nomConfirme, resumeTelephone, seuilPalier, unitePaliers,
   type ModeDeplacement, type PalierDeplacement, type UniteDeplacement,
 } from '@/lib/profil'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Feuilles du bas des réglages qui n'existaient que sur l'ancien écran « Tous les réglages »
 // (`ParametresFormV1`) : frais de déplacement, nom d'expéditeur des SMS (avec SMS test), et la
@@ -33,6 +34,7 @@ export function FeuilleDeplacementV2({
   onEnregistrer: Enregistrer<{ travel_fee_tiers: PalierDeplacement[]; travel_fee_mode: ModeDeplacement }>
   onClose: () => void
 }) {
+  const t = useT()
   const [unite, setUnite] = useState<UniteDeplacement>(unitePaliers(paliers))
   // Une liste par unité : passer aux km puis revenir aux minutes rend les paliers d'avant.
   // Seule celle de l'unité choisie est enregistrée.
@@ -83,20 +85,20 @@ export function FeuilleDeplacementV2({
 
   return (
     <Feuille
-      titre="Frais de déplacement"
-      sousTitre="Facturés selon la durée ou la distance du trajet jusqu’au client."
+      titre={t('Frais de déplacement')}
+      sousTitre={t('Facturés selon la durée ou la distance du trajet jusqu’au client.')}
       verrou={paliers.length === 0 ? 'frais_deplacement' : undefined}
       onClose={onClose}
       pied={
         <div>
           {erreur && <div className="mb-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
-          <Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="reglage-deplacement" />
+          <Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="reglage-deplacement" />
         </div>
       }
     >
       <form id="reglage-deplacement" onSubmit={soumettre} noValidate>
-        <Bloc titre="Calculés selon">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Unité des paliers">
+        <Bloc titre={t('Calculés selon')}>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t('Unité des paliers')}>
             {UNITES_DEPLACEMENT.map(u => (
               <button
                 key={u.valeur} type="button" aria-pressed={unite === u.valeur}
@@ -109,10 +111,10 @@ export function FeuilleDeplacementV2({
           </div>
         </Bloc>
 
-        <Bloc titre="Paliers">
+        <Bloc titre={t('Paliers')}>
           {liste.length === 0 ? (
             <p className={`text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              Aucun palier : le déplacement est offert. Ajoutez-en un pour le facturer.
+              {t('Aucun palier : le déplacement est offert. Ajoutez-en un pour le facturer.')}
             </p>
           ) : (
             <CarteListe>
@@ -129,7 +131,7 @@ export function FeuilleDeplacementV2({
                       className={`flex h-11 shrink-0 items-center px-3 text-[13.5px] ${corpsFort}`}
                       style={{ color: 'var(--v2-color-rouge)' }}
                     >
-                      Retirer
+                      {t('Retirer')}
                     </button>
                   </li>
                 ))}
@@ -138,10 +140,10 @@ export function FeuilleDeplacementV2({
           )}
         </Bloc>
 
-        <Bloc titre="Ajouter un palier">
+        <Bloc titre={t('Ajouter un palier')}>
           <div className="flex items-end gap-2">
             <label className="min-w-0 flex-1">
-              <span className="mb-1.5 block text-[12.5px] text-[color:var(--v2-color-gris)]">Trajet jusqu’à ({abrege})</span>
+              <span className="mb-1.5 block text-[12.5px] text-[color:var(--v2-color-gris)]">{t('Trajet jusqu’à (')}{abrege})</span>
               <input
                 type="number" inputMode="numeric" min={1} placeholder={unite === 'km' ? '20' : '30'} value={seuil}
                 onChange={e => { setSeuil(e.target.value); setErreurPalier(null) }} onKeyDown={entree}
@@ -149,7 +151,7 @@ export function FeuilleDeplacementV2({
               />
             </label>
             <label className="min-w-0 flex-1">
-              <span className="mb-1.5 block text-[12.5px] text-[color:var(--v2-color-gris)]">Frais (€)</span>
+              <span className="mb-1.5 block text-[12.5px] text-[color:var(--v2-color-gris)]">{t('Frais (€)')}</span>
               <input
                 type="number" inputMode="decimal" min={0} step={0.5} placeholder="15" value={frais}
                 onChange={e => { setFrais(e.target.value); setErreurPalier(null) }} onKeyDown={entree}
@@ -161,15 +163,15 @@ export function FeuilleDeplacementV2({
               className={`${BOUTON} shrink-0 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              Ajouter
+              {t('Ajouter')}
             </button>
           </div>
           {erreurPalier && <div className="mt-2"><Constat ton="rouge" role="alert">{erreurPalier}</Constat></div>}
         </Bloc>
 
         {liste.length > 0 && (
-          <Bloc titre="Trajet calculé depuis">
-            <div className="flex flex-col gap-2" role="group" aria-label="Point de départ du trajet">
+          <Bloc titre={t('Trajet calculé depuis')}>
+            <div className="flex flex-col gap-2" role="group" aria-label={t('Point de départ du trajet')}>
               {MODES_DEPLACEMENT.map(m => {
                 const actif = choix === m.valeur
                 return (
@@ -215,6 +217,7 @@ export function ChampExpediteurSms({
   telephone: string
   onEnregistrer: (valeur: string) => Promise<string | null>
 }) {
+  const t = useT()
   const [saisie, setSaisie] = useState(expediteur)
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -239,8 +242,8 @@ export function ChampExpediteurSms({
     if (!r.ok) { setTest({ enCours: false, erreur: r.message }); return }
     setTest({ enCours: false, erreur: null })
     confirmerEnvoi({
-      titre: 'SMS envoyé',
-      detail: telephone ? `Regardez sur votre téléphone (${resumeTelephone(telephone).texte}).` : 'Regardez sur votre téléphone.',
+      titre: t('SMS envoyé'),
+      detail: telephone ? `Regardez sur votre téléphone (${resumeTelephone(telephone).texte}).` : t('Regardez sur votre téléphone.'),
     })
   }
 
@@ -249,56 +252,55 @@ export function ChampExpediteurSms({
         {statut === 'en_attente' && (
           <div className="mb-3">
             <Constat ton="ambre">
-              Demande en cours, approuvée en moins de 24 h. En attendant, vos SMS partent avec WashBoard.
+              {t('Demande en cours, approuvée en moins de 24 h. En attendant, vos SMS partent avec WashBoard.')}
             </Constat>
           </div>
         )}
         {statut === 'approuve' && (
           <p className="mb-3 rounded-[var(--v2-radius-carte)] border border-emerald-300 bg-emerald-50 px-3.5 py-3 text-[13.5px] leading-snug text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
-            Nom approuvé. Vos SMS partent avec ce nom.
+            {t('Nom approuvé. Vos SMS partent avec ce nom.')}
           </p>
         )}
         {statut === 'refuse' && (
           <div className="mb-3">
             <Constat ton="rouge">
-              Ce nom n’a pas été accepté. Vos SMS partent avec WashBoard.
+              {t('Ce nom n’a pas été accepté. Vos SMS partent avec WashBoard.')}
             </Constat>
           </div>
         )}
-        <Bloc titre="Nom d’expéditeur">
+        <Bloc titre={t('Nom d’expéditeur')}>
           <input
             type="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off"
             maxLength={11} value={saisie} placeholder={suggestion}
             onChange={e => { setSaisie(nettoyerExpediteur(e.target.value)); setErreur(null) }}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); enregistrer() } }}
-            aria-label="Nom d’expéditeur" aria-invalid={!!erreur}
+            aria-label={t('Nom d’expéditeur')} aria-invalid={!!erreur}
             className={CHAMP}
           />
           {erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
           <p className={`mt-2 text-[12.5px] leading-[1.55] ${corps} text-[color:var(--v2-color-gris)]`}>
-            11 caractères au maximum, lettres et chiffres uniquement : c’est la règle des opérateurs. Laissez vide pour
-            utiliser le nom commun « WashBoard ».
+            {t('11 caractères au maximum, lettres et chiffres uniquement : c’est la règle des opérateurs. Laissez vide pour utiliser le nom commun « WashBoard ».')}
           </p>
           <button
             type="button" onClick={enregistrer} disabled={!modifie || enCours}
             className={`${BOUTON} mt-3 w-full bg-[color:var(--v2-color-accent)] text-white disabled:opacity-40`}
             style={PRESSION}
           >
-            {enCours ? 'Enregistrement…' : 'Enregistrer le nom'}
+            {enCours ? 'Enregistrement…' : t('Enregistrer le nom')}
           </button>
         </Bloc>
 
-        <Bloc titre="Vérifier">
+        <Bloc titre={t('Vérifier')}>
           <button
             type="button" onClick={tester} disabled={test.enCours}
             className={`${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
             style={PRESSION}
           >
-            {test.enCours ? 'Envoi…' : 'M’envoyer un SMS test'}
+            {test.enCours ? 'Envoi…' : t('M’envoyer un SMS test')}
           </button>
           {test.erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{test.erreur}</Constat></div>}
           <p className={`mt-2 text-[12.5px] leading-[1.55] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Enregistrez d’abord le nom, puis envoyez-vous un exemple sur le numéro de votre profil.
+            {t('Enregistrez d’abord le nom, puis envoyez-vous un exemple sur le numéro de votre profil.')}
           </p>
         </Bloc>
     </div>
@@ -309,6 +311,7 @@ export function ChampExpediteurSms({
 
 /** Suspendre le compte : réversible, la page de réservation est masquée. */
 export function FeuillePauseV2({ onFait, onClose }: { onFait: () => void; onClose: () => void }) {
+  const t = useT()
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -324,9 +327,9 @@ export function FeuillePauseV2({ onFait, onClose }: { onFait: () => void; onClos
 
   return (
     <ConfirmationSuppression
-      titre="Mettre mon compte en pause ?"
-      texte="Votre page de réservation est masquée : plus aucun nouveau rendez-vous n’arrive."
-      remarque="Vos données sont conservées, et vous réactivez le compte quand vous voulez."
+      titre={t('Mettre mon compte en pause ?')}
+      texte={t('Votre page de réservation est masquée : plus aucun nouveau rendez-vous n’arrive.')}
+      remarque={t('Vos données sont conservées, et vous réactivez le compte quand vous voulez.')}
       enCours={enCours}
       erreur={erreur}
       libelleAction="Mettre en pause"
@@ -341,6 +344,7 @@ export function FeuillePauseV2({ onFait, onClose }: { onFait: () => void; onClos
 export function FeuilleSuppressionV2({
   nom, onFait, onClose,
 }: { nom: string; onFait: () => void; onClose: () => void }) {
+  const t = useT()
   const [saisie, setSaisie] = useState('')
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -359,7 +363,7 @@ export function FeuilleSuppressionV2({
 
   return (
     <Feuille
-      titre="Supprimer mon compte"
+      titre={t('Supprimer mon compte')}
       onClose={onClose}
       pied={
         <div>
@@ -370,7 +374,7 @@ export function FeuilleSuppressionV2({
               className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              Annuler
+              {t('Annuler')}
             </button>
             <button
               type="submit" form="reglage-suppression" disabled={enCours || !pret}
@@ -385,13 +389,11 @@ export function FeuilleSuppressionV2({
     >
       <form id="reglage-suppression" onSubmit={soumettre} noValidate>
         <p className={`text-[14.5px] leading-[1.55] ${corps}`}>
-          Cela programme l’effacement de votre compte et de <strong className={corpsFort}>toutes vos données</strong> :
-          clients, rendez-vous, comptabilité, prestations. Vous avez <strong className={corpsFort}>30 jours</strong> pour
-          annuler avant l’effacement définitif.
+          {t('Cela programme l’effacement de votre compte et de')} <strong className={corpsFort}>{t('toutes vos données')}</strong> {t(': clients, rendez-vous, comptabilité, prestations. Vous avez')} <strong className={corpsFort}>{t('30 jours')}</strong> {t('pour annuler avant l’effacement définitif.')}
         </p>
         <div className="mt-4">
           <Constat ton="ambre">
-            Un abonnement en cours ne s’arrête pas tout seul : résiliez-le avant la prochaine échéance pour ne pas être prélevé.
+            {t('Un abonnement en cours ne s’arrête pas tout seul : résiliez-le avant la prochaine échéance pour ne pas être prélevé.')}
           </Constat>
         </div>
         <div className="mt-5">
@@ -399,7 +401,7 @@ export function FeuilleSuppressionV2({
             <input
               type="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off"
               value={saisie} placeholder={nom} onChange={e => { setSaisie(e.target.value); setErreur(null) }}
-              aria-label="Nom de votre entreprise" className={CHAMP}
+              aria-label={t('Nom de votre entreprise')} className={CHAMP}
             />
           </Bloc>
         </div>
@@ -417,6 +419,7 @@ export function CarteEtatCompte({
   maintenant: number
   onReactiver: () => Promise<string | null>
 }) {
+  const t = useT()
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const supprime = etat === 'pending_deletion'
@@ -432,15 +435,15 @@ export function CarteEtatCompte({
 
   return (
     <section
-      aria-label={supprime ? 'Suppression programmée' : 'Compte en pause'}
+      aria-label={supprime ? t('Suppression programmée') : 'Compte en pause'}
       className="mt-3 rounded-[var(--v2-radius-surface)] border bg-[color:var(--v2-color-surface)] p-4"
       style={{ borderColor: supprime ? 'var(--v2-color-rouge)' : 'var(--v2-color-ambre)' }}
     >
-      <h2 className={`text-[16px] ${corpsFort}`}>{supprime ? 'Suppression programmée' : 'Compte en pause'}</h2>
+      <h2 className={`text-[16px] ${corpsFort}`}>{supprime ? t('Suppression programmée') : 'Compte en pause'}</h2>
       <p className={`mt-1.5 text-[14px] leading-[1.55] ${corps}`}>
         {supprime
-          ? <>Votre compte sera <strong className={corpsFort}>définitivement supprimé dans {jours} jour{jours > 1 ? 's' : ''}</strong>, avec toutes vos données. Votre page de réservation est déjà masquée.</>
-          : 'Votre page de réservation est masquée et vous ne recevez plus de nouveaux rendez-vous. Vos données sont conservées.'}
+          ? <>{t('Votre compte sera')} <strong className={corpsFort}>{t('définitivement supprimé dans')} {jours} {t('jour')}{jours > 1 ? 's' : ''}</strong>{t(', avec toutes vos données. Votre page de réservation est déjà masquée.')}</>
+          : t('Votre page de réservation est masquée et vous ne recevez plus de nouveaux rendez-vous. Vos données sont conservées.')}
       </p>
       {erreur && <div className="mt-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
       <button
@@ -448,7 +451,7 @@ export function CarteEtatCompte({
         className={`${BOUTON} mt-3 w-full text-white`}
         style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
       >
-        {enCours ? '…' : supprime ? 'Annuler la suppression' : 'Réactiver mon compte'}
+        {enCours ? '…' : supprime ? t('Annuler la suppression') : t('Réactiver mon compte')}
       </button>
     </section>
   )

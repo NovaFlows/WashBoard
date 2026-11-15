@@ -5,6 +5,7 @@ import { Feuille, CHAMP, PRESSION, corps, puce } from '@/components/dashboard/Fe
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied } from '@/components/dashboard/ReglageAutomatismeV2'
 import { CATEGORIES_DEPENSE, montantNombre, validerDepense, validerRecurrent } from '@/lib/depenses'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Feuilles du bas de l'écran « Dépenses » (PWA) : ajouter un frais, ajouter un frais qui
 // revient chaque mois. Mêmes champs et mêmes routes que l'ancien écran de comptabilité
@@ -14,8 +15,9 @@ import { CATEGORIES_DEPENSE, montantNombre, validerDepense, validerRecurrent } f
 // la feuille reste ouverte, la saisie n'est jamais perdue.
 
 function ChoixCategorie({ valeur, onChange }: { valeur: string; onChange: (v: string) => void }) {
+  const t = useT()
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Catégorie">
+    <div className="flex flex-wrap gap-2" role="group" aria-label={t('Catégorie')}>
       {CATEGORIES_DEPENSE.map(c => (
         <button
           key={c.value}
@@ -34,6 +36,7 @@ function ChoixCategorie({ valeur, onChange }: { valeur: string; onChange: (v: st
 
 /** Montant : un champ large, en gros, avec le « € » collé — c'est ce qu'on tape en premier. */
 function ChampMontant({ valeur, onChange }: { valeur: string; onChange: (v: string) => void }) {
+  const t = useT()
   return (
     <div className="relative">
       <input
@@ -42,7 +45,7 @@ function ChampMontant({ valeur, onChange }: { valeur: string; onChange: (v: stri
         value={valeur}
         onChange={e => onChange(e.target.value)}
         placeholder="0,00"
-        aria-label="Montant en euros"
+        aria-label={t('Montant en euros')}
         className={`${CHAMP} h-14 pr-10 text-[22px] [font-weight:var(--v2-type-corps-fort-poids)] tabular-nums`}
       />
       <span
@@ -63,6 +66,7 @@ export function FeuilleAjoutDepenseV2({
   onEnregistrer: (champs: { date: string; category: string; label: string; amount: number }) => Promise<string | null>
   onClose: () => void
 }) {
+  const t = useT()
   const [date, setDate] = useState(aujourdhui)
   const [categorie, setCategorie] = useState<string>(CATEGORIES_DEPENSE[0].value)
   const [libelle, setLibelle] = useState('')
@@ -90,34 +94,34 @@ export function FeuilleAjoutDepenseV2({
 
   return (
     <Feuille
-      titre="Ajouter un frais"
+      titre={t('Ajouter un frais')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Ajouter" onClose={onClose} formulaire="depense-ajout" />}
+      pied={<Pied enCours={enCours} libelle={t('Ajouter')} onClose={onClose} formulaire="depense-ajout" />}
     >
       <form id="depense-ajout" onSubmit={soumettre} noValidate>
-        <Bloc titre="Montant">
+        <Bloc titre={t('Montant')}>
           <ChampMontant valeur={montant} onChange={v => { setMontant(v); setErreur(null) }} />
         </Bloc>
-        <Bloc titre="Libellé">
+        <Bloc titre={t('Libellé')}>
           <input
             type="text"
             value={libelle}
             onChange={e => { setLibelle(e.target.value); setErreur(null) }}
-            placeholder="Plein essence"
-            aria-label="Libellé"
+            placeholder={t('Plein essence')}
+            aria-label={t('Libellé')}
             className={CHAMP}
           />
         </Bloc>
-        <Bloc titre="Catégorie">
+        <Bloc titre={t('Catégorie')}>
           <ChoixCategorie valeur={categorie} onChange={setCategorie} />
         </Bloc>
-        <Bloc titre="Date">
+        <Bloc titre={t('Date')}>
           <input
             type="date"
             value={date}
             max={aujourdhui}
             onChange={e => { setDate(e.target.value); setErreur(null) }}
-            aria-label="Date du frais"
+            aria-label={t('Date du frais')}
             className={CHAMP}
           />
           {erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
@@ -135,6 +139,7 @@ export function FeuilleAjoutRecurrentV2({
   onEnregistrer: (champs: { category: string; label: string; amount: number; day_of_month: number }) => Promise<string | null>
   onClose: () => void
 }) {
+  const t = useT()
   const [categorie, setCategorie] = useState<string>('abonnement')
   const [libelle, setLibelle] = useState('')
   const [montant, setMontant] = useState('')
@@ -162,30 +167,30 @@ export function FeuilleAjoutRecurrentV2({
 
   return (
     <Feuille
-      titre="Frais qui revient chaque mois"
-      sousTitre="Assurance, abonnement, loyer… ajouté tout seul, chaque mois."
+      titre={t('Frais qui revient chaque mois')}
+      sousTitre={t('Assurance, abonnement, loyer… ajouté tout seul, chaque mois.')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Ajouter" onClose={onClose} formulaire="depense-recurrent" />}
+      pied={<Pied enCours={enCours} libelle={t('Ajouter')} onClose={onClose} formulaire="depense-recurrent" />}
     >
       <form id="depense-recurrent" onSubmit={soumettre} noValidate>
-        <Bloc titre="Montant">
+        <Bloc titre={t('Montant')}>
           <ChampMontant valeur={montant} onChange={v => { setMontant(v); setErreur(null) }} />
         </Bloc>
-        <Bloc titre="Libellé">
+        <Bloc titre={t('Libellé')}>
           <input
             type="text"
             value={libelle}
             onChange={e => { setLibelle(e.target.value); setErreur(null) }}
-            placeholder="Assurance véhicule"
-            aria-label="Libellé"
+            placeholder={t('Assurance véhicule')}
+            aria-label={t('Libellé')}
             className={CHAMP}
           />
         </Bloc>
-        <Bloc titre="Catégorie">
+        <Bloc titre={t('Catégorie')}>
           <ChoixCategorie valeur={categorie} onChange={setCategorie} />
         </Bloc>
-        <Bloc titre="Jour du mois" aide="1 à 28">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Jour du mois">
+        <Bloc titre={t('Jour du mois')} aide="1 à 28">
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t('Jour du mois')}>
             {JOURS_PROPOSES.map(j => (
               <button
                 key={j}
@@ -206,11 +211,11 @@ export function FeuilleAjoutRecurrentV2({
             max={28}
             value={jour}
             onChange={e => { setJour(e.target.value); setErreur(null) }}
-            aria-label="Jour du mois"
+            aria-label={t('Jour du mois')}
             className={`${CHAMP} mt-2.5`}
           />
           <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Au-delà du 28, le frais sauterait les mois de février : choisissez un jour plus tôt.
+            {t('Au-delà du 28, le frais sauterait les mois de février : choisissez un jour plus tôt.')}
           </p>
           {erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
         </Bloc>

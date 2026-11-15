@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { extraireZip, extension, TYPES_ACCEPTES, LIMITES } from '@/lib/zipFactures'
 import { BUCKET_FACTURES_IMPORTEES } from '@/lib/importFactures'
 import type { SourceDate } from '@/lib/dateFacture'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Import des factures qu'un laveur a faites ailleurs, avant WashBoard.
 //
@@ -47,6 +48,7 @@ const SOURCES: Record<SourceDate, string> = {
 const EN_PARALLELE = 3
 
 export function ImportFactures() {
+  const tr = useT()
   const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
   const [lignes, setLignes] = useState<Ligne[]>([])
@@ -66,12 +68,12 @@ export function ImportFactures() {
         body: JSON.stringify({ type: ligne.type, taille: ligne.taille }),
       })
       const p = await prep.json().catch(() => ({})) as { chemin?: string; token?: string; error?: string }
-      if (!prep.ok || !p.chemin || !p.token) throw new Error(p.error ?? 'Envoi impossible.')
+      if (!prep.ok || !p.chemin || !p.token) throw new Error(p.error ?? tr('Envoi impossible.'))
 
       const { error } = await createClient().storage
         .from(BUCKET_FACTURES_IMPORTEES)
         .uploadToSignedUrl(p.chemin, p.token, fichier, { contentType: ligne.type })
-      if (error) throw new Error('Envoi interrompu. Réessayez.')
+      if (error) throw new Error(tr('Envoi interrompu. Réessayez.'))
       maj(ligne.id, { etat: 'analyse', chemin: p.chemin })
 
       const an = await fetch('/api/factures/importees/analyser', {
@@ -88,7 +90,7 @@ export function ImportFactures() {
         numero: a.numero ?? '',
       })
     } catch (e) {
-      maj(ligne.id, { etat: 'erreur', erreur: e instanceof Error ? e.message : 'Envoi impossible.' })
+      maj(ligne.id, { etat: 'erreur', erreur: e instanceof Error ? e.message : tr('Envoi impossible.') })
     }
   }
 
@@ -180,7 +182,7 @@ export function ImportFactures() {
     })
     const r = await res.json().catch(() => ({})) as { ajoutees?: number; error?: string }
     setEnregistrement(false)
-    if (!res.ok) { setMessage({ ok: false, texte: r.error ?? 'L’enregistrement a échoué.' }); return }
+    if (!res.ok) { setMessage({ ok: false, texte: r.error ?? tr('L’enregistrement a échoué.') }); return }
     // Les fichiers en erreur n'ont jamais été enregistrés : on les retire du stockage.
     await effacerFichiers(lignes.filter(l => l.etat === 'erreur' && l.chemin).map(l => l.chemin as string))
     setLignes([]); setIgnores([]); setOuvert(false)
@@ -194,7 +196,7 @@ export function ImportFactures() {
         onClick={() => setOuvert(true)}
         className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
       >
-        + Ajouter mes factures existantes
+        {tr('+ Ajouter mes factures existantes')}
       </button>
     )
   }
@@ -203,18 +205,16 @@ export function ImportFactures() {
 
   return (
     <section aria-labelledby="import-titre" className="w-full mb-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-      <h2 id="import-titre" className="text-base font-bold text-slate-900 dark:text-white">Ajouter mes factures existantes</h2>
+      <h2 id="import-titre" className="text-base font-bold text-slate-900 dark:text-white">{tr('Ajouter mes factures existantes')}</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        Vos factures <strong className="font-semibold text-slate-700 dark:text-slate-200">de vente</strong>, envoyées à vos
-        clients avant WashBoard : PDF, photos (JPG, PNG) ou un fichier ZIP. Vous vérifiez la date de chacune avant de
-        l&apos;enregistrer, elle se range au bon mois et garde son numéro d&apos;origine.
+        {tr('Vos factures')} <strong className="font-semibold text-slate-700 dark:text-slate-200">{tr('de vente')}</strong>{tr(', envoyées à vos clients avant WashBoard : PDF, photos (JPG, PNG) ou un fichier ZIP. Vous vérifiez la date de chacune avant de l’enregistrer, elle se range au bon mois et garde son numéro d’origine.')}
       </p>
       {/* Les achats n'ont rien à faire du côté Ventes : ils fausseraient le
           total encaissé du mois. Ils auront leur propre côté dans cet onglet. */}
       <p className="mt-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-        Factures d&apos;achat (matériel, produits, abonnements) : ne les ajoutez pas ici. Elles auront leur place dans le côté{' '}
-        <Link href="/dashboard/factures?cote=achats" className="font-semibold underline">Achats</Link> de cet onglet,{' '}
-        <span className="font-semibold">en développement</span>.
+        {tr('Factures d’achat (matériel, produits, abonnements) : ne les ajoutez pas ici. Elles auront leur place dans le côté')}{' '}
+        <Link href="/dashboard/factures?cote=achats" className="font-semibold underline">{tr('Achats')}</Link> {tr('de cet onglet,')}{' '}
+        <span className="font-semibold">{tr('en développement')}</span>.
       </p>
 
       <label
@@ -225,8 +225,8 @@ export function ImportFactures() {
           survol ? 'border-[#1651E8] bg-blue-50 dark:bg-blue-950/30' : 'border-slate-300 dark:border-slate-700 hover:border-slate-400'
         }`}
       >
-        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Glissez vos fichiers ici, ou cliquez pour les choisir</span>
-        <span className="text-xs text-slate-500 dark:text-slate-400">10 Mo par fichier · ZIP jusqu&apos;à 100 Mo · {LIMITES.nombreFichiers} factures maximum</span>
+        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{tr('Glissez vos fichiers ici, ou cliquez pour les choisir')}</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{tr('10 Mo par fichier · ZIP jusqu’à 100 Mo ·')} {LIMITES.nombreFichiers} {tr('factures maximum')}</span>
         <input
           type="file"
           multiple
@@ -238,7 +238,7 @@ export function ImportFactures() {
 
       {ignores.length > 0 && (
         <ul className="mt-3 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 space-y-0.5">
-          {ignores.map((t, i) => <li key={i}>Ignoré — {t}</li>)}
+          {ignores.map((t, i) => <li key={i}>{tr('Ignoré —')} {t}</li>)}
         </ul>
       )}
 
@@ -252,28 +252,28 @@ export function ImportFactures() {
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-200 break-all">{l.nom}</p>
                   <p className={`text-xs mt-0.5 ${l.etat === 'erreur' ? 'text-red-600 dark:text-red-400' : aVerifier ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
                     {l.etat === 'envoi' && 'Envoi…'}
-                    {l.etat === 'analyse' && 'Lecture de la date…'}
+                    {l.etat === 'analyse' && tr('Lecture de la date…')}
                     {l.etat === 'erreur' && l.erreur}
-                    {l.etat === 'pret' && (l.source ? SOURCES[l.source] : 'Date introuvable : à saisir')}
+                    {l.etat === 'pret' && (l.source ? SOURCES[l.source] : tr('Date introuvable : à saisir'))}
                   </p>
                 </div>
                 {l.etat === 'pret' && (
                   <>
                     <label className="w-32">
-                      <span className="sr-only">Numéro d&apos;origine de la facture {l.nom} (facultatif)</span>
+                      <span className="sr-only">{tr('Numéro d’origine de la facture')} {l.nom} {tr('(facultatif)')}</span>
                       <input
-                        type="text" placeholder="N° facture" maxLength={40}
+                        type="text" placeholder={tr('N° facture')} maxLength={40}
                         value={l.numero} onChange={e => maj(l.id, { numero: e.target.value })} className={saisie}
                       />
                     </label>
                     <label className="w-36">
-                      <span className="sr-only">Date de la facture {l.nom}</span>
+                      <span className="sr-only">{tr('Date de la facture')} {l.nom}</span>
                       <input type="date" required value={l.date} onChange={e => maj(l.id, { date: e.target.value })} className={saisie} />
                     </label>
                     <label className="w-28">
-                      <span className="sr-only">Montant TTC de la facture {l.nom} (facultatif)</span>
+                      <span className="sr-only">{tr('Montant TTC de la facture')} {l.nom} {tr('(facultatif)')}</span>
                       <input
-                        type="text" inputMode="decimal" placeholder="Montant €"
+                        type="text" inputMode="decimal" placeholder={tr('Montant €')}
                         value={l.montant} onChange={e => maj(l.id, { montant: e.target.value })} className={saisie}
                       />
                     </label>
@@ -309,10 +309,10 @@ export function ImportFactures() {
           onClick={annuler}
           className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
-          Annuler
+          {tr('Annuler')}
         </button>
-        {enCours && <span className="text-xs text-slate-500 dark:text-slate-400">Envoi en cours…</span>}
-        {!enCours && sansDate > 0 && <span className="text-xs text-amber-600 dark:text-amber-400">Il manque la date de {sansDate} facture{sansDate > 1 ? 's' : ''}.</span>}
+        {enCours && <span className="text-xs text-slate-500 dark:text-slate-400">{tr('Envoi en cours…')}</span>}
+        {!enCours && sansDate > 0 && <span className="text-xs text-amber-600 dark:text-amber-400">{tr('Il manque la date de')} {sansDate} {tr('facture')}{sansDate > 1 ? 's' : ''}.</span>}
       </div>
     </section>
   )

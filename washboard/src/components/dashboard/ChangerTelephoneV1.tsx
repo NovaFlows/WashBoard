@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { confirmerCodeTelephone, demanderCodeTelephone } from '@/lib/changerTelephoneClient'
 import { formatPhone } from '@/lib/phone'
 import { validerTelephone } from '@/lib/profil'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Changer de numéro dans l'ancien formulaire des réglages (site, 2026-11-10) — la même chose que
 // la feuille « Téléphone » de Mon profil (`FeuilleTelephoneV2`), au style de l'ancien écran. Le
@@ -17,6 +18,7 @@ const boutonClass = 'rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold te
 const lienClass = 'text-sm text-slate-500 dark:text-slate-400 underline underline-offset-2'
 
 export default function ChangerTelephoneV1({ telephone }: { telephone: string | null }) {
+  const t = useT()
   const router = useRouter()
   const [actuel, setActuel] = useState(telephone)
   const [ouvert, setOuvert] = useState(false)
@@ -34,9 +36,9 @@ export default function ChangerTelephoneV1({ telephone }: { telephone: string | 
   async function demander(e: React.FormEvent) {
     e.preventDefault()
     if (enCours) return
-    const refus = validerTelephone(nouveau) ?? (nouveau.trim() ? null : 'Indiquez votre nouveau numéro.')
+    const refus = validerTelephone(nouveau) ?? (nouveau.trim() ? null : t('Indiquez votre nouveau numéro.'))
     if (refus) { setMessage({ ok: false, texte: refus }); return }
-    if (!motDePasse) { setMessage({ ok: false, texte: 'Indiquez votre mot de passe actuel.' }); return }
+    if (!motDePasse) { setMessage({ ok: false, texte: t('Indiquez votre mot de passe actuel.') }); return }
     setMessage(null)
     setEnCours(true)
     const r = await demanderCodeTelephone(nouveau.trim(), motDePasse)
@@ -57,16 +59,16 @@ export default function ChangerTelephoneV1({ telephone }: { telephone: string | 
     if (!r.ok) { setMessage({ ok: false, texte: r.message }); return }
     setActuel(r.telephone)
     fermer()
-    setMessage({ ok: true, texte: 'Numéro mis à jour.' })
+    setMessage({ ok: true, texte: t('Numéro mis à jour.') })
     router.refresh()
   }
 
   return (
     <div>
-      <label className={labelClass}>Téléphone</label>
+      <label className={labelClass}>{t('Téléphone')}</label>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-slate-900 dark:text-slate-100">{actuel ? formatPhone(actuel) : 'Non renseigné'}</span>
-        {!ouvert && <button type="button" onClick={() => { setOuvert(true); setMessage(null) }} className={lienClass}>Changer mon numéro</button>}
+        <span className="text-sm text-slate-900 dark:text-slate-100">{actuel ? formatPhone(actuel) : t('Non renseigné')}</span>
+        {!ouvert && <button type="button" onClick={() => { setOuvert(true); setMessage(null) }} className={lienClass}>{t('Changer mon numéro')}</button>}
       </div>
       {message && !ouvert && (
         <p className={`mt-2 text-sm ${message.ok ? 'text-emerald-600' : 'text-red-600'}`} role={message.ok ? 'status' : 'alert'}>{message.texte}</p>
@@ -77,45 +79,45 @@ export default function ChangerTelephoneV1({ telephone }: { telephone: string | 
           {envoyeA ? (
             <form onSubmit={valider} noValidate className="space-y-3">
               <div>
-                <label htmlFor="tel-code" className={labelClass}>Code reçu par SMS</label>
+                <label htmlFor="tel-code" className={labelClass}>{t('Code reçu par SMS')}</label>
                 <input
                   id="tel-code" type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
                   value={code} onChange={e => { setCode(e.target.value.replace(/\D/g, '')); setMessage(null) }}
-                  placeholder="6 chiffres" className={inputClass}
+                  placeholder={t('6 chiffres')} className={inputClass}
                 />
                 <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  Un code vient de partir au {envoyeA}. Il est valable 10 minutes. Votre numéro ne change qu’une fois le code validé.
+                  {t('Un code vient de partir au')} {envoyeA}{t('. Il est valable 10 minutes. Votre numéro ne change qu’une fois le code validé.')}
                 </p>
               </div>
               {message && <p className="text-sm text-red-600" role="alert">{message.texte}</p>}
               <div className="flex items-center gap-4">
-                <button type="submit" disabled={enCours} className={boutonClass}>{enCours ? 'Vérification…' : 'Valider le code'}</button>
-                <button type="button" onClick={() => { setEnvoyeA(null); setCode(''); setMessage(null) }} className={lienClass}>Changer de numéro ou renvoyer le code</button>
+                <button type="submit" disabled={enCours} className={boutonClass}>{enCours ? t('Vérification…') : t('Valider le code')}</button>
+                <button type="button" onClick={() => { setEnvoyeA(null); setCode(''); setMessage(null) }} className={lienClass}>{t('Changer de numéro ou renvoyer le code')}</button>
               </div>
             </form>
           ) : (
             <form onSubmit={demander} noValidate className="space-y-3">
               <div>
-                <label htmlFor="tel-nouveau" className={labelClass}>Nouveau numéro</label>
+                <label htmlFor="tel-nouveau" className={labelClass}>{t('Nouveau numéro')}</label>
                 <input
                   id="tel-nouveau" type="tel" inputMode="tel" autoComplete="tel"
                   value={nouveau} onChange={e => { setNouveau(e.target.value); setMessage(null) }}
                   placeholder="06 00 00 00 00" className={inputClass}
                 />
-                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Un mobile (06 ou 07) : un code de confirmation y sera envoyé par SMS.</p>
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{t('Un mobile (06 ou 07) : un code de confirmation y sera envoyé par SMS.')}</p>
               </div>
               <div>
-                <label htmlFor="tel-mdp" className={labelClass}>Votre mot de passe actuel</label>
+                <label htmlFor="tel-mdp" className={labelClass}>{t('Votre mot de passe actuel')}</label>
                 <input
                   id="tel-mdp" type="password" autoComplete="current-password"
                   value={motDePasse} onChange={e => { setMotDePasse(e.target.value); setMessage(null) }}
-                  placeholder="Pour confirmer que c’est bien vous" className={inputClass}
+                  placeholder={t('Pour confirmer que c’est bien vous')} className={inputClass}
                 />
               </div>
               {message && <p className="text-sm text-red-600" role="alert">{message.texte}</p>}
               <div className="flex items-center gap-4">
-                <button type="submit" disabled={enCours} className={boutonClass}>{enCours ? 'Envoi…' : 'Recevoir le code'}</button>
-                <button type="button" onClick={fermer} className={lienClass}>Annuler</button>
+                <button type="submit" disabled={enCours} className={boutonClass}>{enCours ? 'Envoi…' : t('Recevoir le code')}</button>
+                <button type="button" onClick={fermer} className={lienClass}>{t('Annuler')}</button>
               </div>
             </form>
           )}

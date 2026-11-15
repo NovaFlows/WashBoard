@@ -8,6 +8,7 @@ import { ANNEAU_CHOIX, EtatEnvoi, enCoursEnvoi } from '@/components/dashboard/Ap
 import type { EtatImage } from '@/hooks/useApparenceV2'
 import { BG_THEME_PRESETS, OVERLAY, getBgStyle, type BgThemePreset } from '@/lib/themes'
 import { LIBELLE_FOND_PHOTO, LIBELLE_FOND_ORIGINAL, estPhotoPerso, miniaturePhoto } from '@/lib/apparence'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Fond de la page — feuille du bas de l'écran « Apparence de ma page » (PWA). Mêmes
 // choix que l'ancien écran : Original (clair/sombre au choix du client), trois
@@ -75,6 +76,7 @@ const visuelPreset = (t: BgThemePreset): React.CSSProperties =>
     : { background: t.gradient }
 
 export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisir, onPhoto, onRetirerPhoto, onClose, panneau }: Props) {
+  const tr = useT()
   const courant = enAttente === undefined ? fond : enAttente
   // Un identifiant que `getBgStyle` ne reconnaît pas n'habille pas la page : c'est « Original ».
   const original = getBgStyle(courant) === null
@@ -85,9 +87,9 @@ export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisi
 
   return (
     <Feuille
-      titre="Fond de la page"
+      titre={tr('Fond de la page')}
       verrou="page_personnalisee"
-      sousTitre="Un fond retire le bouton clair/sombre chez vos clients."
+      sousTitre={tr('Un fond retire le bouton clair/sombre chez vos clients.')}
       onClose={onClose}
       panneau={panneau}
     >
@@ -101,13 +103,13 @@ export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisi
         >
           <span className="min-w-0 flex-1">
             <span className={`block text-[15px] ${original ? corpsFort : corps}`}>{LIBELLE_FOND_ORIGINAL}</span>
-            <span className={`block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Vos clients choisissent eux-mêmes.</span>
+            <span className={`block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Vos clients choisissent eux-mêmes.')}</span>
           </span>
           <Sun size={16} strokeWidth={2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
           <Moon size={16} strokeWidth={2} aria-hidden className="shrink-0 text-[color:var(--v2-color-gris)]" />
         </button>
 
-        <Bloc titre="Dégradés">
+        <Bloc titre={tr('Dégradés')}>
           <div className="grid grid-cols-3 gap-x-3 gap-y-4">
             {degrades.map(t => (
               <Vignette
@@ -122,7 +124,7 @@ export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisi
           </div>
         </Bloc>
 
-        <Bloc titre="Photos">
+        <Bloc titre={tr('Photos')}>
           <div className="grid grid-cols-2 gap-x-3 gap-y-4">
             {photos.map(t => (
               <Vignette
@@ -167,7 +169,7 @@ export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisi
                   className={`flex h-11 w-full items-center justify-center text-[15px] ${corpsFort} disabled:opacity-50`}
                   style={{ color: TEXTE_ROUGE }}
                 >
-                  Retirer
+                  {tr('Retirer')}
                 </button>
               </div>
             </div>
@@ -179,11 +181,11 @@ export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisi
               className={`${BOUTON} w-full border border-dashed border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              {occupe ? 'En cours…' : 'Choisir ma photo'}
+              {occupe ? 'En cours…' : tr('Choisir ma photo')}
             </button>
           )}
           <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            JPG, PNG, WebP, réduite automatiquement. Une photo est assombrie pour que le texte reste lisible.
+            {tr('JPG, PNG, WebP, réduite automatiquement. Une photo est assombrie pour que le texte reste lisible.')}
           </p>
         </Bloc>
 

@@ -5,6 +5,7 @@ import { MapPin } from 'lucide-react'
 import { CHAMP, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { AVERTISSEMENT_SUGGESTION } from '@/lib/zoneForm'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Saisie d'adresse de la PWA (refonte 2026). Le composant du site
 // (`ui/AddressAutocomplete`, inchangé) reste en style slate et pose sa liste de
@@ -47,6 +48,7 @@ type Props = {
 }
 
 export default function AdresseV2({ id, valeur, onChange, placeholder, adresseDeBase, erreur }: Props) {
+  const t = useT()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [etat, setEtat] = useState<Etat>('repos')
   // L'adresse à l'ouverture vient de la base : elle a déjà été choisie une fois,
@@ -129,7 +131,7 @@ export default function AdresseV2({ id, valeur, onChange, placeholder, adresseDe
           style={PRESSION}
         >
           <MapPin size={15} strokeWidth={2} aria-hidden className="shrink-0" />
-          <span className="truncate">Utiliser mon adresse de départ</span>
+          <span className="truncate">{t('Utiliser mon adresse de départ')}</span>
         </button>
       )}
 

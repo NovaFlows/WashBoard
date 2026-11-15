@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { Service, ServiceAddon, VehicleItem } from '@/types'
 import { hex } from '@/lib/colorUtils'
 import { dureeTotale, prixOptions } from '@/lib/pricing'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Options choisies véhicule par véhicule.
 //
@@ -45,6 +46,7 @@ function titreVehicule(v: VehicleItem, index: number, tous: VehicleItem[]): stri
 export default function StepOptions({
   service, vehicules, basePrice, baseDuration, onNext, onBack, accent = '#2563eb',
 }: Props) {
+  const t = useT()
   // Un tableau d'options par véhicule, aligné sur `vehicules`.
   const [choix, setChoix] = useState<ServiceAddon[][]>(
     () => vehicules.map(v => v.addons ?? []),
@@ -80,9 +82,9 @@ export default function StepOptions({
 
   return (
     <div>
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Options &amp; suppléments</h2>
+      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">{t('Options & suppléments')}</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
-        {plusieurs ? 'Choisissez les options de chaque véhicule' : 'Personnalisez votre prestation'}
+        {plusieurs ? t('Choisissez les options de chaque véhicule') : t('Personnalisez votre prestation')}
       </p>
 
       {vehicules.map((vehicule, iv) => (
@@ -144,7 +146,7 @@ export default function StepOptions({
                           +{addon.price}€
                         </span>
                         {addon.duration_minutes ? (
-                          <span className="text-xs text-slate-400 dark:text-slate-500">+{addon.duration_minutes} min</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500">+{addon.duration_minutes} {t('min')}</span>
                         ) : null}
                       </div>
                     </button>
@@ -159,7 +161,7 @@ export default function StepOptions({
       {/* Récapitulatif prix */}
       <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3.5 mb-6 space-y-1.5">
         <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
-          <span>Prestation de base</span>
+          <span>{t('Prestation de base')}</span>
           <span>{basePrice}€</span>
         </div>
         {vehicules.map((vehicule, iv) => (
@@ -173,12 +175,12 @@ export default function StepOptions({
           ))
         ))}
         <div className="border-t border-slate-200 dark:border-slate-700 pt-1.5 flex justify-between text-sm font-bold text-slate-900 dark:text-slate-100">
-          <span>Total estimé</span>
+          <span>{t('Total estimé')}</span>
           <span>{total}€</span>
         </div>
         <div className="flex justify-between text-xs text-slate-400 dark:text-slate-500">
-          <span>Durée estimée</span>
-          <span>{totalDuration} min</span>
+          <span>{t('Durée estimée')}</span>
+          <span>{totalDuration} {t('min')}</span>
         </div>
       </div>
 
@@ -187,7 +189,7 @@ export default function StepOptions({
           onClick={onBack}
           className="flex-1 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
-          ← Retour
+          {t('← Retour')}
         </button>
         <button
           data-testid="options-continue"
@@ -195,7 +197,7 @@ export default function StepOptions({
           className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-colors"
           style={{ backgroundColor: accent }}
         >
-          Continuer →
+          {t('Continuer →')}
         </button>
       </div>
     </div>

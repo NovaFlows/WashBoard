@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Formulaire de l'équipe support : on saisit le lien du laveur, le serveur
 // vérifie qu'il a bien ouvert l'accès, et renvoie un lien de connexion.
@@ -46,6 +47,7 @@ export function useDemandeAcces() {
 }
 
 export function ResultatAcces({ erreur, resultat }: { erreur: string | null; resultat: Acces | null }) {
+  const t = useT()
   return (
     <>
       {erreur && (
@@ -57,16 +59,14 @@ export function ResultatAcces({ erreur, resultat }: { erreur: string | null; res
       {resultat && (
         <div className="mt-4 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60">
           <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-1">
-            {resultat.washerName} a bien ouvert l&apos;accès
+            {resultat.washerName} {t('a bien ouvert l’accès')}
           </p>
           <ul className="text-xs text-emerald-700/90 dark:text-emerald-500/90 mb-3 space-y-1">
             <li>
-              <strong>À usage unique et valable peu de temps</strong> : ouvrez-le maintenant.
-              Demander un nouvel accès annule celui-ci.
+              <strong>{t('À usage unique et valable peu de temps')}</strong> {t(': ouvrez-le maintenant. Demander un nouvel accès annule celui-ci.')}
             </li>
             <li>
-              Ouvrez-le en <strong>navigation privée</strong> : sinon vous perdez votre propre
-              session et devrez vous reconnecter.
+              {t('Ouvrez-le en')} <strong>{t('navigation privée')}</strong> {t(': sinon vous perdez votre propre session et devrez vous reconnecter.')}
             </li>
           </ul>
           <a
@@ -75,7 +75,7 @@ export function ResultatAcces({ erreur, resultat }: { erreur: string | null; res
             rel="noopener noreferrer"
             className="inline-block px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors"
           >
-            Ouvrir son compte
+            {t('Ouvrir son compte')}
           </a>
         </div>
       )}
@@ -84,6 +84,7 @@ export function ResultatAcces({ erreur, resultat }: { erreur: string | null; res
 }
 
 export default function SupportAccessForm() {
+  const t = useT()
   const [slug, setSlug] = useState('')
   const { occupe, erreur, resultat, demander } = useDemandeAcces()
 
@@ -97,7 +98,7 @@ export default function SupportAccessForm() {
       <form onSubmit={soumettre} className="space-y-3">
         <div>
           <label htmlFor="slug" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-            Lien du laveur
+            {t('Lien du laveur')}
           </label>
           <input
             id="slug"
@@ -109,7 +110,7 @@ export default function SupportAccessForm() {
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
           />
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-            La partie après <code>/book/</code> dans son lien de réservation.
+            {t('La partie après')} <code>{t('/book/')}</code> {t('dans son lien de réservation.')}
           </p>
         </div>
 
@@ -118,7 +119,7 @@ export default function SupportAccessForm() {
           disabled={occupe || !slug.trim()}
           className="px-4 py-2.5 rounded-xl bg-[#1651E8] text-white text-sm font-semibold disabled:opacity-40 hover:bg-[#0F4ACC] transition-colors"
         >
-          {occupe ? 'Vérification…' : 'Obtenir un accès'}
+          {occupe ? t('Vérification…') : t('Obtenir un accès')}
         </button>
       </form>
 

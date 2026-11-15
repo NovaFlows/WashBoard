@@ -65,7 +65,9 @@ function traiter(fichier, dry) {
     if (ts.isIdentifier(n) && n.text === FN) {
       const par = n.parent
       const estDecl = (ts.isVariableDeclaration(par) && par.name === n) || (ts.isParameter(par) && par.name === n) || (ts.isBindingElement(par) && par.name === n)
-      if (estDecl) conflitT = true
+      // `const t = useT()` / `await getT()` : c'est déjà le traducteur, pas un conflit.
+      const estTraducteur = ts.isVariableDeclaration(par) && par.initializer && /^(await\s+)?(useT|getT)\(\)$/.test(par.initializer.getText())
+      if (estDecl && !estTraducteur) conflitT = true
     }
     if (ts.isJsxText(n)) {
       const brut = n.getText()

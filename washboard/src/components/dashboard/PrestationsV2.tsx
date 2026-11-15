@@ -26,6 +26,7 @@ import { resumeZone } from '@/lib/zoneForm'
 import { enregistrerZoneCreneaux } from '@/lib/zoneApi'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Prestations et prix » — refonte 2026, destination NEUVE de « Plus » (la
 // maquette n'a aucun écran pour gérer les prestations ; Alexandre, 2026-09-24 :
@@ -118,14 +119,15 @@ type Props = {
 function BandeauPlafondV2({ enLigne, plafond, offre, aRanger, complet }: {
   enLigne: number; plafond: number; offre: Plan; aRanger: number; complet: boolean
 }) {
+  const t = useT()
   const suivante = offreCatalogueIllimite()
   return (
     <div className="mt-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3.5">
       <div className="flex items-baseline justify-between gap-3">
         <p className={`text-[14px] ${corpsFort}`}>
-          {enLigne} / {plafond} en ligne
+          {enLigne} / {plafond} {t('en ligne')}
         </p>
-        <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Offre {PLAN_LABELS[offre]}</p>
+        <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Offre')} {PLAN_LABELS[offre]}</p>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[color:var(--v2-filet)]" aria-hidden>
         <div
@@ -138,12 +140,11 @@ function BandeauPlafondV2({ enLigne, plafond, offre, aRanger, complet }: {
       </div>
       {aRanger > 0 ? (
         <p className={`mt-3 text-[13.5px] leading-snug ${corps}`}>
-          Votre offre en affiche {plafond} au maximum, vous en avez {enLigne}. Ouvrez une prestation pour la mettre en
-          veille : vos clients ne la voient plus, rien n’est effacé.
+          {t('Votre offre en affiche')} {plafond} {t('au maximum, vous en avez')} {enLigne}{t('. Ouvrez une prestation pour la mettre en veille : vos clients ne la voient plus, rien n’est effacé.')}
         </p>
       ) : complet ? (
         <p className={`mt-3 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Catalogue complet. Mettez une prestation en veille ou modifiez-en une, ou passez à l’offre {PLAN_LABELS[suivante]} pour un catalogue illimité.
+          {t('Catalogue complet. Mettez une prestation en veille ou modifiez-en une, ou passez à l’offre')} {PLAN_LABELS[suivante]} {t('pour un catalogue illimité.')}
         </p>
       ) : null}
       {(aRanger > 0 || complet) && (
@@ -152,7 +153,7 @@ function BandeauPlafondV2({ enLigne, plafond, offre, aRanger, complet }: {
           className={`${BOUTON} mt-3 w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
           style={PRESSION}
         >
-          Voir les offres
+          {t('Voir les offres')}
         </Link>
       )}
     </div>
@@ -206,6 +207,7 @@ function LignePrestation({ service, categorie, typeDemande, onOuvrir, ouverte, o
   onFermerLigne: () => void
   onSupprimer: () => void
 }) {
+  const t = useT()
   const reservable = estReservable(service)
   const sansType = !typeDemande && reservable
   const prix = prixListe(sansType ? prestationsSelonLeType([service], { demander_type_vehicule: false })[0] : service)
@@ -227,7 +229,7 @@ function LignePrestation({ service, categorie, typeDemande, onOuvrir, ouverte, o
         style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
         <Trash2 size={20} strokeWidth={2} aria-hidden />
-        Supprimer
+        {t('Supprimer')}
       </button>
       <div
         {...poignee}
@@ -248,7 +250,7 @@ function LignePrestation({ service, categorie, typeDemande, onOuvrir, ouverte, o
               <span className="flex items-start gap-2">
                 <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-rouge)' }} aria-hidden />
                 <span className={`text-[12.5px] leading-snug ${corpsFort} text-[color:var(--v2-color-encre)]`}>
-                  Invisible pour vos clients : aucun type
+                  {t('Invisible pour vos clients : aucun type')}
                 </span>
               </span>
             )}
@@ -261,13 +263,13 @@ function LignePrestation({ service, categorie, typeDemande, onOuvrir, ouverte, o
               <span className="flex items-start gap-2">
                 <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
                 <span className={`text-[12.5px] leading-snug ${corpsFort} text-[color:var(--v2-color-encre)]`}>
-                  En veille : vos clients ne la voient pas
+                  {t('En veille : vos clients ne la voient pas')}
                 </span>
               </span>
             )}
           </span>
           <span className={`shrink-0 text-right text-[15.5px] ${corpsFort} tabular-nums`}>
-            {prix.des && <span className={`mr-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>dès</span>}
+            {prix.des && <span className={`mr-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('dès')}</span>}
             {prix.montant}
           </span>
           <Chevron />
@@ -281,6 +283,7 @@ export default function PrestationsV2({
   services: servicesServeur, categories: categoriesServeur, availabilities, lectureIncomplete,
   zone: zoneServeur, adresseDeBase, silhouettesVehicules, demanderTypeVehicule, plusieursPrestations = false, silhouettesCouleur = false, lieuxMixtes = false, centresProposes = [], plafond, offre, liste,
 }: Props) {
+  const t = useT()
   const router = useRouter()
   const grandEcran = useGrandEcran()
   const p = usePrestationsV2(servicesServeur, categoriesServeur)
@@ -465,13 +468,13 @@ export default function PrestationsV2({
     <div className="flex items-center gap-1 pb-2">
       <Link
         href="/dashboard/parametres/prestations"
-        aria-label="Retour à Prestations et prix"
+        aria-label={t('Retour à Prestations et prix')}
         className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
       >
         <ChevronLeft size={22} strokeWidth={2} />
       </Link>
       <div className="min-w-0 flex-1">
-        <h1 className={`text-[24px] leading-none ${titre}`}>Prestations</h1>
+        <h1 className={`text-[24px] leading-none ${titre}`}>{t('Prestations')}</h1>
         {!lectureIncomplete && (
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
             {sousTitrePrestations(services.length, categories.length)}
@@ -482,7 +485,7 @@ export default function PrestationsV2({
         <button
           type="button"
           onClick={ouvrirNouvellePrestation}
-          aria-label="Ajouter une prestation"
+          aria-label={t('Ajouter une prestation')}
           data-visite-cible="prestations"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.94] motion-reduce:transition-none"
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
@@ -497,17 +500,17 @@ export default function PrestationsV2({
     <div className="flex items-center gap-1 pb-2">
       <Link
         href="/dashboard/parametres"
-        aria-label="Retour à Plus"
+        aria-label={t('Retour à Plus')}
         className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
       >
         <ChevronLeft size={22} strokeWidth={2} />
       </Link>
-      <h1 className={`text-[24px] leading-none ${titre}`}>Prestations et prix</h1>
+      <h1 className={`text-[24px] leading-none ${titre}`}>{t('Prestations et prix')}</h1>
     </div>
   )
 
   const resumePrestations = lectureIncomplete
-    ? 'À recharger : la lecture a échoué'
+    ? t('À recharger : la lecture a échoué')
     : sousTitrePrestations(services.length, categories.length)
 
   const accueil = (
@@ -515,14 +518,14 @@ export default function PrestationsV2({
       <CarteListe>
         <ul className="divide-y divide-[color:var(--v2-filet)]">
           <LigneDeuxNiveaux
-            label="Prestations"
+            label={t('Prestations')}
             valeur={resumePrestations}
             ton={lectureIncomplete ? 'ambre' : undefined}
             cibleVisite="prestations"
             onClick={() => router.push('/dashboard/parametres/prestations?vue=prestations')}
           />
           <LigneDeuxNiveaux
-            label="Zone d’intervention"
+            label={t('Zone d’intervention')}
             valeur={ligneZone.texte}
             ton={ligneZone.ton}
             onClick={() => setFeuille({ quoi: 'zone' })}
@@ -530,18 +533,18 @@ export default function PrestationsV2({
           {/* Promotions (2026-10-17), rangées ici à la demande d'Alexandre : une remise est
               un prix, elle se règle à côté des prestations. Écran : PromotionsV2.tsx. */}
           <LigneDeuxNiveaux
-            label="Promotions"
-            valeur="Une remise pendant une période, annoncée sur votre page"
+            label={t('Promotions')}
+            valeur={t('Une remise pendant une période, annoncée sur votre page')}
             onClick={() => router.push('/dashboard/parametres/promotions')}
           />
           <LigneDeuxNiveaux
-            label="Acompte"
-            valeur="Demandé à la réservation, payé par votre lien"
+            label={t('Acompte')}
+            valeur={t('Demandé à la réservation, payé par votre lien')}
             onClick={() => router.push('/dashboard/parametres/acompte')}
           />
           <LigneDeuxNiveaux
-            label="Carte de fidélité"
-            valeur="Des tampons, puis une récompense automatique"
+            label={t('Carte de fidélité')}
+            valeur={t('Des tampons, puis une récompense automatique')}
             onClick={() => router.push('/dashboard/parametres/fidelite')}
           />
         </ul>
@@ -560,8 +563,7 @@ export default function PrestationsV2({
       {!vueListe ? accueil : lectureIncomplete ? (
         <div className="mt-4 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-4">
           <Constat ton="ambre" role="status">
-            Vos prestations n’ont pas pu être lues. Rien n’a été modifié. Rechargez la page avant d’y toucher : un écran vide
-            ici ne veut pas dire que vous n’avez rien configuré.
+            {t('Vos prestations n’ont pas pu être lues. Rien n’a été modifié. Rechargez la page avant d’y toucher : un écran vide ici ne veut pas dire que vous n’avez rien configuré.')}
           </Constat>
           <button
             type="button"
@@ -569,7 +571,7 @@ export default function PrestationsV2({
             className={`${BOUTON} mt-4 w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
             style={PRESSION}
           >
-            Recharger la page
+            {t('Recharger la page')}
           </button>
         </div>
       ) : vide ? (
@@ -593,7 +595,7 @@ export default function PrestationsV2({
 
           {!peutAjouterPrestation && (
             <p className={`mt-1 px-0.5 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              Créez d’abord une catégorie : elle liste ce que vos clients peuvent choisir (Voiture avec Citadine, Berline, SUV…).
+              {t('Créez d’abord une catégorie : elle liste ce que vos clients peuvent choisir (Voiture avec Citadine, Berline, SUV…).')}
             </p>
           )}
 
@@ -611,14 +613,14 @@ export default function PrestationsV2({
                     aria-label={`Modifier la catégorie ${cat.name}`}
                     className={`-mr-2 flex min-h-11 shrink-0 items-center px-2 text-[14.5px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}
                   >
-                    Modifier
+                    {t('Modifier')}
                   </button>
                 }
               >
                 <CarteListe>
                   {deLaCategorie.length === 0 ? (
                     <p className={`py-3.5 text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                      Aucune prestation dans cette catégorie.
+                      {t('Aucune prestation dans cette catégorie.')}
                     </p>
                   ) : (
                     <ul className="divide-y divide-[color:var(--v2-filet)]">
@@ -633,7 +635,7 @@ export default function PrestationsV2({
           })}
 
           {sansCategorie.length > 0 && (
-            <Section titre="Sans catégorie" nombre={sansCategorie.length}>
+            <Section titre={t('Sans catégorie')} nombre={sansCategorie.length}>
               <CarteListe>
                 <ul className="divide-y divide-[color:var(--v2-filet)]">
                   {sansCategorie.map(s => (
@@ -646,25 +648,25 @@ export default function PrestationsV2({
 
           <div className="mt-[22px]" data-visite-cible="prestations">
             <CarteListe>
-              <Ligne label="+ Ajouter une catégorie" onClick={() => setFeuille({ quoi: 'categorie', categorie: null })} chevron={false} />
+              <Ligne label={t('+ Ajouter une catégorie')} onClick={() => setFeuille({ quoi: 'categorie', categorie: null })} chevron={false} />
             </CarteListe>
           </div>
 
-          <section aria-label="Type de véhicule" className="mt-[22px]">
+          <section aria-label={t('Type de véhicule')} className="mt-[22px]">
             <CarteListe>
               <div className="flex items-center gap-1">
                 <div className="min-w-0 flex-1 py-3">
-                  <p className={`text-[15.5px] ${nom}`}>Demander le type de véhicule</p>
+                  <p className={`text-[15.5px] ${nom}`}>{t('Demander le type de véhicule')}</p>
                   <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                     {typeDemande
-                      ? 'Vos clients choisissent citadine, berline, SUV… et paient le prix de ce type.'
-                      : 'Vos clients choisissent seulement la prestation et le nombre de véhicules : le prix principal de chaque prestation s’applique.'}
+                      ? t('Vos clients choisissent citadine, berline, SUV… et paient le prix de ce type.')
+                      : t('Vos clients choisissent seulement la prestation et le nombre de véhicules : le prix principal de chaque prestation s’applique.')}
                   </p>
                 </div>
                 <Interrupteur
                   actif={typeDemande}
                   enCours={typeEnCours}
-                  libelle="Demander le type de véhicule sur la page de réservation"
+                  libelle={t('Demander le type de véhicule sur la page de réservation')}
                   onClick={basculerTypeDemande}
                 />
               </div>
@@ -674,21 +676,21 @@ export default function PrestationsV2({
 
           {/* Demande d'Alexandre (2026-10-19) : pouvoir éteindre le véhicule 3D de la page de
               réservation ; allumé par défaut pour tous. Sans type demandé, il n'y a rien à montrer. */}
-          {typeDemande && <section aria-label="Silhouette du véhicule" className="mt-[22px]">
+          {typeDemande && <section aria-label={t('Silhouette du véhicule')} className="mt-[22px]">
             <CarteListe>
               <div className="flex items-center gap-1">
                 <div className="min-w-0 flex-1 py-3">
-                  <p className={`text-[15.5px] ${nom}`}>Afficher la silhouette du véhicule</p>
+                  <p className={`text-[15.5px] ${nom}`}>{t('Afficher la silhouette du véhicule')}</p>
                   <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                     {silhouettes
-                      ? 'Sur votre page de réservation, le véhicule choisi par le client apparaît en 3D.'
-                      : 'Votre page de réservation n’affiche pas le véhicule choisi.'}
+                      ? t('Sur votre page de réservation, le véhicule choisi par le client apparaît en 3D.')
+                      : t('Votre page de réservation n’affiche pas le véhicule choisi.')}
                   </p>
                 </div>
                 <Interrupteur
                   actif={silhouettes}
                   enCours={silhouettesEnCours}
-                  libelle="Afficher la silhouette du véhicule sur la page de réservation"
+                  libelle={t('Afficher la silhouette du véhicule sur la page de réservation')}
                   onClick={basculerSilhouettes}
                 />
               </div>
@@ -697,21 +699,21 @@ export default function PrestationsV2({
           </section>}
 
           {/* Couleur de la silhouette (2026-11-13) : grisée par défaut, teintée de la couleur de la page sinon. */}
-          {typeDemande && silhouettes && <section aria-label="Couleur de la silhouette" className="mt-[22px]">
+          {typeDemande && silhouettes && <section aria-label={t('Couleur de la silhouette')} className="mt-[22px]">
             <CarteListe>
               <div className="flex items-center gap-1">
                 <div className="min-w-0 flex-1 py-3">
-                  <p className={`text-[15.5px] ${nom}`}>Silhouette en couleur</p>
+                  <p className={`text-[15.5px] ${nom}`}>{t('Silhouette en couleur')}</p>
                   <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                     {couleur
-                      ? 'Le véhicule choisi apparaît dans ses vraies couleurs (le camping-car reste grisé).'
-                      : 'Le véhicule choisi apparaît en gris.'}
+                      ? t('Le véhicule choisi apparaît dans ses vraies couleurs (le camping-car reste grisé).')
+                      : t('Le véhicule choisi apparaît en gris.')}
                   </p>
                 </div>
                 <Interrupteur
                   actif={couleur}
                   enCours={couleurEnCours}
-                  libelle="Afficher la silhouette du véhicule en couleur"
+                  libelle={t('Afficher la silhouette du véhicule en couleur')}
                   onClick={basculerCouleur}
                 />
               </div>
@@ -720,21 +722,21 @@ export default function PrestationsV2({
           </section>}
 
           {/* Plusieurs prestations par réservation (2026-11-13), demande de Paint Étrier 77 : éteint par défaut. */}
-          <section aria-label="Plusieurs prestations" className="mt-[22px]">
+          <section aria-label={t('Plusieurs prestations')} className="mt-[22px]">
             <CarteListe>
               <div className="flex items-center gap-1">
                 <div className="min-w-0 flex-1 py-3">
-                  <p className={`text-[15.5px] ${nom}`}>Plusieurs prestations par réservation</p>
+                  <p className={`text-[15.5px] ${nom}`}>{t('Plusieurs prestations par réservation')}</p>
                   <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                     {plusieurs
-                      ? 'Vos clients peuvent cocher plusieurs prestations pour un même véhicule : prix et durée s’additionnent.'
-                      : 'Vos clients choisissent une seule prestation par réservation.'}
+                      ? t('Vos clients peuvent cocher plusieurs prestations pour un même véhicule : prix et durée s’additionnent.')
+                      : t('Vos clients choisissent une seule prestation par réservation.')}
                   </p>
                 </div>
                 <Interrupteur
                   actif={plusieurs}
                   enCours={plusieursEnCours}
-                  libelle="Permettre de choisir plusieurs prestations dans une réservation"
+                  libelle={t('Permettre de choisir plusieurs prestations dans une réservation')}
                   onClick={basculerPlusieurs}
                 />
               </div>
@@ -796,7 +798,7 @@ export default function PrestationsV2({
       {suppression?.quoi === 'prestation' && (
         <ConfirmationSuppression
           titre={`Supprimer “${suppression.service.name}” ?`}
-          texte="Elle disparaît de votre page de réservation."
+          texte={t('Elle disparaît de votre page de réservation.')}
           enCours={suppressionEnCours}
           erreur={suppressionErreur}
           onConfirmer={confirmerSuppression}
@@ -808,13 +810,13 @@ export default function PrestationsV2({
           titre={`Supprimer “${suppression.categorie.name}” ?`}
           texte={
             suppression.nbPrestations === 0
-              ? 'Aucune prestation n’y est rattachée.'
+              ? t('Aucune prestation n’y est rattachée.')
               : `Ses ${suppression.nbPrestations} prestation${suppression.nbPrestations > 1 ? 's' : ''} resteront, sans catégorie.`
           }
           remarque={
             suppression.nbPrestations === 0
               ? undefined
-              : 'Leurs types resteront cochés, mais vos clients ne verront plus leurs noms : rattachez-les d’abord à une autre catégorie si vous voulez les garder lisibles.'
+              : t('Leurs types resteront cochés, mais vos clients ne verront plus leurs noms : rattachez-les d’abord à une autre catégorie si vous voulez les garder lisibles.')
           }
           enCours={suppressionEnCours}
           erreur={suppressionErreur}

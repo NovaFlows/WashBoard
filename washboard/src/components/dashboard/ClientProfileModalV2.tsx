@@ -22,6 +22,7 @@ import { Constat, ConfirmationSuppression } from '@/components/dashboard/Prestat
 import type { Doublon } from '@/lib/doublons'
 import { annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import { texteExportClient, nomFichierExportClient } from '@/lib/exportClient'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // La fiche client, présentation v2 — une feuille qui monte du bas (mobile) ou
 // une carte centrée (ordinateur), réservée à la PWA installée en mode
@@ -82,16 +83,16 @@ const STATUT: Record<StatutAffiche, { couleur: string; label: string }> = {
 // piège de focus (le Tab ne doit pas s'échapper vers la liste derrière).
 const SELECTEUR_FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
-function dateCourte(iso: string, maintenant: number): string {
+function dateCourte(iso: string, maintenant: number, loc = 'fr-FR'): string {
   const d = new Date(iso)
   const memeAnnee = d.getFullYear() === new Date(maintenant).getFullYear()
-  return d.toLocaleDateString('fr-FR', {
+  return d.toLocaleDateString(loc, {
     day: 'numeric', month: 'short', ...(memeAnnee ? {} : { year: 'numeric' }), timeZone: FUSEAU,
   })
 }
 
-const depuis = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: FUSEAU })
+const depuis = (iso: string, loc = 'fr-FR') =>
+  new Date(iso).toLocaleDateString(loc, { month: 'long', year: 'numeric', timeZone: FUSEAU })
 
 /** « 2 mois », « 12 j » — au-delà de 45 jours, le mois est plus lisible qu'un compte de jours ;
  *  en dessous, un mois arrondi (« 1 mois » pour 20 jours d'écart) donnerait une fausse
@@ -113,6 +114,7 @@ function FeuilleRattacherV2({
   onRattache: (entrepriseId: string) => void
   onClose: () => void
 }) {
+  const tr = useT()
   const router = useRouter()
   const [entrepriseId, setEntrepriseId] = useState<string | 'nouvelle' | ''>('')
   const [nouveauNom, setNouveauNom] = useState('')
@@ -129,8 +131,8 @@ function FeuilleRattacherV2({
   // chemin.
   async function soumettre() {
     if (enCours) return
-    if (entrepriseId === '') { setErreur('Choisissez une entreprise, ou créez-en une.'); return }
-    if (entrepriseId === 'nouvelle' && !nouveauNom.trim()) { setErreur('Indiquez le nom de l’entreprise.'); return }
+    if (entrepriseId === '') { setErreur(tr('Choisissez une entreprise, ou créez-en une.')); return }
+    if (entrepriseId === 'nouvelle' && !nouveauNom.trim()) { setErreur(tr('Indiquez le nom de l’entreprise.')); return }
     setEnCours(true)
     setErreur(null)
     if (entrepriseId === 'nouvelle') {
@@ -150,7 +152,7 @@ function FeuilleRattacherV2({
 
   return (
     <Feuille
-      titre="Rattacher à une entreprise"
+      titre={tr('Rattacher à une entreprise')}
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void soumettre()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
@@ -161,25 +163,25 @@ function FeuilleRattacherV2({
       <div className="space-y-4">
         {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
         <div>
-          <label htmlFor="rattacher-entreprise" className={ETIQUETTE}>Entreprise</label>
+          <label htmlFor="rattacher-entreprise" className={ETIQUETTE}>{tr('Entreprise')}</label>
           <select
             id="rattacher-entreprise" value={entrepriseId} onChange={e => setEntrepriseId(e.target.value as typeof entrepriseId)}
             className={CHAMP}
           >
-            <option value="" disabled>Choisir…</option>
+            <option value="" disabled>{tr('Choisir…')}</option>
             {entreprisesDisponibles.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}
-            <option value="nouvelle">+ Nouvelle entreprise…</option>
+            <option value="nouvelle">{tr('+ Nouvelle entreprise…')}</option>
           </select>
         </div>
         {entrepriseId === 'nouvelle' && (
           <div>
-            <label htmlFor="rattacher-nom" className={ETIQUETTE}>Nom de l’entreprise</label>
+            <label htmlFor="rattacher-nom" className={ETIQUETTE}>{tr('Nom de l’entreprise')}</label>
             <input id="rattacher-nom" className={CHAMP} value={nouveauNom} onChange={e => setNouveauNom(e.target.value)} maxLength={200} autoFocus />
           </div>
         )}
         <div>
-          <label htmlFor="rattacher-role" className={ETIQUETTE}>Son rôle (facultatif)</label>
-          <input id="rattacher-role" className={CHAMP} value={role} onChange={e => setRole(e.target.value)} placeholder="Chef d’atelier, comptabilité…" maxLength={200} />
+          <label htmlFor="rattacher-role" className={ETIQUETTE}>{tr('Son rôle (facultatif)')}</label>
+          <input id="rattacher-role" className={CHAMP} value={role} onChange={e => setRole(e.target.value)} placeholder={tr('Chef d’atelier, comptabilité…')} maxLength={200} />
         </div>
       </div>
     </Feuille>
@@ -203,6 +205,7 @@ function FeuilleModifierFicheV2({
   onEnregistre: (champs: { nom: string | null; telephone: string | null; notes: string | null; vehicules: string | null }) => void
   onClose: () => void
 }) {
+  const tr = useT()
   const router = useRouter()
   const [nomSaisi, setNomSaisi] = useState(nomActuel ?? '')
   const [telephoneSaisi, setTelephoneSaisi] = useState(telephoneActuel ?? '')
@@ -230,7 +233,7 @@ function FeuilleModifierFicheV2({
 
   return (
     <Feuille
-      titre="Modifier la fiche"
+      titre={tr('Modifier la fiche')}
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
@@ -241,26 +244,26 @@ function FeuilleModifierFicheV2({
       <div className="space-y-4">
         {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
         <div>
-          <label htmlFor="fiche-nom" className={ETIQUETTE}>Nom (facultatif — corrige l’orthographe)</label>
+          <label htmlFor="fiche-nom" className={ETIQUETTE}>{tr('Nom (facultatif — corrige l’orthographe)')}</label>
           <input id="fiche-nom" className={CHAMP} value={nomSaisi} onChange={e => setNomSaisi(e.target.value)} maxLength={200} />
         </div>
         <div>
-          <label htmlFor="fiche-telephone" className={ETIQUETTE}>Téléphone (facultatif)</label>
+          <label htmlFor="fiche-telephone" className={ETIQUETTE}>{tr('Téléphone (facultatif)')}</label>
           <input id="fiche-telephone" type="tel" inputMode="tel" className={CHAMP} value={telephoneSaisi} onChange={e => setTelephoneSaisi(e.target.value)} maxLength={30} />
         </div>
         <div>
-          <label htmlFor="fiche-vehicules" className={ETIQUETTE}>Véhicules</label>
+          <label htmlFor="fiche-vehicules" className={ETIQUETTE}>{tr('Véhicules')}</label>
           <textarea
             id="fiche-vehicules" value={vehiculesSaisis} onChange={e => setVehiculesSaisis(e.target.value)} rows={2} maxLength={2000}
-            placeholder="Peugeot 208 grise, plaque AB-123-CD"
+            placeholder={tr('Peugeot 208 grise, plaque AB-123-CD')}
             className={`w-full min-w-0 resize-none rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 py-2.5 text-[16px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
           />
         </div>
         <div>
-          <label htmlFor="fiche-notes" className={ETIQUETTE}>Notes (facultatif)</label>
+          <label htmlFor="fiche-notes" className={ETIQUETTE}>{tr('Notes (facultatif)')}</label>
           <textarea
             id="fiche-notes" value={notesSaisies} onChange={e => setNotesSaisies(e.target.value)} rows={3} maxLength={2000}
-            placeholder="Portail à code 1234, préfère le samedi matin…"
+            placeholder={tr('Portail à code 1234, préfère le samedi matin…')}
             className={`w-full min-w-0 resize-none rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 py-2.5 text-[16px] ${corps} text-[color:var(--v2-color-encre)] placeholder:text-[color:var(--v2-color-gris)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
           />
         </div>
@@ -272,6 +275,7 @@ function FeuilleModifierFicheV2({
 /** Un pense-bête court sur cette fiche — « Rappeler », « Proposer l'intérieur » (menu « … »,
  *  2026-09-28). Pas d'échéance ni de priorité : voir `lib/clientsApi.ts`, `ClientTache`. */
 function FeuilleAjouterTacheV2({ cle, onAjoute, onClose }: { cle: string; onAjoute: (t: ClientTache) => void; onClose: () => void }) {
+  const tr = useT()
   const [texte, setTexte] = useState('')
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -288,7 +292,7 @@ function FeuilleAjouterTacheV2({ cle, onAjoute, onClose }: { cle: string; onAjou
 
   return (
     <Feuille
-      titre="Ajouter une tâche"
+      titre={tr('Ajouter une tâche')}
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void ajouter()} disabled={enCours || !texte.trim()} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)] disabled:opacity-50`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
@@ -299,10 +303,10 @@ function FeuilleAjouterTacheV2({ cle, onAjoute, onClose }: { cle: string; onAjou
       <div className="space-y-4">
         {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
         <div>
-          <label htmlFor="tache-texte" className={ETIQUETTE}>Tâche</label>
+          <label htmlFor="tache-texte" className={ETIQUETTE}>{tr('Tâche')}</label>
           <input
             id="tache-texte" className={CHAMP} value={texte} onChange={e => setTexte(e.target.value)}
-            placeholder="Rappeler, proposer l’intérieur…" maxLength={300} autoFocus
+            placeholder={tr('Rappeler, proposer l’intérieur…')} maxLength={300} autoFocus
           />
         </div>
       </div>
@@ -314,6 +318,7 @@ function FeuilleAjouterTacheV2({ cle, onAjoute, onClose }: { cle: string; onAjou
  *  texte de confirmation et mécanique revus par l'agent `legal` le 2026-09-28. Irréversible :
  *  la case à cocher force à lire avant de pouvoir valider, le bouton reste désactivé sinon. */
 function FeuilleAnonymiserV2({ titreClient, onConfirme, onClose }: { titreClient: string; onConfirme: () => Promise<string | null>; onClose: () => void }) {
+  const tr = useT()
   const [coche, setCoche] = useState(false)
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -336,35 +341,32 @@ function FeuilleAnonymiserV2({ titreClient, onConfirme, onClose }: { titreClient
           {erreur && <div className="mb-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
           <div className="flex gap-2.5">
             <button type="button" onClick={onClose} className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`} style={PRESSION}>
-              Annuler
+              {tr('Annuler')}
             </button>
             <button
               type="button" onClick={() => void confirmer()} disabled={enCours || !coche}
               className={`${BOUTON} flex-1 text-white disabled:opacity-50`} style={{ background: 'var(--v2-color-rouge)', ...PRESSION }}
             >
-              {enCours ? 'Anonymisation…' : 'Anonymiser définitivement'}
+              {enCours ? 'Anonymisation…' : tr('Anonymiser définitivement')}
             </button>
           </div>
         </div>
       }
     >
       <div className="space-y-3">
-        <p className={`text-[15px] leading-snug ${corpsFort} text-[color:var(--v2-color-rouge)]`}>Cette action est irréversible.</p>
+        <p className={`text-[15px] leading-snug ${corpsFort} text-[color:var(--v2-color-rouge)]`}>{tr('Cette action est irréversible.')}</p>
         <p className={`text-[14px] leading-snug ${corps}`}>
-          Ce qui disparaît : nom, email, téléphone et adresse — remplacés par des valeurs anonymes
-          sur toutes les réservations et documents de ce client.
+          {tr('Ce qui disparaît : nom, email, téléphone et adresse — remplacés par des valeurs anonymes sur toutes les réservations et documents de ce client.')}
         </p>
         <p className={`text-[14px] leading-snug ${corps}`}>
-          Ce qui reste (obligation comptable, 10 ans) : montants, dates, numéros de facture.
+          {tr('Ce qui reste (obligation comptable, 10 ans) : montants, dates, numéros de facture.')}
         </p>
         <p className={`text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Vous ne pourrez plus retrouver ni recontacter ce client après cette action. Si des
-          notes libres ou le champ véhicule mentionnent son nom, modifiez-les vous-même avant de
-          continuer — l’anonymisation automatique ne les efface pas.
+          {tr('Vous ne pourrez plus retrouver ni recontacter ce client après cette action. Si des notes libres ou le champ véhicule mentionnent son nom, modifiez-les vous-même avant de continuer — l’anonymisation automatique ne les efface pas.')}
         </p>
         <label className="flex items-start gap-2.5 pt-2">
           <input type="checkbox" checked={coche} onChange={e => setCoche(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" />
-          <span className={`text-[13.5px] leading-snug ${corpsFort}`}>Je comprends que cette action est irréversible</span>
+          <span className={`text-[13.5px] leading-snug ${corpsFort}`}>{tr('Je comprends que cette action est irréversible')}</span>
         </label>
       </div>
     </Feuille>
@@ -439,6 +441,8 @@ export default function ClientProfileModalV2({
    *  effet de synchronisation supplémentaire pour chacun de ces champs. */
   panneau?: boolean
 }) {
+  const loc = useLocale()
+  const tr = useT()
   const router = useRouter()
   const [maintenant] = useState(() => Date.now())
   const [visible, setVisible] = useState(false)
@@ -613,7 +617,7 @@ export default function ClientProfileModalV2({
   // réservation) : en extraire une ville serait deviner un format qui n'est
   // pas garanti. L'adresse complète la plus récente est affichée à la
   // place, tronquée si besoin.
-  const depuisTexte = profile.firstVisit ? `Client depuis ${depuis(profile.firstVisit)}` : null
+  const depuisTexte = profile.firstVisit ? `Client depuis ${depuis(profile.firstVisit, loc)}` : null
   const sousTitre = [depuisTexte, profile.addresses[0] ?? null].filter(Boolean).join(' · ')
 
   // Les modèles donnés par le client lui-même en réservant priment (source directe) ; le champ
@@ -691,19 +695,19 @@ export default function ClientProfileModalV2({
             )}
             {profile.isProfessional && profile.companyName && (
               <p className={`mt-0.5 truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                Contact · {profile.name}
+                {tr('Contact ·')} {profile.name}
               </p>
             )}
             {nePlusContacter && (
               <p className={`mt-1 text-[12px] ${corpsFort} text-[color:var(--v2-color-rouge)]`}>
-                Ne reçoit plus de messages automatiques
+                {tr('Ne reçoit plus de messages automatiques')}
               </p>
             )}
           </div>
           <button
             type="button"
             onClick={() => setOptionsOuvertes(true)}
-            aria-label="Options de la fiche"
+            aria-label={tr('Options de la fiche')}
             aria-haspopup="dialog"
             aria-expanded={optionsOuvertes}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:bg-[color:var(--v2-filet)] hover:text-[color:var(--v2-color-encre)]"
@@ -713,7 +717,7 @@ export default function ClientProfileModalV2({
           <button
             ref={closeRef}
             onClick={onClose}
-            aria-label="Fermer la fiche"
+            aria-label={tr('Fermer la fiche')}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:bg-[color:var(--v2-filet)] hover:text-[color:var(--v2-color-encre)]"
           >
             <X size={20} strokeWidth={2} />
@@ -738,7 +742,7 @@ export default function ClientProfileModalV2({
           </dl>
           {profile.cancelledCount > 0 && (
             <p className={`mt-2 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              dont {profile.cancelledCount} annulé{profile.cancelledCount > 1 ? 's' : ''}
+              {tr('dont')} {profile.cancelledCount} {tr('annulé')}{profile.cancelledCount > 1 ? 's' : ''}
             </p>
           )}
 
@@ -786,7 +790,7 @@ export default function ClientProfileModalV2({
                 aria-hidden
               />
               <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-ambre)]`}>
-                Pas revenu depuis {profile.daysSinceLastVisit} jours — bon candidat à une relance.
+                {tr('Pas revenu depuis')} {profile.daysSinceLastVisit} {tr('jours — bon candidat à une relance.')}
               </p>
             </div>
           )}
@@ -804,15 +808,15 @@ export default function ClientProfileModalV2({
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
                 <Phone size={16} strokeWidth={2} aria-hidden />
-                Appeler
+                {tr('Appeler')}
               </a>
               <a
                 href={`sms:${profile.phone}`}
-                onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `À ${profile.name}` })}
+                onClick={() => annoncerApresRetour({ titre: tr('Message envoyé'), detail: `À ${profile.name}` })}
                 className={`flex h-11 flex-1 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                Message
+                {tr('Message')}
               </a>
             </div>
           )}
@@ -821,7 +825,7 @@ export default function ClientProfileModalV2({
               une fois fait — il disparaît alors de la liste (voir `lib/clientsApi.ts`). */}
           {taches !== null && taches.length > 0 && (
             <div className="mt-6 border-t border-[color:var(--v2-filet)] pt-4">
-              <h3 className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Tâches</h3>
+              <h3 className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{tr('Tâches')}</h3>
               <ul className="mt-1.5">
                 {taches.map(t => (
                   <li key={t.id} className="flex items-center gap-2.5 py-1.5">
@@ -847,7 +851,7 @@ export default function ClientProfileModalV2({
           {profile.documents.length > 0 && (
             <div className="mt-6 border-t border-[color:var(--v2-filet)] pt-4">
               <h3 className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-                Devis et factures
+                {tr('Devis et factures')}
               </h3>
               <ul className="mt-1.5">
                 {profile.documents.map(d => (
@@ -857,7 +861,7 @@ export default function ClientProfileModalV2({
                         {d.genre === 'devis' ? 'Devis' : 'Facture'} {d.numero ?? ''}
                       </span>
                       <span className={`ml-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                        {dateCourte(d.emis_le ?? d.created_at, maintenant)}
+                        {dateCourte(d.emis_le ?? d.created_at, maintenant, loc)}
                       </span>
                       {/* Une facture émise n'est pas de l'argent reçu tant qu'elle n'est pas
                           encaissée — même règle que l'« Encaissé » de Chiffres. Rien pour un
@@ -867,7 +871,7 @@ export default function ClientProfileModalV2({
                           className={`ml-2 text-[12.5px] ${corpsFort}`}
                           style={{ color: d.paye_le ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}
                         >
-                          {d.paye_le ? 'Encaissée' : 'À encaisser'}
+                          {d.paye_le ? tr('Encaissée') : 'À encaisser'}
                         </span>
                       )}
                     </span>
@@ -887,10 +891,10 @@ export default function ClientProfileModalV2({
           <FideliteClientV2 cle={profile.cle} />
 
           <div className="mt-6 border-t border-[color:var(--v2-filet)] pt-1">
-            <h3 className="sr-only">Historique</h3>
+            <h3 className="sr-only">{tr('Historique')}</h3>
             {profile.bookings.length === 0 && (
               <p className={`py-3 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                Aucun rendez-vous pour l’instant : ce client est né d’un document écrit à la main.
+                {tr('Aucun rendez-vous pour l’instant : ce client est né d’un document écrit à la main.')}
               </p>
             )}
             <ol>
@@ -926,7 +930,7 @@ export default function ClientProfileModalV2({
                             </span>
                           </span>
                           <span className={`mt-0.5 block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                            {dateCourte(e.booking.scheduled_at, maintenant)} · {STATUT[statutAffiche(e.booking)].label}
+                            {dateCourte(e.booking.scheduled_at, maintenant, loc)} · {STATUT[statutAffiche(e.booking)].label}
                           </span>
                         </>
                       ) : (
@@ -934,12 +938,12 @@ export default function ClientProfileModalV2({
                           <span className="flex items-center gap-1.5">
                             {e.type === 'avis' ? <Star size={13} strokeWidth={2} aria-hidden /> : <BellRing size={13} strokeWidth={2} aria-hidden />}
                             <span className={`truncate text-[14.5px] ${nom}`}>
-                              {e.type === 'avis' ? 'Demande d’avis envoyée' : 'Relance envoyée'}
+                              {e.type === 'avis' ? tr('Demande d’avis envoyée') : tr('Relance envoyée')}
                             </span>
                           </span>
                           <span className={`mt-0.5 block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                            {dateCourte(e.date, maintenant)}
-                            {e.type === 'relance' && e.aReserveDepuis && ' · a réservé depuis'}
+                            {dateCourte(e.date, maintenant, loc)}
+                            {e.type === 'relance' && e.aReserveDepuis && tr(' · a réservé depuis')}
                           </span>
                         </>
                       )}
@@ -962,27 +966,27 @@ export default function ClientProfileModalV2({
               className={`${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              Annuler
+              {tr('Annuler')}
             </button>
           }
         >
           <div className="divide-y divide-[color:var(--v2-filet)]">
             <LigneOption
               icone={Pencil}
-              titre="Modifier la fiche"
-              sousTitre="Nom, téléphone, véhicules, notes"
+              titre={tr('Modifier la fiche')}
+              sousTitre={tr('Nom, téléphone, véhicules, notes')}
               onClick={() => { setOptionsOuvertes(false); setFicheOuverte(true) }}
             />
             <LigneOption
               icone={ListChecks}
-              titre="Ajouter une tâche"
-              sousTitre="« Rappeler », « Proposer l’intérieur »"
+              titre={tr('Ajouter une tâche')}
+              sousTitre={tr('« Rappeler », « Proposer l’intérieur »')}
               onClick={() => { setOptionsOuvertes(false); setTacheOuverte(true) }}
             />
             {doublon && (
               <LigneOption
                 icone={Users}
-                titre="Fusionner un doublon"
+                titre={tr('Fusionner un doublon')}
                 sousTitre={doublon.motif}
                 onClick={() => { setOptionsOuvertes(false); setFusionOuverte(true) }}
               />
@@ -990,7 +994,7 @@ export default function ClientProfileModalV2({
             {entrepriseDuContact ? (
               <LigneOption
                 icone={Users}
-                titre="Se détacher de cette entreprise"
+                titre={tr('Se détacher de cette entreprise')}
                 sousTitre={`Rattaché à « ${entrepriseDuContact.nom} »`}
                 couleur="var(--v2-color-rouge)"
                 disabled={enCours}
@@ -999,28 +1003,28 @@ export default function ClientProfileModalV2({
             ) : entreprisesDisponibles !== undefined && onOuvrirEntreprise && (
               <LigneOption
                 icone={Users}
-                titre="Rattacher à une entreprise"
+                titre={tr('Rattacher à une entreprise')}
                 onClick={() => { setOptionsOuvertes(false); setRattachementOuvert(true) }}
               />
             )}
             <LigneOption
               icone={BellOff}
-              titre={nePlusContacter ? 'Autoriser à nouveau les messages' : 'Ne plus contacter'}
-              sousTitre="Stoppe relances et messages groupés"
+              titre={nePlusContacter ? tr('Autoriser à nouveau les messages') : 'Ne plus contacter'}
+              sousTitre={tr('Stoppe relances et messages groupés')}
               couleur={nePlusContacter ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)'}
               disabled={enCours}
               onClick={() => { setOptionsOuvertes(false); void basculerNePlusContacter() }}
             />
             <LigneOption
               icone={Download}
-              titre="Exporter ses données"
-              sousTitre="Droit d’accès — tout ce qu’on sait sur ce client, à lui remettre s’il le demande"
+              titre={tr('Exporter ses données')}
+              sousTitre={tr('Droit d’accès — tout ce qu’on sait sur ce client, à lui remettre s’il le demande')}
               onClick={() => { setOptionsOuvertes(false); exporter() }}
             />
             <LigneOption
               icone={Eraser}
-              titre="Anonymiser la fiche"
-              sousTitre="Droit à l’effacement — nom, email, téléphone et adresse supprimés ; montants et factures gardés 10 ans. Irréversible."
+              titre={tr('Anonymiser la fiche')}
+              sousTitre={tr('Droit à l’effacement — nom, email, téléphone et adresse supprimés ; montants et factures gardés 10 ans. Irréversible.')}
               couleur="var(--v2-color-rouge)"
               onClick={() => { setOptionsOuvertes(false); setAnonymiserOuvert(true) }}
             />
@@ -1061,8 +1065,8 @@ export default function ClientProfileModalV2({
       {fusionOuverte && doublon && (
         <ConfirmationSuppression
           titre={`Fusionner avec ${doublon.identifiant} ?`}
-          texte="Ses réservations et ses documents rejoignent cette fiche, qui les absorbe. L’autre fiche disparaît."
-          remarque="Irréversible : deux fiches redevenues une seule ne se re-séparent pas."
+          texte={tr('Ses réservations et ses documents rejoignent cette fiche, qui les absorbe. L’autre fiche disparaît.')}
+          remarque={tr('Irréversible : deux fiches redevenues une seule ne se re-séparent pas.')}
           libelleAction="Fusionner"
           libelleEnCours="Fusion…"
           enCours={fusionEnCours}

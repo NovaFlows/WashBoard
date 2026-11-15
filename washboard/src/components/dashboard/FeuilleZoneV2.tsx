@@ -12,6 +12,7 @@ import {
   chercherDepartements, formulaireDepuisZone, nomDepartement, phraseRayon, routePlusLongue, validerZone,
   RAYONS_PRESETS, RAYON_MAX, RAYON_MIN, type ChampZone, type FormulaireZone, type ModeZone,
 } from '@/lib/zoneForm'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Où vous intervenez » — feuille du bas de l'écran « Prestations et prix »
 // (refonte 2026, PWA installée seulement). Reprend les deux réglages de la carte
@@ -71,6 +72,7 @@ function LigneRadio({
 function Departements({
   choisis, onBasculer, erreur,
 }: { choisis: string[]; onBasculer: (code: string) => void; erreur: string | null }) {
+  const t = useT()
   const [recherche, setRecherche] = useState('')
   const [toutesPastilles, setToutesPastilles] = useState(false)
   const [listeOuverte, setListeOuverte] = useState(false)
@@ -139,8 +141,8 @@ function Departements({
         type="search"
         value={recherche}
         onChange={e => setRecherche(e.target.value)}
-        placeholder="Chercher un département"
-        aria-label="Chercher un département"
+        placeholder={t('Chercher un département')}
+        aria-label={t('Chercher un département')}
         autoComplete="off"
         autoCapitalize="none"
         spellCheck={false}
@@ -151,7 +153,7 @@ function Departements({
         <div className="mt-2">
           {resultats.length === 0 ? (
             <p className={`py-3 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              Aucun département ne correspond à « {recherche.trim()} ».
+              {t('Aucun département ne correspond à «')} {recherche.trim()} ».
             </p>
           ) : liste}
         </div>
@@ -177,6 +179,7 @@ function Departements({
 }
 
 export default function FeuilleZoneV2({ zone, adresseDeBase, onEnregistrer, onClose }: Props) {
+  const t = useT()
   const [f, setF] = useState<FormulaireZone>(() => formulaireDepuisZone(zone))
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -214,25 +217,25 @@ export default function FeuilleZoneV2({ zone, adresseDeBase, onEnregistrer, onCl
 
   return (
     <Feuille
-      titre="Où vous intervenez"
-      sousTitre="Un client hors zone ne peut pas réserver."
+      titre={t('Où vous intervenez')}
+      sousTitre={t('Un client hors zone ne peut pas réserver.')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="feuille-zone" />}
+      pied={<Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="feuille-zone" />}
     >
       <form id="feuille-zone" onSubmit={valider} noValidate>
         <div className="mb-5 flex items-center gap-3">
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className={`text-[15.5px] ${corpsFort}`}>Limiter à une zone</span>
+            <span className={`text-[15.5px] ${corpsFort}`}>{t('Limiter à une zone')}</span>
             {!f.limiter && (
               <span className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                Vos clients peuvent réserver de partout
+                {t('Vos clients peuvent réserver de partout')}
               </span>
             )}
           </span>
           <Interrupteur
             actif={f.limiter}
             enCours={false}
-            libelle="Limiter à une zone"
+            libelle={t('Limiter à une zone')}
             onClick={() => modifier({ limiter: !f.limiter })}
           />
         </div>
@@ -241,17 +244,16 @@ export default function FeuilleZoneV2({ zone, adresseDeBase, onEnregistrer, onCl
           zone?.enabled && (
             <div className="mb-2">
               <Constat ton="ambre" role="status">
-                En enregistrant, votre zone actuelle est effacée : l’adresse, le rayon et les départements devront être
-                ressaisis pour la remettre.
+                {t('En enregistrant, votre zone actuelle est effacée : l’adresse, le rayon et les départements devront être ressaisis pour la remettre.')}
               </Constat>
             </div>
           )
         ) : (
           <>
-            <Bloc titre="Comment mesurer">
+            <Bloc titre={t('Comment mesurer')}>
               <div
                 role="radiogroup"
-                aria-label="Comment mesurer"
+                aria-label={t('Comment mesurer')}
                 className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]"
               >
                 {MODES.map(m => (
@@ -268,20 +270,20 @@ export default function FeuilleZoneV2({ zone, adresseDeBase, onEnregistrer, onCl
 
             {parRayon ? (
               <>
-                <Bloc titre="Point de départ">
+                <Bloc titre={t('Point de départ')}>
                   <AdresseV2
                     id="zone-adresse"
                     valeur={f.adresse}
                     onChange={adresse => modifier({ adresse })}
-                    placeholder="12 rue de la Paix, 75002 Paris"
+                    placeholder={t('12 rue de la Paix, 75002 Paris')}
                     adresseDeBase={adresseDeBase}
                     erreur={erreurDe('adresse')}
                   />
                 </Bloc>
 
-                <Bloc titre="Rayon">
+                <Bloc titre={t('Rayon')}>
                   <Puces
-                    nom="Rayon en kilomètres"
+                    nom={t('Rayon en kilomètres')}
                     valeurs={RAYONS_PRESETS}
                     libelle={v => `${v} km`}
                     valeur={choixRayon}
@@ -302,11 +304,11 @@ export default function FeuilleZoneV2({ zone, adresseDeBase, onEnregistrer, onCl
                         max={RAYON_MAX}
                         value={f.rayon}
                         onChange={e => modifier({ rayon: e.target.value })}
-                        aria-label="Rayon en kilomètres"
+                        aria-label={t('Rayon en kilomètres')}
                         aria-invalid={!!erreurDe('rayon')}
                         className={`${CHAMP} !w-24`}
                       />
-                      <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>km</span>
+                      <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('km')}</span>
                     </div>
                   )}
                   {erreurDe('rayon') && (
@@ -317,13 +319,13 @@ export default function FeuilleZoneV2({ zone, adresseDeBase, onEnregistrer, onCl
                   {phrase && (
                     <p className={`mt-2 text-[12.5px] leading-[1.55] ${corps} text-[color:var(--v2-color-gris)]`}>
                       {phrase}
-                      {routePlusLongue(f.mode) && ' Sur la route, c’est souvent plus long.'}
+                      {routePlusLongue(f.mode) && t(' Sur la route, c’est souvent plus long.')}
                     </p>
                   )}
                 </Bloc>
               </>
             ) : (
-              <Bloc titre="Départements couverts" aide={f.departements.length > 0 ? String(f.departements.length) : undefined}>
+              <Bloc titre={t('Départements couverts')} aide={f.departements.length > 0 ? String(f.departements.length) : undefined}>
                 <Departements
                   choisis={f.departements}
                   onBasculer={code => { setChampFautif(null); basculerDepartement(code) }}

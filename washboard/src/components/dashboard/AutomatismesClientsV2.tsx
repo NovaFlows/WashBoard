@@ -17,6 +17,7 @@ import {
 } from '@/lib/creneauxForm'
 import { enregistrerZoneCreneaux } from '@/lib/zoneApi'
 import { resumePublicites, type ResumePublicites } from '@/lib/resumePublicites'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Section « Automatismes » de l'écran Clients — Alexandre, 2026-09-30 : la demande d'avis Google,
 // la relance client et les créneaux intelligents quittent « Plus » et « Prestations et prix »
@@ -49,6 +50,7 @@ export type AutomatismesClients = {
 }
 
 export default function AutomatismesClientsV2({ automatismes }: { automatismes: AutomatismesClients }) {
+  const t = useT()
   const router = useRouter()
   const { peut } = useOffre()
   const {
@@ -81,18 +83,18 @@ export default function AutomatismesClientsV2({ automatismes }: { automatismes: 
     : avisActif(messages, ctx)
       ? { texte: `${libelleDelaiAvis(messages.review_delay_hours)} · ${libelleCanal(messages.review_channel)}` }
       : blocage === 'lien'
-        ? { texte: 'Rien ne part : ajoutez votre lien d’avis Google', ton: 'ambre' as const }
+        ? { texte: t('Rien ne part : ajoutez votre lien d’avis Google'), ton: 'ambre' as const }
         : blocage === 'sms'
           ? { texte: `Rien ne part : le SMS est inclus dès l’offre ${requiredPlanLabel('avis_sms')}`, ton: 'ambre' as const }
-          : { texte: 'Désactivée. Un avis après chaque lavage, sans y penser.' }
+          : { texte: t('Désactivée. Un avis après chaque lavage, sans y penser.') }
 
   const relance = !relanceDisponible
     ? { texte: `Inclus dans l’offre ${libellePlanRelance}` }
     : relanceActive(messages)
       ? { texte: `${libelleDelaiRelance(messages.followup_delay_days)} · ${libelleCanal(messages.review_channel)}` }
       : messages.followup_enabled
-        ? { texte: 'Rien ne part : écrivez le message à envoyer', ton: 'ambre' as const }
-        : { texte: 'Désactivée. Un message aux clients qui ne sont pas revenus.' }
+        ? { texte: t('Rien ne part : écrivez le message à envoyer'), ton: 'ambre' as const }
+        : { texte: t('Désactivée. Un message aux clients qui ne sont pas revenus.') }
 
   async function enregistrerCreneaux(champs: ChampsCreneaux): Promise<string | null> {
     const r = await enregistrerZoneCreneaux(champs)
@@ -110,30 +112,30 @@ export default function AutomatismesClientsV2({ automatismes }: { automatismes: 
   }
 
   return (
-    <section aria-label="Automatismes">
-      <TitreSection>Automatismes</TitreSection>
+    <section aria-label={t('Automatismes')}>
+      <TitreSection>{t('Automatismes')}</TitreSection>
       <CarteListe>
         <ul className="divide-y divide-[color:var(--v2-filet)]">
           <LigneDeuxNiveaux
-            label="Avis Google"
+            label={t('Avis Google')}
             valeur={avis.texte}
             ton={'ton' in avis ? avis.ton : undefined}
             onClick={() => router.push(avisDisponible ? '/dashboard/clients/messages' : '/dashboard/abonnement')}
           />
           <LigneDeuxNiveaux
-            label="Relance client"
+            label={t('Relance client')}
             valeur={relance.texte}
             ton={'ton' in relance ? relance.ton : undefined}
             onClick={() => router.push(relanceDisponible ? '/dashboard/clients/messages' : '/dashboard/abonnement')}
           />
           <LigneDeuxNiveaux
-            label="Publicités"
+            label={t('Publicités')}
             valeur={publicites.texte}
             ton={publicites.ton}
             onClick={() => router.push(publicitesAutorisees ? '/dashboard/clients/publicites' : '/dashboard/abonnement')}
           />
           <LigneDeuxNiveaux
-            label="Créneaux intelligents"
+            label={t('Créneaux intelligents')}
             valeur={peut('creneaux_intelligents')
               ? resumeCreneaux(creneaux)
               : `Inclus dans l’offre ${requiredPlanLabel('creneaux_intelligents')}`}

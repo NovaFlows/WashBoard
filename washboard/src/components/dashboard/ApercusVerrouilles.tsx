@@ -1,3 +1,7 @@
+'use client'
+
+import { useT } from '@/components/i18n/I18nProvider'
+
 // Aperçus décoratifs affichés derrière un écran « changer d'offre ».
 //
 // Un écran verrouillé qui ne montre qu'un cadenas ne donne envie de rien : le
@@ -23,9 +27,10 @@ function Flou({ children, className = '' }: { children: React.ReactNode; classNa
 }
 
 function Etiquette() {
+  const t = useT()
   return (
     <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-      Exemple
+      {t('Exemple')}
     </span>
   )
 }
@@ -42,19 +47,20 @@ function Chiffre({ label, valeur, couleur = 'text-slate-900 dark:text-slate-100'
 }
 
 export function ApercuCompta() {
+  const t = useT()
   const mois = [55, 70, 48, 82, 64, 91]
   return (
     <div className="space-y-4" aria-hidden>
       <div className={CARTE}>
         <Etiquette />
         <div className="flex gap-4">
-          <Chiffre label="Chiffre d’affaires" valeur="4 280 €" />
-          <Chiffre label="Dépenses" valeur="960 €" couleur="text-orange-600 dark:text-orange-400" />
-          <Chiffre label="Résultat" valeur="3 320 €" couleur="text-emerald-600 dark:text-emerald-400" />
+          <Chiffre label={t('Chiffre d’affaires')} valeur="4 280 €" />
+          <Chiffre label={t('Dépenses')} valeur="960 €" couleur="text-orange-600 dark:text-orange-400" />
+          <Chiffre label={t('Résultat')} valeur="3 320 €" couleur="text-emerald-600 dark:text-emerald-400" />
         </div>
       </div>
       <div className={CARTE}>
-        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">Mois par mois</p>
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">{t('Mois par mois')}</p>
         <div className="flex items-end gap-3 h-28 blur-[4px]">
           {mois.map((h, i) => (
             <span key={i} className="flex-1 rounded-t-lg bg-blue-500/80" style={{ height: `${h}%` }} />
@@ -66,24 +72,25 @@ export function ApercuCompta() {
 }
 
 export function ApercuCrm() {
+  const t = useT()
   const sources = [
     { nom: 'Instagram', pct: 82 },
     { nom: 'Google', pct: 54 },
     { nom: 'TikTok', pct: 38 },
-    { nom: 'Bouche-à-oreille', pct: 21 },
+    { nom: t('Bouche-à-oreille'), pct: 21 },
   ]
   return (
     <div className="space-y-4" aria-hidden>
       <div className={CARTE}>
         <Etiquette />
         <div className="flex gap-4">
-          <Chiffre label="Visiteurs" valeur="612" />
-          <Chiffre label="Réservations" valeur="48" />
-          <Chiffre label="Transformation" valeur="7,8 %" couleur="text-emerald-600 dark:text-emerald-400" />
+          <Chiffre label={t('Visiteurs')} valeur="612" />
+          <Chiffre label={t('Réservations')} valeur="48" />
+          <Chiffre label={t('Transformation')} valeur="7,8 %" couleur="text-emerald-600 dark:text-emerald-400" />
         </div>
       </div>
       <div className={CARTE}>
-        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">D’où viennent vos clients</p>
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">{t('D’où viennent vos clients')}</p>
         <div className="space-y-3">
           {sources.map(s => (
             <div key={s.nom}>
@@ -106,10 +113,11 @@ export function ApercuCrm() {
 }
 
 export function ApercuFactures() {
+  const t = useT()
   const lignes = [
-    ['2026-014', 'Garage Mérignac', '480 €'],
-    ['2026-013', 'Résidence du Parc', '260 €'],
-    ['2026-012', 'Auto-école Conduite+', '180 €'],
+    ['2026-014', t('Garage Mérignac'), '480 €'],
+    ['2026-013', t('Résidence du Parc'), '260 €'],
+    ['2026-012', t('Auto-école Conduite+'), '180 €'],
     ['2026-011', 'Thomas R.', '75 €'],
     ['2026-010', 'Claire M.', '45 €'],
   ]
@@ -118,12 +126,12 @@ export function ApercuFactures() {
       <div className={CARTE}>
         <Etiquette />
         <div className="flex gap-4">
-          <Chiffre label="Facturé cette année" valeur="12 640 €" />
-          <Chiffre label="Factures émises" valeur="34" />
+          <Chiffre label={t('Facturé cette année')} valeur="12 640 €" />
+          <Chiffre label={t('Factures émises')} valeur="34" />
         </div>
       </div>
       <div className={`${CARTE} p-0 overflow-hidden`}>
-        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 px-5 pt-5 pb-3">Vos factures émises</p>
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 px-5 pt-5 pb-3">{t('Vos factures émises')}</p>
         {lignes.map(([num, client, montant], i) => (
           <div
             key={num}
@@ -145,27 +153,28 @@ export function ApercuFactures() {
  *  base. Ce qui reste NET, c'est ce que le laveur comprendra qu'on lui dira —
  *  « Retour », « Coût par client » ; ce qui est flouté, c'est la réponse. */
 export function ApercuCampagnes() {
+  const t = useT()
   return (
     <div className="space-y-4" aria-hidden>
       <div className={CARTE}>
         <Etiquette />
-        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">Pub Rentrée</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Meta · budget 80 €</p>
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">{t('Pub Rentrée')}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t('Meta · budget 80 €')}</p>
         <div className="flex gap-4">
-          <Chiffre label="Visites" valeur="312" />
-          <Chiffre label="Réservations" valeur="14" />
-          <Chiffre label="Retour" valeur="× 11,4" couleur="text-emerald-600 dark:text-emerald-400" />
+          <Chiffre label={t('Visites')} valeur="312" />
+          <Chiffre label={t('Réservations')} valeur="14" />
+          <Chiffre label={t('Retour')} valeur="× 11,4" couleur="text-emerald-600 dark:text-emerald-400" />
         </div>
       </div>
       <div className={CARTE}>
-        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Ce qu’elle vous a rapporté</p>
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('Ce qu’elle vous a rapporté')}</p>
         <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
           <div className="flex justify-between">
-            <span>Coût par client</span>
+            <span>{t('Coût par client')}</span>
             <Flou className="font-semibold">5,71 €</Flou>
           </div>
           <div className="flex justify-between">
-            <span>Chiffre d’affaires</span>
+            <span>{t('Chiffre d’affaires')}</span>
             <Flou className="font-semibold">910 €</Flou>
           </div>
         </div>

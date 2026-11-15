@@ -6,6 +6,7 @@ import { formatPrice } from '@/lib/pricing'
 import {
   getPeriodRange, navigatePeriod, isCurrentPeriod, type PeriodType,
 } from '@/lib/comptaPeriod'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 
 type Expense = {
@@ -51,9 +52,9 @@ const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','A
 /** Montant des trois cartes de résumé : à la française (« 148,50 € »), et
  *  sans centimes au-delà de 1 000 € pour tenir dans une carte étroite sur
  *  téléphone, même en vue Année. */
-function montantCarte(n: number): string {
+function montantCarte(n: number, loc = 'fr-FR'): string {
   const entier = Math.abs(n) >= 1000
-  return new Intl.NumberFormat('fr-FR', {
+  return new Intl.NumberFormat(loc, {
     style: 'currency', currency: 'EUR',
     minimumFractionDigits: entier ? 0 : 2,
     maximumFractionDigits: entier ? 0 : 2,
@@ -64,6 +65,8 @@ function montantCarte(n: number): string {
 type Props = { initialRevenue: number; washerId: string }
 
 export default function ComptaDashboard({ initialRevenue }: Props) {
+  const loc = useLocale()
+  const tr = useT()
   const [periodType, setPeriodType] = useState<PeriodType>('mois')
   const [refDate,    setRefDate]    = useState(new Date())
 
@@ -98,8 +101,8 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
   async function addRecurring(e: React.FormEvent) {
     e.preventDefault()
     setRecErr(null)
-    if (!recForm.label.trim() || !recForm.amount) { setRecErr('Libellé et montant requis'); return }
-    if (parseFloat(recForm.amount) < 0) { setRecErr('Le montant doit être positif'); return }
+    if (!recForm.label.trim() || !recForm.amount) { setRecErr(tr('Libellé et montant requis')); return }
+    if (parseFloat(recForm.amount) < 0) { setRecErr(tr('Le montant doit être positif')); return }
     setSavingRec(true)
     const res = await fetch('/api/expenses/recurring', {
       method: 'POST',
@@ -152,8 +155,8 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
   async function addExpense(e: React.FormEvent) {
     e.preventDefault()
     setFormErr(null)
-    if (!form.label.trim() || !form.amount) { setFormErr('Libellé et montant requis'); return }
-    if (parseFloat(form.amount) < 0) { setFormErr('Le montant doit être positif'); return }
+    if (!form.label.trim() || !form.amount) { setFormErr(tr('Libellé et montant requis')); return }
+    if (parseFloat(form.amount) < 0) { setFormErr(tr('Le montant doit être positif')); return }
     setSaving(true)
     const res = await fetch('/api/expenses', {
       method: 'POST',
@@ -161,7 +164,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
       body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
     })
     if (res.ok) { setForm({ date: today, category: 'carburant', label: '', amount: '' }); fetchData() }
-    else { const j = await res.json().catch(() => null); setFormErr(j?.error ?? 'Erreur lors de la sauvegarde') }
+    else { const j = await res.json().catch(() => null); setFormErr(j?.error ?? tr('Erreur lors de la sauvegarde')) }
     setSaving(false)
   }
 
@@ -197,7 +200,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
             }`}
           >
-            {t === 'annee' ? 'Année' : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'annee' ? tr('Année') : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
@@ -221,16 +224,16 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="min-w-0 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-3 sm:p-4">
           <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">CA</p>
-          <p className="text-base sm:text-xl font-bold tabular-nums whitespace-nowrap text-emerald-700 dark:text-emerald-300">{montantCarte(totalRevenue)}</p>
+          <p className="text-base sm:text-xl font-bold tabular-nums whitespace-nowrap text-emerald-700 dark:text-emerald-300">{montantCarte(totalRevenue, loc)}</p>
         </div>
         <div className="min-w-0 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-2xl p-3 sm:p-4">
-          <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Dépenses</p>
-          <p className="text-base sm:text-xl font-bold tabular-nums whitespace-nowrap text-red-700 dark:text-red-300">{montantCarte(totalExpenses)}</p>
+          <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">{tr('Dépenses')}</p>
+          <p className="text-base sm:text-xl font-bold tabular-nums whitespace-nowrap text-red-700 dark:text-red-300">{montantCarte(totalExpenses, loc)}</p>
         </div>
         <div className={`min-w-0 border rounded-2xl p-3 sm:p-4 ${result >= 0 ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' : 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'}`}>
-          <p className={`text-xs font-medium mb-1 ${result >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>Résultat</p>
+          <p className={`text-xs font-medium mb-1 ${result >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>{tr('Résultat')}</p>
           <p className={`text-base sm:text-xl font-bold tabular-nums whitespace-nowrap ${result >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-orange-300'}`}>
-            {result > 0 ? '+' : ''}{montantCarte(result)}
+            {result > 0 ? '+' : ''}{montantCarte(result, loc)}
           </p>
         </div>
       </div>
@@ -239,19 +242,19 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
       {periodType === 'annee' && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Détail par mois</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{tr('Détail par mois')}</h2>
           </div>
           {loadingEx ? (
-            <div className="p-8 text-center text-sm text-slate-400">Chargement...</div>
+            <div className="p-8 text-center text-sm text-slate-400">{tr('Chargement...')}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 dark:border-slate-800">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Mois</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">{tr('Mois')}</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">CA</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-red-600 dark:text-red-400">Dépenses</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Résultat</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-red-600 dark:text-red-400">{tr('Dépenses')}</th>
+                    <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">{tr('Résultat')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
@@ -272,7 +275,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                    <td className="px-5 py-3 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Total</td>
+                    <td className="px-5 py-3 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide">{tr('Total')}</td>
                     <td className="px-4 py-3 text-right font-bold text-emerald-700 dark:text-emerald-300">{formatPrice(totalRevenue)}</td>
                     <td className="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">−{formatPrice(totalExpenses)}</td>
                     <td className={`px-5 py-3 text-right font-bold ${result >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-600 dark:text-orange-400'}`}>
@@ -291,15 +294,15 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
         <>
           {/* Formulaire ajout */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Ajouter un frais</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">{tr('Ajouter un frais')}</h2>
             <form onSubmit={addExpense} noValidate className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Date</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{tr('Date')}</label>
                   <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Catégorie</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{tr('Catégorie')}</label>
                   <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className={inputClass + ' w-full'}>
                     {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
@@ -307,17 +310,17 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Libellé</label>
-                  <input type="text" value={form.label} onChange={e => setForm(p => ({ ...p, label: e.target.value }))} placeholder="ex: Plein essence" className={`${inputClass} w-full`} />
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{tr('Libellé')}</label>
+                  <input type="text" value={form.label} onChange={e => setForm(p => ({ ...p, label: e.target.value }))} placeholder={tr('ex: Plein essence')} className={`${inputClass} w-full`} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Montant (€)</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{tr('Montant (€)')}</label>
                   <input type="number" min={0} step={0.01} value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} placeholder="0.00" className={`${inputClass} w-full`} />
                 </div>
               </div>
               {formErr && <p className="text-xs text-red-500">{formErr}</p>}
               <button type="submit" disabled={saving} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
-                {saving ? 'Ajout...' : '+ Ajouter'}
+                {saving ? 'Ajout...' : tr('+ Ajouter')}
               </button>
             </form>
           </div>
@@ -325,19 +328,19 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
           {/* Liste des frais */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Frais de la période</h2>
-              <span className="text-xs text-slate-400">{expenses.length} entrée{expenses.length > 1 ? 's' : ''}</span>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{tr('Frais de la période')}</h2>
+              <span className="text-xs text-slate-400">{expenses.length} {tr('entrée')}{expenses.length > 1 ? 's' : ''}</span>
             </div>
             {loadingEx ? (
-              <div className="p-8 text-center text-sm text-slate-400">Chargement...</div>
+              <div className="p-8 text-center text-sm text-slate-400">{tr('Chargement...')}</div>
             ) : expenses.length === 0 ? (
-              <div className="p-8 text-center text-sm text-slate-400">Aucun frais sur cette période</div>
+              <div className="p-8 text-center text-sm text-slate-400">{tr('Aucun frais sur cette période')}</div>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {expenses.map(ex => (
                   <div key={ex.id} className="flex items-center gap-3 px-5 py-3.5">
                     <div className="shrink-0 text-xs text-slate-400 w-16">
-                      {new Date(ex.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      {new Date(ex.date + 'T12:00:00').toLocaleDateString(loc, { day: 'numeric', month: 'short' })}
                     </div>
                     <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${CAT_COLORS[ex.category] ?? CAT_COLORS.autre}`}>
                       {CATEGORIES.find(c => c.value === ex.category)?.label ?? ex.category}
@@ -345,7 +348,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                     <span className="flex-1 text-sm text-slate-700 dark:text-slate-300 truncate">
                       {ex.label}
                       {ex.recurring_expense_id && (
-                        <span className="ml-1.5 text-xs text-slate-400" title="Frais récurrent auto-généré">↻</span>
+                        <span className="ml-1.5 text-xs text-slate-400" title={tr('Frais récurrent auto-généré')}>↻</span>
                       )}
                     </span>
                     <span className="shrink-0 font-semibold text-sm text-red-600 dark:text-red-400">−{formatPrice(Number(ex.amount))}</span>
@@ -370,8 +373,8 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Frais récurrents</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Prélevés automatiquement chaque mois</p>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{tr('Frais récurrents')}</h2>
+            <p className="text-xs text-slate-400 mt-0.5">{tr('Prélevés automatiquement chaque mois')}</p>
           </div>
           <button
             onClick={() => setShowRecForm(p => !p)}
@@ -389,36 +392,36 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
             <form onSubmit={addRecurring} noValidate className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Catégorie</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{tr('Catégorie')}</label>
                   <select value={recForm.category} onChange={e => setRecForm(p => ({ ...p, category: e.target.value }))} className={inputClass + ' w-full'}>
                     {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Prélevé le (jour du mois)</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{tr('Prélevé le (jour du mois)')}</label>
                   <input type="number" min={1} max={28} value={recForm.day_of_month} onChange={e => setRecForm(p => ({ ...p, day_of_month: e.target.value }))} className={`${inputClass} w-full`} placeholder="1" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Libellé</label>
-                  <input type="text" value={recForm.label} onChange={e => setRecForm(p => ({ ...p, label: e.target.value }))} placeholder="ex: WashBoard abonnement" className={`${inputClass} w-full`} />
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{tr('Libellé')}</label>
+                  <input type="text" value={recForm.label} onChange={e => setRecForm(p => ({ ...p, label: e.target.value }))} placeholder={tr('ex: WashBoard abonnement')} className={`${inputClass} w-full`} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Montant (€)</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{tr('Montant (€)')}</label>
                   <input type="number" min={0} step={0.01} value={recForm.amount} onChange={e => setRecForm(p => ({ ...p, amount: e.target.value }))} placeholder="49.00" className={`${inputClass} w-full`} />
                 </div>
               </div>
               {recErr && <p className="text-xs text-red-500">{recErr}</p>}
               <button type="submit" disabled={savingRec} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
-                {savingRec ? 'Ajout...' : '+ Ajouter ce frais récurrent'}
+                {savingRec ? 'Ajout...' : tr('+ Ajouter ce frais récurrent')}
               </button>
             </form>
           </div>
         )}
 
         {recurring.length === 0 ? (
-          <div className="p-6 text-center text-sm text-slate-400">Aucun frais récurrent configuré</div>
+          <div className="p-6 text-center text-sm text-slate-400">{tr('Aucun frais récurrent configuré')}</div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {recurring.map(r => (
@@ -427,12 +430,12 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                   {CATEGORIES.find(c => c.value === r.category)?.label ?? r.category}
                 </span>
                 <span className="flex-1 text-sm text-slate-700 dark:text-slate-300 truncate">{r.label}</span>
-                <span className="shrink-0 text-xs text-slate-400">le {r.day_of_month}</span>
-                <span className="shrink-0 font-semibold text-sm text-red-600 dark:text-red-400">−{formatPrice(Number(r.amount))}/mois</span>
+                <span className="shrink-0 text-xs text-slate-400">{tr('le')} {r.day_of_month}</span>
+                <span className="shrink-0 font-semibold text-sm text-red-600 dark:text-red-400">−{formatPrice(Number(r.amount))}{tr('/mois')}</span>
                 <button
                   onClick={() => toggleRecurring(r.id, !r.active)}
                   disabled={togglingRec === r.id}
-                  title={r.active ? 'Désactiver' : 'Activer'}
+                  title={r.active ? tr('Désactiver') : 'Activer'}
                   className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${r.active ? 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30' : 'text-slate-300 dark:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

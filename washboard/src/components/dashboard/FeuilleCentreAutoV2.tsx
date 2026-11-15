@@ -6,6 +6,7 @@ import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied } from '@/components/dashboard/ReglageAutomatismeV2'
 import AdresseV2 from '@/components/dashboard/AdresseV2'
 import { CHOIX_LIEUX, MAX_CENTRES, ReglagesCentreAutoSchema, centresDeReglages, normaliserReglages, type LieuxProposes, type ReglagesCentreAuto } from '@/lib/centreAuto'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Centre auto » de « Mon profil » : le laveur qui a un local choisit ce que sa page de
 // réservation propose (à domicile, en centre auto, ou les deux). Enregistré par
@@ -20,6 +21,7 @@ export default function FeuilleCentreAutoV2({
   onEnregistrer: (r: ReglagesCentreAuto) => Promise<string | null>
   onClose: () => void
 }) {
+  const t = useT()
   const [actif, setActif] = useState(reglages?.actif ?? false)
   // Un ou plusieurs locaux ; `cle` ne sert qu'à garder les champs en place quand on en retire un.
   const [centres, setCentres] = useState<{ cle: number; id?: string; nom: string; adresse: string }[]>(() => {
@@ -36,7 +38,7 @@ export default function FeuilleCentreAutoV2({
     if (enCours) return
     const saisis = centres.map(c => ({ id: c.id, nom: c.nom, adresse: c.adresse }))
     const saisie = ReglagesCentreAutoSchema.safeParse({ actif, adresse: saisis[0]?.adresse ?? '', lieux, centres: saisis })
-    if (!saisie.success) { setErreur(saisie.error.issues[0]?.message ?? 'Réglages invalides.'); return }
+    if (!saisie.success) { setErreur(saisie.error.issues[0]?.message ?? t('Réglages invalides.')); return }
     setErreur(null)
     setEnCours(true)
     const message = await onEnregistrer(normaliserReglages(saisie.data))
@@ -47,19 +49,19 @@ export default function FeuilleCentreAutoV2({
 
   return (
     <Feuille
-      titre="Centre auto"
-      sousTitre="Recevoir vos clients dans votre local."
+      titre={t('Centre auto')}
+      sousTitre={t('Recevoir vos clients dans votre local.')}
       onClose={onClose}
       pied={
         <div>
           {erreur && <div className="mb-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
-          <Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="reglage-centre-auto" />
+          <Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="reglage-centre-auto" />
         </div>
       }
     >
       <form id="reglage-centre-auto" onSubmit={soumettre} noValidate>
-        <Bloc titre="Avez-vous un centre auto ?">
-          <div className="flex gap-2.5" role="group" aria-label="Avez-vous un centre auto ?">
+        <Bloc titre={t('Avez-vous un centre auto ?')}>
+          <div className="flex gap-2.5" role="group" aria-label={t('Avez-vous un centre auto ?')}>
             {([true, false] as const).map(v => {
               const choisi = actif === v
               return (
@@ -82,26 +84,26 @@ export default function FeuilleCentreAutoV2({
           </div>
           {!actif && (
             <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              Vous vous déplacez chez vos clients, votre page reste comme aujourd’hui.
+              {t('Vous vous déplacez chez vos clients, votre page reste comme aujourd’hui.')}
             </p>
           )}
         </Bloc>
 
         {actif && (
           <>
-            <Bloc titre={centres.length > 1 ? 'Vos centres' : 'Adresse du centre'}>
+            <Bloc titre={centres.length > 1 ? 'Vos centres' : t('Adresse du centre')}>
               <div className="flex flex-col gap-4">
                 {centres.map((c, i) => (
                   <div key={c.cle} className="flex flex-col gap-2">
                     {centres.length > 1 && (
                       <div className="flex items-center justify-between">
-                        <span className={`text-[13px] ${corpsFort}`}>Centre {i + 1}</span>
+                        <span className={`text-[13px] ${corpsFort}`}>{t('Centre')} {i + 1}</span>
                         <button
                           type="button"
                           onClick={() => { setCentres(l => l.filter(x => x.cle !== c.cle)); setErreur(null) }}
                           className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] underline`}
                         >
-                          Retirer
+                          {t('Retirer')}
                         </button>
                       </div>
                     )}
@@ -109,7 +111,7 @@ export default function FeuilleCentreAutoV2({
                       <input
                         type="text"
                         aria-label={`Nom du centre ${i + 1}`}
-                        placeholder="Nom (ex. Centre Lyon Nord)"
+                        placeholder={t('Nom (ex. Centre Lyon Nord)')}
                         maxLength={80}
                         value={c.nom}
                         onChange={e => { const v = e.target.value; setCentres(l => l.map(x => (x.cle === c.cle ? { ...x, nom: v } : x))); setErreur(null) }}
@@ -120,7 +122,7 @@ export default function FeuilleCentreAutoV2({
                       id={i === 0 ? 'centre-auto-adresse' : `centre-auto-adresse-${c.cle}`}
                       valeur={c.adresse}
                       onChange={v => { setCentres(l => l.map(x => (x.cle === c.cle ? { ...x, adresse: v } : x))); setErreur(null) }}
-                      placeholder="12 rue de la Paix, 75001 Paris"
+                      placeholder={t('12 rue de la Paix, 75001 Paris')}
                       adresseDeBase={i === 0 ? adresseDeBase : undefined}
                       erreur={null}
                     />
@@ -128,7 +130,7 @@ export default function FeuilleCentreAutoV2({
                 ))}
               </div>
               <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                {centres.length > 1 ? 'Le client choisit son centre au moment de réserver.' : 'Affichée à vos clients qui choisissent de venir au centre.'}
+                {centres.length > 1 ? t('Le client choisit son centre au moment de réserver.') : t('Affichée à vos clients qui choisissent de venir au centre.')}
               </p>
               {centres.length < MAX_CENTRES && (
                 <button
@@ -137,13 +139,13 @@ export default function FeuilleCentreAutoV2({
                   className={`${BOUTON} mt-3 w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
                   style={PRESSION}
                 >
-                  + Ajouter un autre centre
+                  {t('+ Ajouter un autre centre')}
                 </button>
               )}
             </Bloc>
 
-            <Bloc titre="Sur votre page de réservation">
-              <div className="flex flex-col gap-2" role="group" aria-label="Lieux proposés">
+            <Bloc titre={t('Sur votre page de réservation')}>
+              <div className="flex flex-col gap-2" role="group" aria-label={t('Lieux proposés')}>
                 {CHOIX_LIEUX.map(c => {
                   const choisi = lieux === c.valeur
                   return (

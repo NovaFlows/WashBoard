@@ -5,6 +5,7 @@ import { PRESETS } from '@/components/dashboard/admin/CategoriesManager'
 import { corps, corpsFort, titre, PRESSION } from '@/components/dashboard/FeuilleV2'
 import { Constat, nom } from '@/components/dashboard/PrestationsUiV2'
 import type { ModeleCategorie } from '@/lib/prestationForm'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Vous vendez quoi ? » — état vide de « Prestations et prix » (aucune
 // catégorie, aucune prestation).
@@ -32,6 +33,7 @@ type Props = {
 }
 
 export default function PrestationsEtatVideV2({ onModele, onAutre }: Props) {
+  const tr = useT()
   const [enCours, setEnCours] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const verrou = useRef(false)
@@ -54,9 +56,9 @@ export default function PrestationsEtatVideV2({ onModele, onAutre }: Props) {
 
   return (
     <div className="pt-6">
-      <h2 className={`text-[26px] leading-tight ${titre}`}>Vous vendez quoi ?</h2>
+      <h2 className={`text-[26px] leading-tight ${titre}`}>{tr('Vous vendez quoi ?')}</h2>
       <p className={`mt-2 text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-        Un tap crée vos types, puis vous ajoutez votre première prestation.
+        {tr('Un tap crée vos types, puis vous ajoutez votre première prestation.')}
       </p>
 
       <div className="mt-6 space-y-3">
@@ -69,7 +71,7 @@ export default function PrestationsEtatVideV2({ onModele, onAutre }: Props) {
             className={`${carte} flex min-h-[88px] flex-col justify-center gap-1 py-4`}
             style={PRESSION}
           >
-            <span className={`text-[20px] ${nom}`}>{enCours === p.name ? 'Création…' : p.name}</span>
+            <span className={`text-[20px] ${nom}`}>{enCours === p.name ? tr('Création…') : p.name}</span>
             <span className={`truncate text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
               {p.types.slice(0, 4).map(t => t.name).join(', ')}…
             </span>
@@ -82,8 +84,8 @@ export default function PrestationsEtatVideV2({ onModele, onAutre }: Props) {
           className={`${carte} flex min-h-[64px] items-center py-3`}
           style={PRESSION}
         >
-          <span className={`text-[16px] ${corpsFort}`}>Autre chose</span>
-          <span className={`ml-auto text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>je crée mes types</span>
+          <span className={`text-[16px] ${corpsFort}`}>{tr('Autre chose')}</span>
+          <span className={`ml-auto text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('je crée mes types')}</span>
         </button>
       </div>
 

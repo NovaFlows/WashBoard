@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { BookingPageMode } from '@/lib/bookingPageMode'
 import { Interrupteur } from '@/components/dashboard/PrestationsUiV2'
 import { corps, titre } from '@/components/dashboard/FeuilleV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 /** Commun au site et à la PWA. Le choix visible change après confirmation du serveur.
  *  `v2` : même logique, habillée aux jetons de la refonte (`ApparenceV2`) — sans ça, le bleu
@@ -14,6 +15,7 @@ export default function BookingPageModePicker({ mode, onChange, v2 = false }: {
   onChange: (mode: BookingPageMode) => void
   v2?: boolean
 }) {
+  const t = useT()
   const router = useRouter()
   const [pending, setPending] = useState<BookingPageMode | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -29,12 +31,12 @@ export default function BookingPageModePicker({ mode, onChange, v2 = false }: {
     try {
       const response = await fetch('/api/washer', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_page_mode: next }) })
       const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Impossible de changer de page. Réessayez.')
+      if (!response.ok) throw new Error(result.error || t('Impossible de changer de page. Réessayez.'))
       onChange(next)
       setSaved(true)
       router.refresh()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Impossible de changer de page. Réessayez.')
+      setError(e instanceof Error ? e.message : t('Impossible de changer de page. Réessayez.'))
     } finally {
       busy.current = false
       setPending(null)
@@ -42,31 +44,31 @@ export default function BookingPageModePicker({ mode, onChange, v2 = false }: {
   }
 
   const actif = mode === 'default'
-  const description = mode === 'default' ? 'Décochez pour utiliser votre page personnalisée et ouvrir ses réglages.' : 'Page personnalisée active. Retrouvez vos réglages ci-dessous.'
+  const description = mode === 'default' ? t('Décochez pour utiliser votre page personnalisée et ouvrir ses réglages.') : t('Page personnalisée active. Retrouvez vos réglages ci-dessous.')
 
   if (v2) {
     return <section aria-labelledby="booking-page-mode-title" className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3.5">
-      <h2 id="booking-page-mode-title" className={`text-[15px] ${titre} text-[color:var(--v2-color-encre)]`}>Votre page de réservation</h2>
+      <h2 id="booking-page-mode-title" className={`text-[15px] ${titre} text-[color:var(--v2-color-encre)]`}>{t('Votre page de réservation')}</h2>
       <div className="mt-1 flex items-center justify-between gap-3">
-        <span className={`text-[14.5px] ${corps} text-[color:var(--v2-color-encre)]`}>Page par défaut</span>
-        <Interrupteur actif={actif} enCours={pending !== null} libelle="Page par défaut" onClick={() => choose(actif ? 'custom' : 'default')} />
+        <span className={`text-[14.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{t('Page par défaut')}</span>
+        <Interrupteur actif={actif} enCours={pending !== null} libelle={t('Page par défaut')} onClick={() => choose(actif ? 'custom' : 'default')} />
       </div>
       <p id="booking-page-mode-description" className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{description}</p>
-      {pending !== null && <p role="status" className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Enregistrement…</p>}
+      {pending !== null && <p role="status" className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Enregistrement…')}</p>}
       {error && <p role="alert" className={`mt-2 text-[13px] ${corps} text-[color:var(--v2-color-rouge)]`}>{error}</p>}
-      {saved && <p role="status" className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-vert)]`}>Le choix de votre page est enregistré.</p>}
+      {saved && <p role="status" className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-vert)]`}>{t('Le choix de votre page est enregistré.')}</p>}
     </section>
   }
 
   return <section aria-labelledby="booking-page-mode-title" className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
-    <h2 id="booking-page-mode-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">Votre page de réservation</h2>
+    <h2 id="booking-page-mode-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">{t('Votre page de réservation')}</h2>
     <div className="flex items-center justify-between gap-3 mt-3 min-h-11">
-      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">Page par défaut</span>
+      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{t('Page par défaut')}</span>
       <button
         type="button"
         role="switch"
         aria-checked={actif}
-        aria-label="Page par défaut"
+        aria-label={t('Page par défaut')}
         aria-describedby="booking-page-mode-description"
         disabled={pending !== null}
         onClick={() => choose(actif ? 'custom' : 'default')}
@@ -78,8 +80,8 @@ export default function BookingPageModePicker({ mode, onChange, v2 = false }: {
     <p id="booking-page-mode-description" className="text-sm text-slate-500 dark:text-slate-400 mt-1">
       {description}
     </p>
-    {pending !== null && <p role="status" className="text-xs text-slate-500 mt-3">Enregistrement…</p>}
+    {pending !== null && <p role="status" className="text-xs text-slate-500 mt-3">{t('Enregistrement…')}</p>}
     {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400 mt-3">{error}</p>}
-    {saved && <p role="status" className="text-xs text-emerald-700 dark:text-emerald-400 mt-3">Le choix de votre page est enregistré.</p>}
+    {saved && <p role="status" className="text-xs text-emerald-700 dark:text-emerald-400 mt-3">{t('Le choix de votre page est enregistré.')}</p>}
   </section>
 }

@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from 'react'
 import type { GoogleReview, GoogleReviewResult } from '@/lib/googleReviews'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type Props = {
   reviews: GoogleReview[]
@@ -22,6 +23,7 @@ const INTERVAL_MS = 7000
  *  à chaque tick, donc un glissement manuel entre deux tick n'est jamais
  *  écrasé par un saut arrière vers une position programmée obsolète. */
 export default function ReviewsCarousel({ reviews, aggregate, themed }: Props) {
+  const t = useT()
   const scrollerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function ReviewsCarousel({ reviews, aggregate, themed }: Props) {
     }`}>
       <div className="px-5 pt-4 pb-3 flex items-center justify-between">
         <p className={`text-sm font-semibold ${themed ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
-          Avis clients
+          {t('Avis clients')}
         </p>
         {aggregate && (
           <div className="flex items-center gap-1.5">
@@ -62,7 +64,7 @@ export default function ReviewsCarousel({ reviews, aggregate, themed }: Props) {
             </span>
             {aggregate.count > 0 && (
               <span className={`text-xs ${themed ? 'text-white/50' : 'text-slate-400 dark:text-slate-500'}`}>
-                · {aggregate.count} avis
+                · {aggregate.count} {t('avis')}
               </span>
             )}
           </div>

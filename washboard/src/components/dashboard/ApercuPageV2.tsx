@@ -5,6 +5,7 @@ import { corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import EchantillonCouleurV2 from '@/components/dashboard/EchantillonCouleurV2'
 import { getBgStyle } from '@/lib/themes'
 import { COULEUR_PAR_DEFAUT, MESSAGE_PAR_DEFAUT } from '@/lib/apparence'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Aperçu de la page de réservation d'un laveur, en tête de l'écran « Apparence de
 // ma page » (PWA). C'est une APPROXIMATION honnête de l'en-tête de
@@ -31,6 +32,7 @@ type Props = {
 }
 
 export default function ApercuPageV2({ nom, logoUrl, message, couleur, fond }: Props) {
+  const t = useT()
   const styleFond = getBgStyle(fond)
   const avecFond = !!styleFond
   // `getBgStyle` fixe l'image à la fenêtre (`fixed`) : dans un petit cadre, elle
@@ -41,7 +43,7 @@ export default function ApercuPageV2({ nom, logoUrl, message, couleur, fond }: P
   return (
     <div
       role="group"
-      aria-label="Aperçu de votre page de réservation"
+      aria-label={t('Aperçu de votre page de réservation')}
       className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet-fort)]"
     >
       <div className={avecFond ? '' : 'bg-[color:var(--v2-color-fond)]'} style={style}>

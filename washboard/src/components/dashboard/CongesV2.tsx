@@ -7,6 +7,7 @@ import type { AjoutConge } from '@/hooks/useConges'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import { Constat, Interrupteur } from '@/components/dashboard/PrestationsUiV2'
 import { HEURES_CHOIX, MOTIFS_BLOCAGE, erreurBlocage, plageBloquee } from '@/lib/horaires'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Congés / indisponibilités, présentation v2 — réservée à la PWA installée
 // (voir CalendrierDashboardV2.tsx). Passe 7, sous-lot 3. La logique (états,
@@ -61,6 +62,7 @@ export function BandeauConge({
   complet: boolean
   onSupprimer: () => void
 }) {
+  const t = useT()
   const equipe = detailEquipe(conge, teamSize, complet)
   return (
     <div className="flex items-center gap-3 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] py-2 pl-3.5 pr-1.5">
@@ -79,7 +81,7 @@ export function BandeauConge({
         aria-label={`Supprimer la période ${libellePeriode(conge)}`}
         className={`flex h-11 shrink-0 items-center px-3 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
       >
-        Supprimer
+        {t('Supprimer')}
       </button>
     </div>
   )
@@ -98,10 +100,11 @@ export function CongesAVenir({
   estComplet: (u: Unavailability) => boolean
   onOuvrir: (u: Unavailability) => void
 }) {
+  const t = useT()
   if (conges.length === 0) return null
   return (
-    <section aria-label="Congés à venir">
-      <h2 className={`text-[15px] ${corpsFort}`}>Congés à venir</h2>
+    <section aria-label={t('Congés à venir')}>
+      <h2 className={`text-[15px] ${corpsFort}`}>{t('Congés à venir')}</h2>
       <ul className="mt-1">
         {conges.map((u, i) => {
           const equipe = detailEquipe(u, teamSize, estComplet(u))
@@ -152,6 +155,7 @@ export function FeuilleAjoutConge({
   onSave: () => void
   onClose: () => void
 }) {
+  const t = useT()
   const restants = teamSize - form.team_members_off
   const toutes = form.team_members_off >= teamSize
   // Présentation seulement : `useConges.saveUnavail` (partagé avec le site) ne
@@ -160,10 +164,10 @@ export function FeuilleAjoutConge({
   const erreurDates = erreurBlocage(form)
   return (
     <Feuille
-      titre="Bloquer une période"
+      titre={t('Bloquer une période')}
       sousTitre={form.journee
-        ? 'Plus aucune réservation ne sera possible sur ces jours.'
-        : 'Aucune réservation sur cette plage. Le reste de la journée reste ouvert.'}
+        ? t('Plus aucune réservation ne sera possible sur ces jours.')
+        : t('Aucune réservation sur cette plage. Le reste de la journée reste ouvert.')}
       onClose={onClose}
       pied={
         <div>
@@ -176,7 +180,7 @@ export function FeuilleAjoutConge({
               className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              Annuler
+              {t('Annuler')}
             </button>
             <button
               type="button"
@@ -193,11 +197,11 @@ export function FeuilleAjoutConge({
     >
       <div className="space-y-5">
         <div className="flex items-center justify-between gap-3">
-          <p className={`text-[15px] ${corpsFort}`}>Toute la journée</p>
+          <p className={`text-[15px] ${corpsFort}`}>{t('Toute la journée')}</p>
           <Interrupteur
             actif={form.journee}
             enCours={false}
-            libelle="Toute la journée"
+            libelle={t('Toute la journée')}
             onClick={() => setForm(m => (m ? { ...m, journee: !m.journee, end: m.start } : m))}
           />
         </div>
@@ -205,7 +209,7 @@ export function FeuilleAjoutConge({
         {!form.journee && (
           <div className="space-y-3">
             <div>
-              <label htmlFor="conge-le" className={ETIQUETTE}>Le</label>
+              <label htmlFor="conge-le" className={ETIQUETTE}>{t('Le')}</label>
               <input
                 id="conge-le"
                 type="date"
@@ -216,7 +220,7 @@ export function FeuilleAjoutConge({
             </div>
             <div className="flex gap-3">
               <div className="min-w-0 flex-1">
-                <label htmlFor="conge-de" className={ETIQUETTE}>De</label>
+                <label htmlFor="conge-de" className={ETIQUETTE}>{t('De')}</label>
                 <select id="conge-de" value={form.debut} onChange={e => setForm(m => (m ? { ...m, debut: e.target.value } : m))} className={`${CHAMP} tabular-nums`}>
                   {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
@@ -234,7 +238,7 @@ export function FeuilleAjoutConge({
         {form.journee && (
         <div className="flex gap-3">
           <div className="min-w-0 flex-1">
-            <label htmlFor="conge-du" className={ETIQUETTE}>Du</label>
+            <label htmlFor="conge-du" className={ETIQUETTE}>{t('Du')}</label>
             <input
               id="conge-du"
               type="date"
@@ -244,7 +248,7 @@ export function FeuilleAjoutConge({
             />
           </div>
           <div className="min-w-0 flex-1">
-            <label htmlFor="conge-au" className={ETIQUETTE}>Au</label>
+            <label htmlFor="conge-au" className={ETIQUETTE}>{t('Au')}</label>
             <input
               id="conge-au"
               type="date"
@@ -258,7 +262,7 @@ export function FeuilleAjoutConge({
         )}
 
         <div>
-          <p className={ETIQUETTE}>Motif (facultatif)</p>
+          <p className={ETIQUETTE}>{t('Motif (facultatif)')}</p>
           <div className="flex flex-wrap gap-2">
             {MOTIFS_BLOCAGE.map(p => {
               const actif = form.label === p
@@ -280,13 +284,13 @@ export function FeuilleAjoutConge({
               )
             })}
           </div>
-          <label htmlFor="conge-motif" className="sr-only">Motif libre</label>
+          <label htmlFor="conge-motif" className="sr-only">{t('Motif libre')}</label>
           <input
             id="conge-motif"
             type="text"
             value={form.label}
             onChange={e => setForm(m => (m ? { ...m, label: e.target.value } : m))}
-            placeholder="Ou un motif libre…"
+            placeholder={t('Ou un motif libre…')}
             className={`${CHAMP} mt-2.5`}
           />
         </div>
@@ -294,11 +298,11 @@ export function FeuilleAjoutConge({
         {/* Nombre de laveurs concernés — seulement s'il y a une équipe */}
         {teamSize > 1 && (
           <div>
-            <p className={ETIQUETTE}>Laveurs indisponibles</p>
+            <p className={ETIQUETTE}>{t('Laveurs indisponibles')}</p>
             <div className="flex items-center gap-3 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] px-2 py-1.5">
               <button
                 type="button"
-                aria-label="Un laveur de moins"
+                aria-label={t('Un laveur de moins')}
                 onClick={() => setForm(m => (m ? { ...m, team_members_off: Math.max(1, m.team_members_off - 1) } : m))}
                 disabled={form.team_members_off <= 1}
                 className="flex h-11 w-11 items-center justify-center rounded-full text-[color:var(--v2-color-encre)] disabled:opacity-30"
@@ -311,7 +315,7 @@ export function FeuilleAjoutConge({
               </p>
               <button
                 type="button"
-                aria-label="Un laveur de plus"
+                aria-label={t('Un laveur de plus')}
                 onClick={() => setForm(m => (m ? { ...m, team_members_off: Math.min(teamSize, m.team_members_off + 1) } : m))}
                 disabled={toutes}
                 className="flex h-11 w-11 items-center justify-center rounded-full text-[color:var(--v2-color-encre)] disabled:opacity-30"
@@ -321,7 +325,7 @@ export function FeuilleAjoutConge({
             </div>
             <p className={`mt-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
               {toutes
-                ? 'Toute l’équipe — les créneaux seront bloqués.'
+                ? t('Toute l’équipe — les créneaux seront bloqués.')
                 : `${restants} laveur${restants > 1 ? 's' : ''} restant — capacité réduite.`}
             </p>
           </div>
@@ -348,11 +352,12 @@ export function FeuilleSuppressionConge({
   onDelete: () => void
   onClose: () => void
 }) {
+  const t = useT()
   const equipe = detailEquipe(conge, teamSize, complet)
   return (
     <Feuille
-      titre="Supprimer cette période ?"
-      sousTitre="Les créneaux redeviennent réservables."
+      titre={t('Supprimer cette période ?')}
+      sousTitre={t('Les créneaux redeviennent réservables.')}
       onClose={onClose}
       pied={
         <div className="flex gap-2.5">
@@ -362,7 +367,7 @@ export function FeuilleSuppressionConge({
             className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
             style={PRESSION}
           >
-            Annuler
+            {t('Annuler')}
           </button>
           <button
             type="button"

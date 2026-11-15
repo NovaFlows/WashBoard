@@ -19,6 +19,8 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { chargerCampagnes } from '@/lib/campagnesServeur'
 import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import { ApercuCrm, ApercuCampagnes } from '@/components/dashboard/ApercusVerrouilles'
+import { getLangue } from '@/lib/i18n/serveur'
+import { LOCALES_INTL } from '@/lib/i18n/langues'
 
 // Fenêtre d'événements chargée. Elle borne ce qu'on peut analyser : au-delà,
 // les statistiques de visite n'existent tout simplement pas. Un an couvre les
@@ -29,6 +31,7 @@ const FUNNEL_HISTORY_DAYS = 365
 export default async function CrmPage({ searchParams }: {
   searchParams: Promise<{ onglet?: string }>
 }) {
+  const loc = LOCALES_INTL[await getLangue()]
   const { onglet } = await searchParams
   const ongletActif: OngletCrm = onglet === 'campagnes' ? 'campagnes' : 'apercu'
 
@@ -62,7 +65,7 @@ export default async function CrmPage({ searchParams }: {
     const depuis = inscription && !Number.isNaN(inscription.getTime()) && inscription > debutFenetre
       ? inscription
       : debutFenetre
-    const depuisLabel = depuis.toLocaleDateString('fr-FR', {
+    const depuisLabel = depuis.toLocaleDateString(loc, {
       timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric',
     })
 

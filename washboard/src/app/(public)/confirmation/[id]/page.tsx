@@ -6,10 +6,13 @@ import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 import './recu.css'
 import { adresseAvecLieu } from '@/lib/centreAuto'
+import { getLangue } from '@/lib/i18n/serveur'
+import { LOCALES_INTL } from '@/lib/i18n/langues'
 
 type Props = { params: Promise<{ id: string }> }
 
 export default async function ConfirmationPage({ params }: Props) {
+  const loc = LOCALES_INTL[await getLangue()]
   const { id } = await params
 
   // Le client qui vient de réserver n'est PAS authentifié, or la RLS interdit la
@@ -47,9 +50,9 @@ export default async function ConfirmationPage({ params }: Props) {
   const service = booking.services as { name: string; duration_minutes: number } | null
 
   const date         = new Date(booking.scheduled_at)
-  const formattedDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const time          = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-  const today         = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  const formattedDate = date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const time          = date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
+  const today         = new Date().toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' })
   const ref           = booking.id.slice(0, 8).toUpperCase()
 
   const discount   = Number(booking.smart_discount ?? 0)

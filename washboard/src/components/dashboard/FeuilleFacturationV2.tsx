@@ -7,6 +7,7 @@ import { Bloc, Pied, Puces } from '@/components/dashboard/ReglageAutomatismeV2'
 import { validerFacturation } from '@/lib/profil'
 import { paysDuProfil, reglesPays, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, type RegimeTva, type StatutJuridique } from '@/lib/facture'
 import type { ChampsProfil } from '@/lib/profilApi'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Mon statut et mes factures » — feuille du bas de « Mon profil » (PWA). Ce sont les mentions
 // portées sur les factures envoyées aux clients : tant qu'il en manque une, aucune facture
@@ -71,6 +72,7 @@ function ChoixDeux<T extends string>({ nom, valeur, options, onChange }: {
 }
 
 export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }: Props) {
+  const t = useT()
   const [statut, setStatut] = useState<StatutJuridique>(washer.facture_statut ?? 'ei')
   const [nomLegal, setNomLegal] = useState(washer.facture_nom_legal ?? '')
   const [siret, setSiret] = useState(washer.facture_siret ?? '')
@@ -135,14 +137,14 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
 
   return (
     <Feuille
-      titre="Mon statut et mes factures"
+      titre={t('Mon statut et mes factures')}
       verrou="facturation"
-      sousTitre="Ce qui figure sur les factures envoyées à vos clients."
+      sousTitre={t('Ce qui figure sur les factures envoyées à vos clients.')}
       onClose={onClose}
-      pied={<Pied enCours={enCours} libelle="Enregistrer" onClose={onClose} formulaire="profil-facturation" />}
+      pied={<Pied enCours={enCours} libelle={t('Enregistrer')} onClose={onClose} formulaire="profil-facturation" />}
     >
       <form id="profil-facturation" onSubmit={soumettre} noValidate>
-        <Bloc titre="Votre statut">
+        <Bloc titre={t('Votre statut')}>
           <ChoixDeux
             nom="Statut"
             valeur={statut}
@@ -154,19 +156,19 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
           />
         </Bloc>
 
-        <Bloc titre={societe ? 'Raison sociale' : 'Votre nom légal'}>
+        <Bloc titre={societe ? 'Raison sociale' : t('Votre nom légal')}>
           <input
             type="text"
             value={nomLegal}
             onChange={e => { setNomLegal(e.target.value); setErreur(null) }}
             placeholder={societe ? 'AutoNettoyage' : 'Jean Dupont'}
-            aria-label={societe ? 'Raison sociale' : 'Nom légal'}
+            aria-label={societe ? 'Raison sociale' : t('Nom légal')}
             className={CHAMP}
           />
           <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
             {societe
-              ? 'Le nom déposé de votre société, tel qu’il figure sur votre Kbis.'
-              : 'Votre prénom et nom, tels que déclarés. La mention « EI » est ajoutée toute seule.'}
+              ? t('Le nom déposé de votre société, tel qu’il figure sur votre Kbis.')
+              : t('Votre prénom et nom, tels que déclarés. La mention « EI » est ajoutée toute seule.')}
           </p>
         </Bloc>
 
@@ -181,21 +183,21 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
           />
         </Bloc>
 
-        <Bloc titre="Adresse professionnelle">
+        <Bloc titre={t('Adresse professionnelle')}>
           <input
             type="text"
             value={adresse}
             onChange={e => { setAdresse(e.target.value); setErreur(null) }}
             placeholder={regles.adresseExemple}
-            aria-label="Adresse professionnelle"
+            aria-label={t('Adresse professionnelle')}
             className={CHAMP}
           />
         </Bloc>
 
         {societe && (
           <>
-            <Bloc titre="Forme juridique">
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Forme juridique">
+            <Bloc titre={t('Forme juridique')}>
+              <div className="flex flex-wrap gap-2" role="group" aria-label={t('Forme juridique')}>
                 {regles.formes.map(f => (
                   <button
                     key={f}
@@ -217,30 +219,30 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
                 type="text"
                 value={forme}
                 onChange={e => setForme(e.target.value)}
-                placeholder="Autre forme"
-                aria-label="Forme juridique"
+                placeholder={t('Autre forme')}
+                aria-label={t('Forme juridique')}
                 className={`${CHAMP} mt-2.5`}
               />
             </Bloc>
 
-            <Bloc titre="Capital social">
+            <Bloc titre={t('Capital social')}>
               <input
                 type="text"
                 value={capital}
                 onChange={e => setCapital(e.target.value)}
                 placeholder="1 000 €"
-                aria-label="Capital social"
+                aria-label={t('Capital social')}
                 className={CHAMP}
               />
             </Bloc>
 
-            <Bloc titre="Immatriculation">
+            <Bloc titre={t('Immatriculation')}>
               <input
                 type="text"
                 value={immatriculation}
                 onChange={e => setImmatriculation(e.target.value)}
                 placeholder={regles.immatriculationExemple}
-                aria-label="Immatriculation"
+                aria-label={t('Immatriculation')}
                 className={CHAMP}
               />
             </Bloc>
@@ -249,18 +251,18 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
 
         <Bloc titre="TVA">
           <ChoixDeux
-            nom="Régime de TVA"
+            nom={t('Régime de TVA')}
             valeur={regime}
             onChange={setRegime}
             options={[
-              { valeur: 'franchise', libelle: 'Franchise en base', aide: 'Vous ne facturez pas la TVA (cas le plus courant)' },
-              { valeur: 'assujetti', libelle: 'Assujetti', aide: 'Vous facturez la TVA et la reversez' },
+              { valeur: 'franchise', libelle: 'Franchise en base', aide: t('Vous ne facturez pas la TVA (cas le plus courant)') },
+              { valeur: 'assujetti', libelle: 'Assujetti', aide: t('Vous facturez la TVA et la reversez') },
             ] as const}
           />
           {assujetti && (
             <div className="mt-3 space-y-3">
               <div>
-                <p className={`mb-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Taux appliqué</p>
+                <p className={`mb-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Taux appliqué')}</p>
                 <Puces
                   nom="Taux de TVA"
                   valeurs={tauxProposes}
@@ -270,13 +272,13 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
                 />
               </div>
               <div>
-                <p className={`mb-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Numéro de TVA</p>
+                <p className={`mb-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Numéro de TVA')}</p>
                 <input
                   type="text"
                   value={numeroTva}
                   onChange={e => { setNumeroTva(e.target.value); setErreur(null) }}
                   placeholder={regles.numeroTvaExemple}
-                  aria-label="Numéro de TVA"
+                  aria-label={t('Numéro de TVA')}
                   className={CHAMP}
                 />
               </div>
@@ -284,19 +286,18 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
           )}
         </Bloc>
 
-        <Bloc titre="Prochain numéro de facture">
+        <Bloc titre={t('Prochain numéro de facture')}>
           <input
             type="number"
             inputMode="numeric"
             min={numeroActuel}
             value={prochainNumero}
             onChange={e => { setProchainNumero(e.target.value); setErreur(null) }}
-            aria-label="Prochain numéro de facture"
+            aria-label={t('Prochain numéro de facture')}
             className={CHAMP}
           />
           <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Vos factures sont numérotées sans trou et sans retour en arrière. Vous pouvez seulement
-            avancer, par exemple pour reprendre la suite d’un autre logiciel.
+            {t('Vos factures sont numérotées sans trou et sans retour en arrière. Vous pouvez seulement avancer, par exemple pour reprendre la suite d’un autre logiciel.')}
           </p>
         </Bloc>
 

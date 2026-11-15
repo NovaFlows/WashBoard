@@ -15,6 +15,7 @@ import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
 import type { SupportThread } from '@/lib/support'
 import { BoutonSupprimerSurvol } from '@/components/dashboard/BoutonSupprimerSurvol'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Aide et assistance » — refonte 2026 (PWA en bêta seulement ; le site garde
 // `AssistanceContent`, inchangé). Demande d'Alexandre, 2026-09-26 : « redesign la partie pour
@@ -72,6 +73,7 @@ function LigneFil({
    *  `false` sur téléphone, où ouvrir une conversation couvre la liste. */
   selectionnee?: boolean
 }) {
+  const tr = useT()
   const { refLigne, poignee, styleContenu, clicAbsorbe } = useLigneGlissante({ ouverte, onOuvrir: onOuvrirLigne, onFermer: onFermerLigne })
   const nonLues = fil.nonLuesCount ?? 0
   const resolue = fil.status === 'resolue'
@@ -88,7 +90,7 @@ function LigneFil({
         style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
         <Trash2 size={20} strokeWidth={2} aria-hidden />
-        Supprimer
+        {tr('Supprimer')}
       </button>
       <div {...poignee} style={styleContenu} className={`group relative motion-reduce:!transition-none ${selectionnee ? 'bg-[color:var(--v2-filet)]' : 'bg-[color:var(--v2-color-surface)]'}`}>
         <button
@@ -105,7 +107,7 @@ function LigneFil({
                 style={{ background: resolue ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}
                 aria-hidden
               />
-              <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{resolue ? 'Résolue' : 'Ouverte'}</span>
+              <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{resolue ? tr('Résolue') : 'Ouverte'}</span>
             </span>
           </span>
           {nonLues > 0 && (
@@ -139,6 +141,7 @@ function PanneauConversationV2({ feuille, filOuvert, erreurNouvelle, erreurFil, 
   onEnvoyerNouvelle: (texte: string) => void
   onEnvoyerFil: (texte: string) => void
 }) {
+  const tr = useT()
   const fin = useRef<HTMLDivElement>(null)
   const [texteFil, setTexteFil] = useState('')
   const [texteNouvelle, setTexteNouvelle] = useState('')
@@ -158,7 +161,7 @@ function PanneauConversationV2({ feuille, filOuvert, erreurNouvelle, erreurFil, 
         <div className="shrink-0 border-b border-[color:var(--v2-filet)] px-4 py-3.5">
           <p className={`text-[14.5px] ${corpsFort}`}>{filOuvert.title}</p>
           <p className={`mt-0.5 text-[11px] ${corpsFort}`} style={{ color: filOuvert.status === 'resolue' ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}>
-            {filOuvert.status === 'resolue' ? 'Résolue' : 'Ouverte'}
+            {filOuvert.status === 'resolue' ? tr('Résolue') : 'Ouverte'}
           </p>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -184,15 +187,15 @@ function PanneauConversationV2({ feuille, filOuvert, erreurNouvelle, erreurFil, 
     return (
       <div className="flex h-full min-h-[420px] flex-col">
         <div className="shrink-0 border-b border-[color:var(--v2-filet)] px-4 py-3.5">
-          <p className={`text-[14.5px] ${corpsFort}`}>Nouvelle question</p>
+          <p className={`text-[14.5px] ${corpsFort}`}>{tr('Nouvelle question')}</p>
           <p className={`mt-0.5 text-[11px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Une personne de l’équipe vous répond en moins de 24 h.
+            {tr('Une personne de l’équipe vous répond en moins de 24 h.')}
           </p>
         </div>
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
           <MessageCircle size={28} className="text-[color:var(--v2-color-gris)]" aria-hidden />
           <p className={`text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Décrivez votre souci en quelques mots, on vous répond directement ici.
+            {tr('Décrivez votre souci en quelques mots, on vous répond directement ici.')}
           </p>
         </div>
         <div className="shrink-0 border-t border-[color:var(--v2-filet)] p-4">
@@ -216,7 +219,7 @@ function PanneauConversationV2({ feuille, filOuvert, erreurNouvelle, erreurFil, 
     <div className="flex h-full min-h-[420px] flex-col items-center justify-center gap-2 p-6 text-center">
       <MessageCircle size={28} className="text-[color:var(--v2-color-gris)]" aria-hidden />
       <p className={`text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-        Choisissez une conversation à gauche, ou posez-en une nouvelle.
+        {tr('Choisissez une conversation à gauche, ou posez-en une nouvelle.')}
       </p>
     </div>
   )
@@ -228,6 +231,7 @@ type Props = {
 }
 
 export default function AssistanceV2({ liste }: Props) {
+  const tr = useT()
   const grandEcran = useGrandEcran()
   const searchParams = useSearchParams()
   const filParam = searchParams.get('fil')
@@ -303,20 +307,20 @@ export default function AssistanceV2({ liste }: Props) {
       <CarteListe>
         <Link href="/dashboard/guide" className="flex min-h-[60px] w-full items-center gap-3 py-2.5 text-left">
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className={`text-[15.5px] ${nom}`}>Guide d’utilisation</span>
-            <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Chercher une réponse par vous-même</span>
+            <span className={`text-[15.5px] ${nom}`}>{tr('Guide d’utilisation')}</span>
+            <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Chercher une réponse par vous-même')}</span>
           </span>
           <Chevron />
         </Link>
       </CarteListe>
 
-      <section className="mt-[26px]" aria-label="Vos questions">
+      <section className="mt-[26px]" aria-label={tr('Vos questions')}>
         <div className="flex items-center justify-between gap-3 pb-1.5">
-          <h2 className={`px-0.5 text-[19px] leading-tight ${titre}`}>Vos questions</h2>
+          <h2 className={`px-0.5 text-[19px] leading-tight ${titre}`}>{tr('Vos questions')}</h2>
           <button
             type="button"
             onClick={() => { dismissSendError(); setFeuille({ quoi: 'nouvelle' }) }}
-            aria-label="Poser une nouvelle question"
+            aria-label={tr('Poser une nouvelle question')}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-transform active:scale-[.94] motion-reduce:transition-none"
             style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
           >
@@ -327,7 +331,7 @@ export default function AssistanceV2({ liste }: Props) {
         {loaded && fils.length === 0 ? (
           <div className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
             <p className={`text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              Pas de question pour l’instant. Décrivez votre souci en quelques mots : on vous répond directement ici.
+              {tr('Pas de question pour l’instant. Décrivez votre souci en quelques mots : on vous répond directement ici.')}
             </p>
             <button
               type="button"
@@ -335,7 +339,7 @@ export default function AssistanceV2({ liste }: Props) {
               className={`${BOUTON} mt-3.5 w-full text-white`}
               style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
             >
-              Poser une question
+              {tr('Poser une question')}
             </button>
           </div>
         ) : fils.length > 0 ? (
@@ -367,7 +371,7 @@ export default function AssistanceV2({ liste }: Props) {
   const confirmationSuppression = aSupprimer && (
     <ConfirmationSuppression
       titre={`Supprimer « ${aSupprimer.title} » ?`}
-      texte="Elle disparaît de votre liste. L’équipe garde l’échange, et la conversation revient si elle vous répond."
+      texte={tr('Elle disparaît de votre liste. L’équipe garde l’échange, et la conversation revient si elle vous répond.')}
       enCours={suppressionEnCours}
       erreur={suppressionErreur}
       onConfirmer={confirmerSuppression}
@@ -382,10 +386,10 @@ export default function AssistanceV2({ liste }: Props) {
           <ListeReglagesV2 {...liste} selection="reglages" />
         </div>
         <div className="min-w-0 flex-1 text-[color:var(--v2-color-encre)]">
-          <FilAriane label="Réglages" href="/dashboard/parametres/reglages" />
-          <h1 className={`text-[20px] leading-none ${titre}`}>Aide et assistance</h1>
+          <FilAriane label={tr('Réglages')} href="/dashboard/parametres/reglages" />
+          <h1 className={`text-[20px] leading-none ${titre}`}>{tr('Aide et assistance')}</h1>
           <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Une personne de l’équipe vous répond en moins de 24 h.
+            {tr('Une personne de l’équipe vous répond en moins de 24 h.')}
           </p>
 
           <div className="mt-5 grid items-start gap-5" style={{ gridTemplateColumns: '300px 1fr' }}>
@@ -413,15 +417,15 @@ export default function AssistanceV2({ liste }: Props) {
       <div className="flex items-center gap-1 pb-2">
         <Link
           href="/dashboard/parametres"
-          aria-label="Retour à Plus"
+          aria-label={tr('Retour à Plus')}
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[24px] leading-none ${titre}`}>Aide et assistance</h1>
+          <h1 className={`text-[24px] leading-none ${titre}`}>{tr('Aide et assistance')}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Une personne de l’équipe vous répond en moins de 24 h.
+            {tr('Une personne de l’équipe vous répond en moins de 24 h.')}
           </p>
         </div>
       </div>

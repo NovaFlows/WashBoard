@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { Check } from 'lucide-react'
 import { abonnerConfirmation, fermerConfirmation, lireConfirmation } from '@/lib/confirmationEnvoi'
 import { corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Bien envoyé » : la fenêtre qui confirme un SMS, un message WhatsApp ou un PDF parti depuis
 // l'app (Alexandre, 2026-09-30). Elle se ferme seule après 2,4 s, ou d'un tap n'importe où.
@@ -14,6 +15,7 @@ import { corps, corpsFort, titre } from '@/components/dashboard/FeuilleV2'
 const DUREE_MS = 2400
 
 export default function ConfirmationEnvoiV2() {
+  const t = useT()
   const c = useSyncExternalStore(abonnerConfirmation, lireConfirmation, () => null)
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function ConfirmationEnvoiV2() {
         {c.detail && (
           <p className={`mt-1.5 text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{c.detail}</p>
         )}
-        <span className={`mt-4 text-[12.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>Toucher pour fermer</span>
+        <span className={`mt-4 text-[12.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Toucher pour fermer')}</span>
       </div>
     </div>
   )

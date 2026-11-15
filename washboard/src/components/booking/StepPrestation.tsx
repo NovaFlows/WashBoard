@@ -11,6 +11,7 @@ import { nombreDeVehicules, sansChoixDeType } from '@/lib/prestation'
 import { appliquerPrestations, basculerPrestation, MAX_PRESTATIONS, prestationsChoisies, prestationsCompatibles } from '@/lib/plusieursPrestations'
 import MentionLieuAdapte from './MentionLieuAdapte'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
+import { useT } from '@/components/i18n/I18nProvider'
 
 /** Prix d'une prestation ; barré avec le prix remisé quand une promotion la concerne. */
 function PrixPrestation({ prix, remise }: { prix: number; remise: number }) {
@@ -43,6 +44,7 @@ export default function StepPrestation({ services, categories, category, onCateg
   /** Le véhicule choisi apparaît dans ses couleurs d'origine ; sinon grisé (par défaut). */
   couleurSilhouette?: boolean
 }) {
+  const tr = useT()
   const catalogue = services.filter(s => s.category_id === category)
   const types = [...new Set(catalogue.flatMap(s => s.vehicle_types))]
   const service = services.find(s => s.id === form.service_id)
@@ -90,8 +92,8 @@ export default function StepPrestation({ services, categories, category, onCateg
   }
 
   return <div>
-    <h2 className="wb-booking-title">Que faut-il laver ?</h2>
-    {new Set(services.map(s => s.category_id)).size > 1 && <div className="wb-booking-chips mb-4" aria-label="Catégorie">
+    <h2 className="wb-booking-title">{tr('Que faut-il laver ?')}</h2>
+    {new Set(services.map(s => s.category_id)).size > 1 && <div className="wb-booking-chips mb-4" aria-label={tr('Catégorie')}>
       {[...new Set(services.map(s => s.category_id))].map(id => <button key={id ?? 'other'} type="button" aria-pressed={category === id}
         onClick={() => { onCategory(id); setMixed(false); onChange({ service_id: '', vehicles_detail: [], selected_addons: [], booked_price: 0 }) }}>
         {categories.find(c => c.id === id)?.name ?? 'Autres'}
@@ -101,7 +103,7 @@ export default function StepPrestation({ services, categories, category, onCateg
       <SilhouetteVehicule3D key={typeAffiche} type={typeAffiche} nom={label(typeAffiche)} couleur={couleurSilhouette} />
     </ApparitionVehicule>}
     {/* Le laveur ne demande pas le type (lib/prestation.ts) : rien à choisir, seul le nombre reste. */}
-    {!sansChoixDeType(types) && <div className="wb-booking-chips" aria-label="Type de véhicule">
+    {!sansChoixDeType(types) && <div className="wb-booking-chips" aria-label={tr('Type de véhicule')}>
       {types.map(type => <button key={type} type="button" aria-pressed={activeTypes.includes(type)} onClick={() => {
         setDernier(type)
         if (mixed) count(type, vehicles.filter(v => v.type === type).length ? 0 : 1)
@@ -109,20 +111,20 @@ export default function StepPrestation({ services, categories, category, onCateg
       }}>{label(type)}</button>)}
     </div>}
     {activeTypes.map(type => <div key={type} className="flex items-center justify-between gap-3 my-3">
-      <span className="text-sm font-medium">{mixed ? label(type) : 'Nombre de véhicules'}</span>
+      <span className="text-sm font-medium">{mixed ? label(type) : tr('Nombre de véhicules')}</span>
       <div className="wb-booking-counter">
         <button type="button" aria-label={`Retirer un véhicule (${type})`} disabled={vehicles.length <= 1} onClick={() => count(type, vehicles.filter(v => v.type === type).length - 1)}>−</button>
         <span aria-live="polite">{vehicles.filter(v => v.type === type).length}</span>
         <button type="button" aria-label={`Ajouter un véhicule (${type})`} disabled={vehicles.length >= 99} onClick={() => count(type, vehicles.filter(v => v.type === type).length + 1)}>+</button>
       </div>
     </div>)}
-    {vehicles.length > 1 && !mixed && types.length > 1 && <button type="button" className="text-xs underline mb-3" onClick={() => setMixed(true)}>Mes véhicules sont de types différents</button>}
+    {vehicles.length > 1 && !mixed && types.length > 1 && <button type="button" className="text-xs underline mb-3" onClick={() => setMixed(true)}>{tr('Mes véhicules sont de types différents')}</button>}
     <div className="flex items-baseline justify-between gap-3 mt-6 mb-2">
       <h3 className="font-semibold">{plusieurs ? 'Les prestations' : 'La prestation'}</h3>
       <span className="text-xs text-zinc-500">{sansVehicule
-        ? 'Prix selon votre véhicule'
-        : sansChoixDeType(types) ? <>Prix pour {nombreDeVehicules(vehicles.length)}</>
-        : <>Prix pour {vehicles.length} {activeTypes.length === 1 ? label(activeTypes[0]).toLowerCase() : 'véhicules'}</>}</span>
+        ? tr('Prix selon votre véhicule')
+        : sansChoixDeType(types) ? <>{tr('Prix pour')} {nombreDeVehicules(vehicles.length)}</>
+        : <>{tr('Prix pour')} {vehicles.length} {activeTypes.length === 1 ? label(activeTypes[0]).toLowerCase() : tr('véhicules')}</>}</span>
     </div>
     <div className="divide-y divide-zinc-200/70 dark:divide-zinc-700">
       {visible.map(s => <div key={s.id} className="py-4">
@@ -140,17 +142,17 @@ export default function StepPrestation({ services, categories, category, onCateg
               onChange={() => change(vehicles, [s])} />}
           <span className="flex-1 min-w-0">
             <span className="flex justify-between gap-3 font-semibold text-sm"><span>{s.name}</span>{sansVehicule
-              ? <span className="whitespace-nowrap font-normal text-zinc-500">dès {formatPrice(prixDepart(s))}</span>
+              ? <span className="whitespace-nowrap font-normal text-zinc-500">{tr('dès')} {formatPrice(prixDepart(s))}</span>
               : <PrixPrestation prix={vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0)} remise={remisePromotion(promotion, s.id, vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0))} />}</span>
             {s.description && <span className="block text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">{s.description}</span>}
             <MentionLieuAdapte service={s} auCentre={auCentre} className="mt-1.5" />
-            <span className="block text-xs text-zinc-500 mt-2">Environ {formatDureeFr(s.duration_minutes * Math.max(1, vehicles.length))} sur place</span>
-            {incompatible && <span className="block text-xs text-zinc-500 mt-1">Ne se fait pas avec les prestations déjà choisies.</span>}
+            <span className="block text-xs text-zinc-500 mt-2">{tr('Environ')} {formatDureeFr(s.duration_minutes * Math.max(1, vehicles.length))} {tr('sur place')}</span>
+            {incompatible && <span className="block text-xs text-zinc-500 mt-1">{tr('Ne se fait pas avec les prestations déjà choisies.')}</span>}
           </span>
         </label>
         })()}
         {service?.id === s.id && s.addons.length > 0 && <div className="ml-8 mt-5">
-          <p className="text-xs text-zinc-500 mb-2">En plus, si besoin</p>
+          <p className="text-xs text-zinc-500 mb-2">{tr('En plus, si besoin')}</p>
           {vehicles.map((v, i) => <div key={`${v.type}-${i}`}>
             {vehicles.length > 1 && <p className="text-xs font-semibold mt-3 mb-1">{label(v.type)} {i + 1}</p>}
             {s.addons.map(addon => <label key={addon.id} className="flex items-center gap-2.5 min-h-11 text-sm cursor-pointer">
@@ -163,6 +165,6 @@ export default function StepPrestation({ services, categories, category, onCateg
         </div>}
       </div>)}
     </div>
-    {!visible.length && <p className="text-sm text-zinc-500 py-4">Aucune prestation pour cette sélection. Choisissez un autre type de véhicule.</p>}
+    {!visible.length && <p className="text-sm text-zinc-500 py-4">{tr('Aucune prestation pour cette sélection. Choisissez un autre type de véhicule.')}</p>}
   </div>
 }

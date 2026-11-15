@@ -92,7 +92,7 @@ export default function ListeReglagesV2({
   // « Configuration de votre compte » se met de côté depuis elle-même.
   usePreferenceLocale(CLE_CARTE_CACHEE)
   const notifications = resumeNotifications(etatNotifications, mobile)
-  const planLabel = grandfathered ? 'Accès complet' : PLAN_LABELS[plan]
+  const planLabel = grandfathered ? t('Accès complet') : PLAN_LABELS[plan]
 
   // `grid-cols-1` + `gap-y-6` se comporte exactement comme le `space-y-6` d'avant : c'est le
   // même rythme vertical, mais on peut y ajouter une seconde colonne sans toucher aux sections.
@@ -136,7 +136,7 @@ export default function ListeReglagesV2({
           <Ligne
             label={t('Mon profil')}
             sousLabel={t('Entreprise, factures')}
-            valeur={facturationIncomplete ? 'À compléter' : undefined}
+            valeur={facturationIncomplete ? t('À compléter') : undefined}
             href="/dashboard/parametres/profil"
             selected={selection === 'profil'}
           />

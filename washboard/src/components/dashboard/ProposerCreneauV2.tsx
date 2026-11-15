@@ -11,6 +11,7 @@ import { DISTANCES_KM, adressesClients, clientsProches, libelleKm, positionsClie
 import { cleAdresse } from '@/lib/positionsAdresses'
 import { usePositionsAdresses } from '@/hooks/usePositionsAdresses'
 import type { Booking } from '@/components/dashboard/calendrierTypes'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // « Proposer » un créneau libre de l'agenda v2 à un client, par message —
 // demande d'Alexandre du 2026-09-24. La ligne « X de libre » de
@@ -65,8 +66,8 @@ function prenom(nomComplet: string): string {
  *  d'Alexandre du 2026-09-24 (« Proposer » n'avait pas de comportement défini).
  *  Ne mentionne pas la ville : le rendez-vous qui précède le trou la donne déjà
  *  dans la ligne du créneau (quand l'adresse la fournit), ce serait redondant. */
-function messageCreneau(nomClient: string, debut: Date, fin: Date): string {
-  const jour = debut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+function messageCreneau(nomClient: string, debut: Date, fin: Date, loc = 'fr-FR'): string {
+  const jour = debut.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })
   return `Bonjour ${prenom(nomClient)}, j'ai un créneau libre ${jour} de ${formatHeure(debut)} à ${formatHeure(fin)}. Ça vous intéresse ?`
 }
 
@@ -83,7 +84,7 @@ function smsHref(phone: string, message: string): string {
  *  courant), sinon prochain rendez-vous déjà pris (un prospect en cours), sinon
  *  rien de connu. Aucun nouveau calcul : `derniere`/`prochain` viennent déjà de
  *  `listeClients`. */
-function sousLigneActivite(c: ResumeClient, maintenant: number): string {
+function sousLigneActivite(c: ResumeClient, maintenant: number, loc = 'fr-FR'): string {
   if (c.derniere) {
     const jours = Math.floor((maintenant - new Date(c.derniere.date).getTime()) / 86_400_000)
     if (jours <= 0) return 'Vu aujourd’hui'
@@ -91,7 +92,7 @@ function sousLigneActivite(c: ResumeClient, maintenant: number): string {
     return `Vu il y a ${jours} jours`
   }
   if (c.prochain) {
-    return `Prochain rendez-vous le ${new Date(c.prochain.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+    return `Prochain rendez-vous le ${new Date(c.prochain.date).toLocaleDateString(loc, { day: 'numeric', month: 'long' })}`
   }
   return 'Pas encore de visite'
 }
@@ -135,6 +136,8 @@ export default function ProposerCreneauV2({
   origine: OrigineCreneau
   onClose: () => void
 }) {
+  const loc = useLocale()
+  const t = useT()
   const [maintenant] = useState(() => Date.now())
   const [recherche, setRecherche] = useState('')
   // `null` : « Tous », aucun filtre.
@@ -212,37 +215,37 @@ export default function ProposerCreneauV2({
     [filtre, clientsRecherches],
   )
 
-  const jour = debut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const jour = debut.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })
   const sousTitre = `${jour} · ${formatHeure(debut)}–${formatHeure(fin)}${ville ? ` · ${ville}` : ''}`
 
   return (
-    <Feuille titre="Proposer ce créneau" sousTitre={sousTitre} onClose={onClose}>
-      <label htmlFor="proposer-recherche" className="sr-only">Chercher un client</label>
+    <Feuille titre={t('Proposer ce créneau')} sousTitre={sousTitre} onClose={onClose}>
+      <label htmlFor="proposer-recherche" className="sr-only">{t('Chercher un client')}</label>
       <input
         id="proposer-recherche"
         type="search"
         value={recherche}
         onChange={e => setRecherche(e.target.value)}
-        placeholder="Chercher un client…"
+        placeholder={t('Chercher un client…')}
         className={CHAMP}
       />
 
-      <div role="group" aria-label="Distance du rendez-vous voisin" className="mt-3">
+      <div role="group" aria-label={t('Distance du rendez-vous voisin')} className="mt-3">
         {filtreDisponible ? (
           <>
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
               <button type="button" aria-pressed={distance === null} onClick={() => choisirDistance(null)} className={puce(distance === null)} style={PRESSION}>
-                Tous
+                {t('Tous')}
               </button>
               {DISTANCES_KM.map(km => (
                 <button key={km} type="button" aria-pressed={distance === km} onClick={() => choisirDistance(km)} className={puce(distance === km)} style={PRESSION}>
-                  {km} km
+                  {km} {t('km')}
                 </button>
               ))}
             </div>
             <p aria-live="polite" className={`mt-1.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
               {distance === null
-                ? 'Tous vos clients, sans filtre de distance.'
+                ? t('Tous vos clients, sans filtre de distance.')
                 : origineEnAttente
                   ? `Localisation du rendez-vous ${origine.voisin}…`
                   : !origineEffective
@@ -254,14 +257,14 @@ export default function ProposerCreneauV2({
           </>
         ) : (
           <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            Le rendez-vous voisin n’a pas d’adresse : impossible de filtrer par distance.
+            {t('Le rendez-vous voisin n’a pas d’adresse : impossible de filtrer par distance.')}
           </p>
         )}
       </div>
 
       {clients.length === 0 ? (
         <p className={`py-8 text-center text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          Aucun client enregistré pour l’instant.
+          {t('Aucun client enregistré pour l’instant.')}
         </p>
       ) : lignes.length === 0 ? (
         <p className={`py-8 text-center text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
@@ -272,12 +275,12 @@ export default function ProposerCreneauV2({
       ) : (
         <ul className="mt-1">
           {lignes.map(({ c, km }) => {
-            const message = messageCreneau(c.name, debut, fin)
+            const message = messageCreneau(c.name, debut, fin, loc)
             return (
               <li key={c.email} className="border-t border-[color:var(--v2-filet)] py-3 first:border-t-0 first:pt-1">
                 <p className={`truncate text-[15px] ${corpsFort}`}>{c.name}</p>
                 <p className={`mt-0.5 truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                  {sousLigneActivite(c, maintenant)}{km !== null ? ` · à ${libelleKm(km)}` : ''}
+                  {sousLigneActivite(c, maintenant, loc)}{km !== null ? ` · à ${libelleKm(km)}` : ''}
                 </p>
                 {/* Un client sans téléphone ne peut pas recevoir ce message :
                     montré quand même (le masquer aurait laissé croire qu'il
@@ -289,16 +292,16 @@ export default function ProposerCreneauV2({
                       target="_blank"
                       rel="noopener"
                       aria-label={`Proposer ce créneau à ${c.name} sur WhatsApp`}
-                      onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `Créneau proposé à ${c.name}` })}
+                      onClick={() => annoncerApresRetour({ titre: t('Message envoyé'), detail: `Créneau proposé à ${c.name}` })}
                       className={boutonEnvoi}
                       style={stylePression}
                     >
-                      WhatsApp
+                      {t('WhatsApp')}
                     </a>
                     <a
                       href={smsHref(c.phone, message)}
                       aria-label={`Proposer ce créneau à ${c.name} par SMS`}
-                      onClick={() => annoncerApresRetour({ titre: 'Message envoyé', detail: `Créneau proposé à ${c.name}` })}
+                      onClick={() => annoncerApresRetour({ titre: t('Message envoyé'), detail: `Créneau proposé à ${c.name}` })}
                       className={boutonEnvoi}
                       style={stylePression}
                     >
@@ -307,7 +310,7 @@ export default function ProposerCreneauV2({
                   </div>
                 ) : (
                   <p className={`mt-2 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                    Pas de téléphone — impossible de le lui proposer ainsi.
+                    {t('Pas de téléphone — impossible de le lui proposer ainsi.')}
                   </p>
                 )}
               </li>
@@ -318,9 +321,9 @@ export default function ProposerCreneauV2({
 
       {filtre && filtre.sansPosition > 0 && (
         <p className={`mt-3 border-t border-[color:var(--v2-filet)] pt-3 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          {filtre.sansPosition} client{filtre.sansPosition > 1 ? 's' : ''} sans adresse localisée
-          {filtre.sansPosition > 1 ? ' ne sont pas montrés' : ' n’est pas montré'}. Choisissez « Tous » pour
-          {filtre.sansPosition > 1 ? ' les' : ' le'} voir.
+          {filtre.sansPosition} {t('client')}{filtre.sansPosition > 1 ? 's' : ''} {t('sans adresse localisée')}
+          {filtre.sansPosition > 1 ? t(' ne sont pas montrés') : t(' n’est pas montré')}{t('. Choisissez « Tous » pour')}
+          {filtre.sansPosition > 1 ? t(' les') : ' le'} {t('voir.')}
         </p>
       )}
     </Feuille>

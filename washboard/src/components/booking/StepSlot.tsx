@@ -10,6 +10,7 @@ import { effectiveDuration, addonsDuration, smartDiscountAmount, formatDureeFr }
 import BookingAction from './BookingAction'
 import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
 import { centreParAdresse, centresDe, lieuParDefaut, lieuxPossibles, centreRestreint, type CentreAutoPublic, type Lieu, type LieuRestreint } from '@/lib/centreAuto'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
 type EmbedService = { duration_minutes: number } | { duration_minutes: number }[] | null
@@ -83,6 +84,8 @@ export default function StepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
   hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre: centreComplet = null, lieuPrestation = null, heuresPrestation = null, centresPrestation = null, initialLieu, onNext, accent = '#2563eb', initialAddress = '', active, actionTarget, onDraft,
 }: Props) {
+  const loc = useLocale()
+  const tr = useT()
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
   const [selectedTime,      setSelectedTime]      = useState<string | null>(null)
   // Plusieurs centres : seulement ceux où la prestation se fait.
@@ -151,8 +154,8 @@ export default function StepSlot({
     setZoneMessage(null)
     fetch(`/api/zone/check?washer_id=${washerId}&address=${encodeURIComponent(debouncedAddress.trim())}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(data => { if (!stale) { setZoneAllowed(data.allowed === true); setZoneMessage(data.allowed ? null : 'Adresse hors zone d’intervention') } })
-      .catch(() => { if (!stale) { setZoneAllowed(false); setZoneMessage('Impossible de vérifier cette adresse. Réessayez.') } })
+      .then(data => { if (!stale) { setZoneAllowed(data.allowed === true); setZoneMessage(data.allowed ? null : tr('Adresse hors zone d’intervention')) } })
+      .catch(() => { if (!stale) { setZoneAllowed(false); setZoneMessage(tr('Impossible de vérifier cette adresse. Réessayez.')) } })
       .finally(() => { if (!stale) setFetchingZone(false) })
     return () => { stale = true }
   }, [debouncedAddress, washerId, active, auCentre, retry])
@@ -196,7 +199,7 @@ export default function StepSlot({
         setSmartDiscountType(data.discountType ?? 'fixed')
         setSmartDiscountValue(data.discountValue ?? 0)
       } })
-      .catch(() => { if (!stale) { setSmartWindows([]); setBookingConstraints([]); setRequestError('Impossible de vérifier les horaires. Réessayez.') } })
+      .catch(() => { if (!stale) { setSmartWindows([]); setBookingConstraints([]); setRequestError(tr('Impossible de vérifier les horaires. Réessayez.')) } })
       .finally(() => { if (!stale) setFetchingSmarts(false) })
     return () => { stale = true }
   }, [selectedDate, adresseRdv, washerId, active, retry])
@@ -304,58 +307,58 @@ export default function StepSlot({
     if (estReservable(d)) days.push(new Date(d))
   }
   const hourLabel = (time: string) => time.replace(':00', ' h').replace(':', ' h ')
-  const actionLabel = !addressReady ? 'Indiquez votre adresse' : busy ? 'Vérification en cours…' : !zoneOk ? 'Vérifiez votre adresse' : !selectedDate ? 'Choisissez un jour' : !selectedTime ? 'Choisissez une heure' : canContinue ? 'Continuer' : 'Vérifiez le créneau'
+  const actionLabel = !addressReady ? tr('Indiquez votre adresse') : busy ? tr('Vérification en cours…') : !zoneOk ? tr('Vérifiez votre adresse') : !selectedDate ? tr('Choisissez un jour') : !selectedTime ? tr('Choisissez une heure') : canContinue ? 'Continuer' : tr('Vérifiez le créneau')
   return <div>
-    <h2 className="wb-booking-title">Où et quand ?</h2>
+    <h2 className="wb-booking-title">{tr('Où et quand ?')}</h2>
     {centre && lieuxOk.length > 1 && <div className="mb-4">
-      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Lieu du lavage">
+      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={tr('Lieu du lavage')}>
         {(['domicile', 'centre'] as const).map(l => <button key={l} type="button" role="radio" aria-checked={lieu === l} onClick={() => choisirLieu(l)}
           className={'min-h-12 rounded-xl border text-sm font-semibold ' + (lieu === l ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-300 dark:border-zinc-700')}>
           {l === 'domicile' ? 'À domicile' : 'En centre auto'}
         </button>)}
       </div>
-      {!auCentre && hasTravelFee && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-2">Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.</p>}
+      {!auCentre && hasTravelFee && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-2">{tr('Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.')}</p>}
     </div>}
     {auCentre && centre ? <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-3 py-3">
-      <p className="text-sm font-medium">{centres.length > 1 ? 'Choisissez votre centre auto' : 'Rendez-vous au centre auto'}</p>
-      {centres.length > 1 ? <div className="mt-2 flex flex-col gap-2" role="radiogroup" aria-label="Centre auto">
+      <p className="text-sm font-medium">{centres.length > 1 ? tr('Choisissez votre centre auto') : tr('Rendez-vous au centre auto')}</p>
+      {centres.length > 1 ? <div className="mt-2 flex flex-col gap-2" role="radiogroup" aria-label={tr('Centre auto')}>
         {centres.map(c => <button key={c.adresse} type="button" role="radio" aria-checked={adresseCentre === c.adresse} onClick={() => setCentreAdresse(c.adresse)}
           className={'text-left rounded-xl border px-3 py-2.5 min-h-12 ' + (adresseCentre === c.adresse ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-300 dark:border-zinc-700')}>
           {c.nom && <span className="block text-sm font-semibold">{c.nom}</span>}
           <span className="block text-sm opacity-80">{c.adresse}</span>
         </button>)}
       </div> : <p className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">{adresseCentre}</p>}
-      <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-2">● Pas de frais de déplacement</p>
+      <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-2">{tr('● Pas de frais de déplacement')}</p>
     </div> : <>
-    <label htmlFor="booking-address" className="block text-sm font-medium mb-2">Adresse du lavage</label>
+    <label htmlFor="booking-address" className="block text-sm font-medium mb-2">{tr('Adresse du lavage')}</label>
     <AddressAutocomplete id="booking-address" value={address} onChange={value => { setAddress(value); setSelectedTime(null) }}
-      placeholder="Numéro, rue, ville" allowGeolocation
+      placeholder={tr('Numéro, rue, ville')} allowGeolocation
       className="w-full min-h-12 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-3 bg-white dark:bg-zinc-900 outline-none focus:border-zinc-500" />
-    {!addressReady && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-6 mb-3">Les créneaux et le prix exact s’affichent dès que l’adresse est indiquée : les frais de déplacement en dépendent.</p>}
+    {!addressReady && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-6 mb-3">{tr('Les créneaux et le prix exact s’affichent dès que l’adresse est indiquée : les frais de déplacement en dépendent.')}</p>}
     </>}
     {addressReady && <>
-      {!auCentre && (fetchingZone ? <p role="status" className="text-sm text-zinc-500 mt-3">Vérification de votre adresse…</p>
-        : zoneMessage ? <p role="alert" className="text-sm text-red-600 mt-3">{zoneMessage} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>Réessayer</button></p>
-        : zoneAllowed && <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-3">● Dans le secteur du laveur{fee === 0 ? ' : déplacement compris' : fee !== undefined ? ' · déplacement ' + fee + ' €' : ''}</p>)}
+      {!auCentre && (fetchingZone ? <p role="status" className="text-sm text-zinc-500 mt-3">{tr('Vérification de votre adresse…')}</p>
+        : zoneMessage ? <p role="alert" className="text-sm text-red-600 mt-3">{zoneMessage} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>{tr('Réessayer')}</button></p>
+        : zoneAllowed && <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-3">{tr('● Dans le secteur du laveur')}{fee === 0 ? tr(' : déplacement compris') : fee !== undefined ? tr(' · déplacement ') + fee + ' €' : ''}</p>)}
       {zoneOk && <>
-        <div className="flex items-center justify-between mt-6 mb-2"><h3 className="text-sm font-medium">Jour</h3><button type="button" className="text-xs underline min-h-8" onClick={() => setChoixDateOuvert(v => !v)}>{choixDateOuvert ? 'Fermer le calendrier' : 'Calendrier'}</button></div>
-        <div className="flex gap-2 overflow-x-auto pb-2 snap-x" aria-label="Jours disponibles">
-          {days.map(day => <button key={toDateStr(day)} type="button" aria-label={day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} aria-pressed={!!selectedDate && memeJour(day, selectedDate)}
+        <div className="flex items-center justify-between mt-6 mb-2"><h3 className="text-sm font-medium">{tr('Jour')}</h3><button type="button" className="text-xs underline min-h-8" onClick={() => setChoixDateOuvert(v => !v)}>{choixDateOuvert ? tr('Fermer le calendrier') : 'Calendrier'}</button></div>
+        <div className="flex gap-2 overflow-x-auto pb-2 snap-x" aria-label={tr('Jours disponibles')}>
+          {days.map(day => <button key={toDateStr(day)} type="button" aria-label={day.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} aria-pressed={!!selectedDate && memeJour(day, selectedDate)}
             onClick={() => choisirJour(day)} className={'shrink-0 snap-start w-[58px] min-h-[64px] rounded-xl border text-center ' + (selectedDate && memeJour(day, selectedDate) ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-300 dark:border-zinc-700')}>
-            <span className="block text-xs">{day.toLocaleDateString('fr-FR', { weekday: 'short' })}</span><span className="block text-xl leading-tight font-bold">{day.getDate()}</span><span className="block text-[10px] opacity-60">{MONTH_NAMES[day.getMonth()]}</span>
+            <span className="block text-xs">{day.toLocaleDateString(loc, { weekday: 'short' })}</span><span className="block text-xl leading-tight font-bold">{day.getDate()}</span><span className="block text-[10px] opacity-60">{MONTH_NAMES[day.getMonth()]}</span>
           </button>)}
         </div>
-        {!days.length && <p className="text-sm text-zinc-500">Aucun jour disponible pour le moment.</p>}
+        {!days.length && <p className="text-sm text-zinc-500">{tr('Aucun jour disponible pour le moment.')}</p>}
         {choixDateOuvert && <div className="my-3 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl">
-          <div className="flex justify-between items-center mb-2"><button type="button" aria-label="Mois précédent" disabled={!moisPrecedentPossible} onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} className="w-11 h-11 disabled:opacity-30">←</button>
-            <span className="text-sm font-semibold">{MOIS_LONGS[moisAffiche.getMonth()]} {moisAffiche.getFullYear()}</span><button type="button" aria-label="Mois suivant" disabled={!moisSuivantPossible} onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="w-11 h-11 disabled:opacity-30">→</button></div>
+          <div className="flex justify-between items-center mb-2"><button type="button" aria-label={tr('Mois précédent')} disabled={!moisPrecedentPossible} onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} className="w-11 h-11 disabled:opacity-30">←</button>
+            <span className="text-sm font-semibold">{MOIS_LONGS[moisAffiche.getMonth()]} {moisAffiche.getFullYear()}</span><button type="button" aria-label={tr('Mois suivant')} disabled={!moisSuivantPossible} onClick={() => setMoisAffiche(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="w-11 h-11 disabled:opacity-30">→</button></div>
           <div className="grid grid-cols-7 gap-1">{ENTETES_SEMAINE.map((d, i) => <span key={i} className="text-center text-xs text-zinc-500">{d}</span>)}
             {grilleDuMois(moisAffiche).map((d, i) => d ? <button key={i} type="button" disabled={!estReservable(d)} onClick={() => choisirJour(d)} className="aspect-square rounded-lg text-sm disabled:opacity-25 hover:bg-zinc-100 dark:hover:bg-zinc-800">{d.getDate()}</button> : <span key={i} />)}
           </div>
         </div>}
         {selectedDate && <div className="mt-5">
-          <h3 className="text-sm font-medium mb-3">Heure d’arrivée</h3>
-          {fetchingSmarts ? <p role="status" className="text-sm text-zinc-500">Recherche des créneaux disponibles…</p> : requestError ? <p role="alert" className="text-sm text-red-600">{requestError} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>Réessayer</button></p> : <>
+          <h3 className="text-sm font-medium mb-3">{tr('Heure d’arrivée')}</h3>
+          {fetchingSmarts ? <p role="status" className="text-sm text-zinc-500">{tr('Recherche des créneaux disponibles…')}</p> : requestError ? <p role="alert" className="text-sm text-red-600">{requestError} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>{tr('Réessayer')}</button></p> : <>
             <div className="grid grid-cols-3 gap-2">{shownSlots.map(slot => {
               const smart = isSlotInWindows(slot, selectedDate, fenetresAvantageuses)
               const amount = smart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
@@ -364,10 +367,10 @@ export default function StepSlot({
                 <span className="block">{hourLabel(slot)}</span>{amount > 0 && <span className={'block text-[11px] ' + (chosen ? '' : 'text-emerald-700 dark:text-emerald-400')}>−{amount} €</span>}
               </button>
             })}</div>
-            {slotsForDay.length > visibleSlots && <button type="button" onClick={() => setVisibleSlots(v => v + 12)} className="w-full text-sm underline min-h-11 mt-2">Voir plus d’horaires</button>}
-            {!slotsForDay.length && <p className="text-sm text-zinc-500">{dureeTropLongue ? 'La prestation de ' + formatDureeFr(serviceDuration) + ' ne tient pas dans les horaires de ce jour. Choisissez une autre date.' : 'Aucun créneau disponible ce jour. Choisissez une autre date.'}</p>}
-            {smartSlotsInDay.length > 0 && smartDiscountValue > 0 && <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400 mt-4"><span className="text-emerald-700 dark:text-emerald-400 font-semibold">−{smartDiscountType === 'percent' ? smartDiscountValue + ' %' : smartDiscountValue + ' €'}</span> : ce jour-là, le laveur a déjà un rendez-vous tout près de chez vous. Moins de route pour lui, moins cher pour vous.</p>}
-            {hasTravelFee && selectedTime && !fetchingTravelFee && fee === undefined && <p role="alert" className="text-sm text-red-600 mt-3">Impossible de calculer le déplacement. <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>Réessayer</button></p>}
+            {slotsForDay.length > visibleSlots && <button type="button" onClick={() => setVisibleSlots(v => v + 12)} className="w-full text-sm underline min-h-11 mt-2">{tr('Voir plus d’horaires')}</button>}
+            {!slotsForDay.length && <p className="text-sm text-zinc-500">{dureeTropLongue ? 'La prestation de ' + formatDureeFr(serviceDuration) + tr(' ne tient pas dans les horaires de ce jour. Choisissez une autre date.') : tr('Aucun créneau disponible ce jour. Choisissez une autre date.')}</p>}
+            {smartSlotsInDay.length > 0 && smartDiscountValue > 0 && <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400 mt-4"><span className="text-emerald-700 dark:text-emerald-400 font-semibold">−{smartDiscountType === 'percent' ? smartDiscountValue + ' %' : smartDiscountValue + ' €'}</span> {tr(': ce jour-là, le laveur a déjà un rendez-vous tout près de chez vous. Moins de route pour lui, moins cher pour vous.')}</p>}
+            {hasTravelFee && selectedTime && !fetchingTravelFee && fee === undefined && <p role="alert" className="text-sm text-red-600 mt-3">{tr('Impossible de calculer le déplacement.')} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>{tr('Réessayer')}</button></p>}
           </>}
         </div>}
       </>}

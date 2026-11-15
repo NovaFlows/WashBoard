@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from 'recharts'
 import type { PointSource } from '@/lib/graphiquesCrm'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Sources de trafic : volume × conversion.
 //
@@ -24,15 +25,16 @@ const nombre = new Intl.NumberFormat('fr-FR')
 const pct = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 })
 
 function InfoBulle({ active, payload }: { active?: boolean; payload?: { payload: PointSource }[] }) {
+  const t = useT()
   if (!active || !payload?.length) return null
   const p = payload[0].payload
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-sm text-xs">
       <p className="font-semibold text-slate-900 dark:text-slate-100">{p.label}</p>
       <p className="text-slate-600 dark:text-slate-300 tabular-nums">
-        {nombre.format(p.visiteurs)} visiteurs · {nombre.format(p.conversions)} réservation{p.conversions > 1 ? 's' : ''}
+        {nombre.format(p.visiteurs)} {t('visiteurs ·')} {nombre.format(p.conversions)} {t('réservation')}{p.conversions > 1 ? 's' : ''}
       </p>
-      <p className="text-slate-500 dark:text-slate-400 tabular-nums">Conversion : {pct.format(p.taux)} %</p>
+      <p className="text-slate-500 dark:text-slate-400 tabular-nums">{t('Conversion :')} {pct.format(p.taux)} %</p>
     </div>
   )
 }
@@ -63,6 +65,7 @@ export default function SourcesNuage({ sources, visiteurs, conversions, accent =
   accent?: string
   periodLabel: string
 }) {
+  const t = useT()
   // Un réseau à deux visiteurs n'a pas de taux de conversion qui veuille dire
   // quelque chose : un seul client en ferait « 50 % ».
   const points = sources.filter(s => s.visiteurs >= SEUIL_VISITEURS)
@@ -88,19 +91,19 @@ export default function SourcesNuage({ sources, visiteurs, conversions, accent =
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Sources : volume et conversion</h3>
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('Sources : volume et conversion')}</h3>
         <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">{periodLabel}</span>
       </div>
       <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-3">
-        À droite, les sources qui amènent du monde ; en haut, celles dont les visiteurs réservent.
+        {t('À droite, les sources qui amènent du monde ; en haut, celles dont les visiteurs réservent.')}
       </p>
 
       {points.length < 2 ? (
         <p className="text-sm text-slate-400 dark:text-slate-500 py-8 text-center leading-relaxed">
-          Il faut au moins deux sources d&apos;au moins {SEUIL_VISITEURS} visiteurs pour les comparer.
+          {t('Il faut au moins deux sources d’au moins')} {SEUIL_VISITEURS} {t('visiteurs pour les comparer.')}
           {/* Ne pas écrire ici le titre de l'encart des liens : les tests de bout
               en bout le cherchent comme texte unique sur la page. */}
-          <br />Utilisez les liens de partage en bas de page pour que chaque source soit reconnue.
+          <br />{t('Utilisez les liens de partage en bas de page pour que chaque source soit reconnue.')}
         </p>
       ) : (
         <>
@@ -125,10 +128,10 @@ export default function SourcesNuage({ sources, visiteurs, conversions, accent =
           </div>
           <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <span className="inline-block w-4 border-t border-dashed border-slate-500" aria-hidden />
-            Conversion moyenne : {pct.format(moyenne)} %
+            {t('Conversion moyenne :')} {pct.format(moyenne)} %
           </p>
           <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-            Visiteurs en échelle logarithmique · sources de moins de {SEUIL_VISITEURS} visiteurs non affichées
+            {t('Visiteurs en échelle logarithmique · sources de moins de')} {SEUIL_VISITEURS} {t('visiteurs non affichées')}
           </p>
         </>
       )}

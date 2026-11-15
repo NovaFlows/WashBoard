@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { corps, corpsFort, titre, PRESSION } from '@/components/dashboard/FeuilleV2'
 import { Constat, nom } from '@/components/dashboard/PrestationsUiV2'
 import { resumeHoraires } from '@/lib/horaires'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Quand travaillez-vous ? » — état vide de « Horaires » (aucune plage : aucun
 // créneau réservable sur la page de réservation).
@@ -42,6 +43,7 @@ type Props = {
 }
 
 export default function HorairesEtatVideV2({ onModele, onAutre }: Props) {
+  const t = useT()
   const [enCours, setEnCours] = useState<number | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const verrou = useRef(false)
@@ -64,9 +66,9 @@ export default function HorairesEtatVideV2({ onModele, onAutre }: Props) {
 
   return (
     <div className="pt-5">
-      <h2 className={`text-[26px] leading-tight ${titre}`}>Quand travaillez-vous ?</h2>
+      <h2 className={`text-[26px] leading-tight ${titre}`}>{t('Quand travaillez-vous ?')}</h2>
       <p className={`mt-2 text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-        Un tap règle votre semaine. Vous pourrez l’ajuster ensuite.
+        {t('Un tap règle votre semaine. Vous pourrez l’ajuster ensuite.')}
       </p>
 
       <div className="mt-6 space-y-3">
@@ -79,8 +81,8 @@ export default function HorairesEtatVideV2({ onModele, onAutre }: Props) {
             className={`${carte} flex min-h-[80px] flex-col justify-center gap-1 py-4`}
             style={PRESSION}
           >
-            <span className={`text-[20px] ${nom}`}>{enCours === i ? 'Création…' : libelle(m)}</span>
-            <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{m.jours.length} jours par semaine</span>
+            <span className={`text-[20px] ${nom}`}>{enCours === i ? t('Création…') : libelle(m)}</span>
+            <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{m.jours.length} {t('jours par semaine')}</span>
           </button>
         ))}
         <button
@@ -90,8 +92,8 @@ export default function HorairesEtatVideV2({ onModele, onAutre }: Props) {
           className={`${carte} flex min-h-[64px] items-center py-3`}
           style={PRESSION}
         >
-          <span className={`text-[16px] ${corpsFort}`}>Je règle moi-même</span>
-          <span className={`ml-auto text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>jour par jour</span>
+          <span className={`text-[16px] ${corpsFort}`}>{t('Je règle moi-même')}</span>
+          <span className={`ml-auto text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('jour par jour')}</span>
         </button>
       </div>
 

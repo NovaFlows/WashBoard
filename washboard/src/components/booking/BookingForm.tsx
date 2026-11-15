@@ -21,6 +21,7 @@ import StepSlot from './StepSlot'
 import ContactDetails from './ContactDetails'
 import StepConfirmation from './StepConfirmation'
 import type { CentreAutoPublic } from '@/lib/centreAuto'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Trois cartes, options intégrées et une seule action dans la barre fixe.
 // Les étapes restent montées quand elles sont repliées pour préserver la saisie.
@@ -131,6 +132,7 @@ export type FormState = Partial<BookingFormData>
 type Section = 1 | 2 | 3
 
 export default function BookingForm({ washer, services, categories, availabilities, disponibilites, accent = '#2563eb', whatsappHref = null, promotion = null, acompte = null, fideliteProposee = false }: Props) {
+  const t = useT()
   const [section, setSection] = useState<Section>(1)
   const [actionTarget, setActionTarget] = useState<HTMLDivElement | null>(null)
   const priceDialog = useRef<HTMLDialogElement>(null)
@@ -238,7 +240,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
         body: JSON.stringify(payload),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la réservation')
+      if (!res.ok) throw new Error(json.error ?? t('Erreur lors de la réservation'))
       updateForm(contactData)
       setBookingId(json.data.id)
       // L'acompte vient de la RÉPONSE du serveur (montant recalculé), jamais du formulaire.
@@ -263,7 +265,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
         value: Number.isFinite(montant) && montant > 0 ? montant : undefined,
       })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Une erreur est survenue')
+      setError(e instanceof Error ? e.message : t('Une erreur est survenue'))
     } finally {
       setLoading(false)
     }
@@ -274,7 +276,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
   // ── Barre de prix persistante (fidèle à la maquette) ──────────────────────
   const barLabel = !form.service_id
     ? 'À partir de'
-    : (form.address && form.travel_fee !== undefined ? 'Total, à régler sur place' : 'Total estimé, à régler sur place')
+    : (form.address && form.travel_fee !== undefined ? t('Total, à régler sur place') : t('Total estimé, à régler sur place'))
   // Même calcul que le serveur (api/bookings) : la remise porte sur la prestation et ses
   // options, jamais sur le déplacement. Sans prestation choisie, « À partir de » reste le
   // prix plein : la remise peut ne pas concerner la moins chère.
@@ -328,10 +330,9 @@ export default function BookingForm({ washer, services, categories, availabiliti
               non, est un client perdu pour le laveur. */}
           {estProposition && (
             <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3 text-sm">
-              <p className="font-bold">Aperçu — cette page n&apos;est pas encore active</p>
+              <p className="font-bold">{t('Aperçu — cette page n’est pas encore active')}</p>
               <p className="text-xs mt-0.5 leading-relaxed">
-                Elle montre à quoi ressemblerait la page de réservation de {washer.name}.
-                Aucune réservation ne peut être enregistrée pour l&apos;instant.
+                {t('Elle montre à quoi ressemblerait la page de réservation de')} {washer.name}{t('. Aucune réservation ne peut être enregistrée pour l’instant.')}
               </p>
             </div>
           )}
@@ -339,7 +340,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
           <SectionCard
             id="wb-section-1"
             numero={1}
-            titre="Prestation"
+            titre={t('Prestation')}
             etat={section === 1 ? 'open' : prestationComplete ? 'done' : 'locked'}
             resume={resumePrestation(form, services)}
             onModifier={() => reouvrir(1)}
@@ -349,14 +350,14 @@ export default function BookingForm({ washer, services, categories, availabiliti
               plusieurs={washer.plusieurs_prestations === true} couleurSilhouette={washer.silhouettes_couleur === true} />
             <BookingAction target={section === 1 ? actionTarget : null} accent={accent} disabled={!form.service_id || !form.vehicle_count}
               onClick={() => { setPrestationComplete(true); reouvrir(2) }}>
-              {form.service_id ? 'Choisir le créneau' : 'Choisissez une prestation'}
+              {form.service_id ? t('Choisir le créneau') : t('Choisissez une prestation')}
             </BookingAction>
           </SectionCard>
 
           <SectionCard
             id="wb-section-2"
             numero={2}
-            titre="Où et quand"
+            titre={t('Où et quand')}
             etat={section === 2 ? 'open' : complete2 ? 'done' : 'locked'}
             resume={resumeCreneau(form)}
             onModifier={() => reouvrir(2)}
@@ -372,11 +373,10 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 {disposEnEchec ? (
                   <>
                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      Impossible d&apos;afficher les disponibilités
+                      {t('Impossible d’afficher les disponibilités')}
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-5">
-                      Vérifiez votre connexion : nous préférons ne rien proposer plutôt
-                      qu&apos;un horaire déjà pris.
+                      {t('Vérifiez votre connexion : nous préférons ne rien proposer plutôt qu’un horaire déjà pris.')}
                     </p>
                     <div className="flex items-center justify-center gap-3">
                       <button
@@ -384,7 +384,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                         onClick={() => setSection(1)}
                         className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                       >
-                        Retour
+                        {t('Retour')}
                       </button>
                       <button
                         type="button"
@@ -392,13 +392,13 @@ export default function BookingForm({ washer, services, categories, availabiliti
                         className="px-4 py-2 rounded-lg text-sm font-bold text-white"
                         style={{ backgroundColor: accent }}
                       >
-                        Réessayer
+                        {t('Réessayer')}
                       </button>
                     </div>
                   </>
                 ) : (
                   <p className="text-sm text-slate-500 dark:text-slate-400" role="status">
-                    Recherche des créneaux disponibles…
+                    {t('Recherche des créneaux disponibles…')}
                   </p>
                 )}
               </div>
@@ -440,7 +440,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
           <SectionCard
             id="wb-section-3"
             numero={3}
-            titre="Vos coordonnées"
+            titre={t('Vos coordonnées')}
             etat={section === 3 ? 'open' : 'locked'}
             resume=""
             onModifier={() => reouvrir(3)}
@@ -459,26 +459,24 @@ export default function BookingForm({ washer, services, categories, availabiliti
                   </svg>
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-                  Voilà à quoi ressemblerait votre page
+                  {t('Voilà à quoi ressemblerait votre page')}
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm mx-auto mb-6">
-                  Vos prestations, vos tarifs et vos horaires y sont déjà. Activez-la
-                  pour que vos clients puissent réserver et que les rendez-vous
-                  tombent dans votre agenda.
+                  {t('Vos prestations, vos tarifs et vos horaires y sont déjà. Activez-la pour que vos clients puissent réserver et que les rendez-vous tombent dans votre agenda.')}
                 </p>
                 <a
                   href="/signup"
                   className="inline-block px-6 py-3 text-white text-sm font-semibold rounded-xl transition-opacity hover:opacity-90"
                   style={{ backgroundColor: accent }}
                 >
-                  Activer ma page — 1 mois offert
+                  {t('Activer ma page — 1 mois offert')}
                 </a>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">Sans carte bancaire</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">{t('Sans carte bancaire')}</p>
                 <button
                   onClick={() => setSection(2)}
                   className="block mx-auto mt-5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 >
-                  ← Revenir aux créneaux
+                  {t('← Revenir aux créneaux')}
                 </button>
               </div>
             ) : (
@@ -510,9 +508,9 @@ export default function BookingForm({ washer, services, categories, availabiliti
               rel="noopener noreferrer"
               className="text-sm leading-relaxed text-zinc-900 dark:text-zinc-200 py-2 px-1"
             >
-              Une question avant de réserver ?{' '}
+              {t('Une question avant de réserver ?')}{' '}
               <span className="font-semibold text-slate-700 dark:text-slate-200 underline underline-offset-2">
-                Écrire sur WhatsApp
+                {t('Écrire sur WhatsApp')}
               </span>
             </a>
           )}
@@ -522,28 +520,28 @@ export default function BookingForm({ washer, services, categories, availabiliti
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div aria-live="polite"><p className="text-xs text-zinc-500 dark:text-zinc-400">{barLabel}</p>
                   <p className="text-[28px] leading-tight font-bold tracking-tight tabular-nums">{formatPrice(barAmount)}</p></div>
-                {form.service_id && <button type="button" className="text-xs underline underline-offset-2 min-h-11" onClick={() => priceDialog.current?.showModal()}>Détail du prix</button>}
+                {form.service_id && <button type="button" className="text-xs underline underline-offset-2 min-h-11" onClick={() => priceDialog.current?.showModal()}>{t('Détail du prix')}</button>}
               </div>
               <div ref={setActionTarget} />
-              {section === 2 && !dispos && <button type="button" disabled className="wb-booking-continue">Chargement des disponibilités…</button>}
+              {section === 2 && !dispos && <button type="button" disabled className="wb-booking-continue">{t('Chargement des disponibilités…')}</button>}
             </div>
           )}
           <dialog ref={priceDialog} className="wb-booking-price-dialog" aria-labelledby="booking-price-title" onClick={e => { if (e.target === e.currentTarget) priceDialog.current?.close() }}>
-            <div className="flex items-center justify-between mb-5"><h2 id="booking-price-title" className="text-lg font-bold">Détail du prix</h2>
-              <button type="button" aria-label="Fermer le détail du prix" onClick={() => priceDialog.current?.close()} className="w-11 h-11 text-xl">×</button></div>
+            <div className="flex items-center justify-between mb-5"><h2 id="booking-price-title" className="text-lg font-bold">{t('Détail du prix')}</h2>
+              <button type="button" aria-label={t('Fermer le détail du prix')} onClick={() => priceDialog.current?.close()} className="w-11 h-11 text-xl">×</button></div>
             <div className="space-y-3 text-sm">
               {(form.vehicles_detail ?? []).map((v, i) => <div key={i}>
                 <div className="flex justify-between gap-3"><span>{selectedService?.name} · {v.label ?? v.type}</span><span>{formatPrice(v.unit_price * v.count)}</span></div>
                 {(v.addons ?? []).map(a => <div key={a.id} className="flex justify-between gap-3 text-zinc-500 mt-2"><span>{a.label}</span><span>+{formatPrice(a.price)}</span></div>)}
               </div>)}
               {form.lieu === 'centre'
-                ? <div className="flex justify-between gap-3"><span>En centre auto</span><span>Pas de déplacement</span></div>
-                : <div className="flex justify-between gap-3"><span>Déplacement</span><span>{form.travel_fee !== undefined ? formatPrice(form.travel_fee) : 'À confirmer avec l’adresse'}</span></div>}
-              {!!form.smart_discount && <div className="flex justify-between text-emerald-700"><span>Créneau avantageux</span><span>−{formatPrice(form.smart_discount)}</span></div>}
-              {remise > 0 && promotion && <div className="flex justify-between text-emerald-700"><span>Promotion {promotion.nom}</span><span>−{formatPrice(remise)}</span></div>}
-              {remiseFidelite > 0 && <div className="flex justify-between text-emerald-700"><span>Récompense fidélité</span><span>−{formatPrice(remiseFidelite)}</span></div>}
-              <div className="flex justify-between border-t border-zinc-200 pt-4 text-base font-bold"><span>Total estimé</span><span>{formatPrice(barAmount ?? 0)}</span></div>
-              <p className="text-xs text-zinc-500">À régler sur place, après la prestation.</p>
+                ? <div className="flex justify-between gap-3"><span>{t('En centre auto')}</span><span>{t('Pas de déplacement')}</span></div>
+                : <div className="flex justify-between gap-3"><span>{t('Déplacement')}</span><span>{form.travel_fee !== undefined ? formatPrice(form.travel_fee) : t('À confirmer avec l’adresse')}</span></div>}
+              {!!form.smart_discount && <div className="flex justify-between text-emerald-700"><span>{t('Créneau avantageux')}</span><span>−{formatPrice(form.smart_discount)}</span></div>}
+              {remise > 0 && promotion && <div className="flex justify-between text-emerald-700"><span>{t('Promotion')} {promotion.nom}</span><span>−{formatPrice(remise)}</span></div>}
+              {remiseFidelite > 0 && <div className="flex justify-between text-emerald-700"><span>{t('Récompense fidélité')}</span><span>−{formatPrice(remiseFidelite)}</span></div>}
+              <div className="flex justify-between border-t border-zinc-200 pt-4 text-base font-bold"><span>{t('Total estimé')}</span><span>{formatPrice(barAmount ?? 0)}</span></div>
+              <p className="text-xs text-zinc-500">{t('À régler sur place, après la prestation.')}</p>
             </div>
           </dialog>
         </>
@@ -584,6 +582,7 @@ function SectionCard({
   onModifier: () => void
   children: React.ReactNode
 }) {
+  const t = useT()
   return <section id={id} tabIndex={-1} aria-label={titre} className={
     'scroll-mt-4 outline-none rounded-2xl ' + (etat === 'locked'
       ? 'border border-dashed border-zinc-300 dark:border-zinc-700'
@@ -595,7 +594,7 @@ function SectionCard({
       </span>
       <div className="min-w-0 flex-1"><p className={etat === 'done' ? 'text-xs text-zinc-600 dark:text-zinc-400' : 'text-sm text-zinc-600 dark:text-zinc-400 font-medium'}>{titre}</p>
         {etat === 'done' && <p className="text-sm truncate">{resume}</p>}</div>
-      {etat === 'done' && <button type="button" aria-label={`Modifier : ${titre}`} aria-expanded={false} aria-controls={id + '-content'} onClick={onModifier} className="text-sm underline underline-offset-2 min-h-11">Modifier</button>}
+      {etat === 'done' && <button type="button" aria-label={`Modifier : ${titre}`} aria-expanded={false} aria-controls={id + '-content'} onClick={onModifier} className="text-sm underline underline-offset-2 min-h-11">{t('Modifier')}</button>}
     </div>}
     <div id={id + '-content'} hidden={etat !== 'open'} className="p-4 sm:p-5">{children}</div>
   </section>

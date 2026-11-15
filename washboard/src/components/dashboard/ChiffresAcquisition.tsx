@@ -9,6 +9,7 @@ import { deplacer, formaterJour, libelleComparaison, plageDe, type PeriodeChiffr
 import { couvertureEvenements, evenementsDansLaPeriode, serieVisites } from '@/lib/chiffresAcquisition'
 import GraphiqueBarres, { type PointBarre } from '@/components/dashboard/GraphiqueBarres'
 import type { ChiffresEvent } from '@/components/dashboard/ChiffresV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Onglet « Acquisition » de Chiffres (refonte 2026, passe 5, repris au
 // 2026-09-24) — reprend les statistiques de visite de l'ancien CRM
@@ -67,6 +68,7 @@ export default function ChiffresAcquisition({
    *  maquette (260px héros + détail à gauche, graphique + entonnoir + sources à droite). */
   grandEcran?: boolean
 }) {
+  const t = useT()
   const couverture = couvertureEvenements(periode, evenementsDepuis ?? null)
   const plage = plageDe(periode)
 
@@ -125,7 +127,7 @@ export default function ChiffresAcquisition({
   const meilleur = points.filter(p => !p.futur).reduce<PointBarre | null>((m, p) => (!m || p.valeur > m.valeur ? p : m), null)
   const resume = `${titreVisites(periode.type)}, ${plage.label}. ${nombre.format(stats.visitorCount)} visiteur${stats.visitorCount > 1 ? 's' : ''}.`
     + (meilleur && meilleur.valeur > 0 ? ` Créneau le plus fréquenté : ${meilleur.libelleLong}, ${nombre.format(meilleur.valeur)}.` : '')
-    + ' Flèches gauche et droite pour parcourir les barres.'
+    + t(' Flèches gauche et droite pour parcourir les barres.')
 
   const maxReferrer = stats.referrerBreakdown[0]?.sessions ?? 1
 
@@ -138,14 +140,14 @@ export default function ChiffresAcquisition({
 
   const blocHero = (
     <div className="flex flex-col gap-[3px]">
-      <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Visiteurs sur votre page</span>
+      <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Visiteurs sur votre page')}</span>
       <span className={`${grandEcran ? 'text-[50px]' : 'text-[44px] sm:text-[52px]'} leading-none ${hero}`}>{aucune ? '—' : nombre.format(stats.visitorCount)}</span>
       {aucune ? (
         <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          Pas de données avant le {formaterJour(couverture.depuisJour!)}.
+          {t('Pas de données avant le')} {formaterJour(couverture.depuisJour!)}.
         </span>
       ) : stats.visitorCount === 0 ? (
-        <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Aucune visite sur cette période</span>
+        <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Aucune visite sur cette période')}</span>
       ) : (
         <>
           {stats.comparable && pct !== null && (
@@ -154,13 +156,13 @@ export default function ChiffresAcquisition({
             </span>
           )}
           <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {nombre.format(stats.conversionCount)} réservation{stats.conversionCount > 1 ? 's' : ''}, soit {formatConversionRate(stats.conversionCount, stats.visitorCount)} des visiteurs
+            {nombre.format(stats.conversionCount)} {t('réservation')}{stats.conversionCount > 1 ? 's' : ''}{t(', soit')} {formatConversionRate(stats.conversionCount, stats.visitorCount)} {t('des visiteurs')}
           </span>
         </>
       )}
       {couverture.etat === 'partielle' && (
         <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)] mt-1`}>
-          Les visites avant le {formaterJour(couverture.depuisJour!)} ne sont pas comptées.
+          {t('Les visites avant le')} {formaterJour(couverture.depuisJour!)} {t('ne sont pas comptées.')}
         </span>
       )}
     </div>
@@ -190,7 +192,7 @@ export default function ChiffresAcquisition({
 
   const blocFunnelArret = stats.visitorCount > 0 && (
     <div>
-      <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>Où ils s’arrêtent</p>
+      <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>{t('Où ils s’arrêtent')}</p>
       <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 pt-2 pb-3">
         {stats.funnelStats.map((s, i) => (
           <div key={s.step} className="flex items-center gap-[11px] py-[7px]">
@@ -206,8 +208,8 @@ export default function ChiffresAcquisition({
         ))}
         {stats.pire && stats.pireAvant && stats.pire.pctDropFromPrevious > 0 && (
           <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed pt-1.5`}>
-            Le plus gros décrochage est entre {ETAPE_COURTE[stats.pireAvant.step].toLowerCase()} et {ETAPE_COURTE[stats.pire.step].toLowerCase()} :{' '}
-            {stats.pire.pctDropFromPrevious} % des visiteurs abandonnent là.
+            {t('Le plus gros décrochage est entre')} {ETAPE_COURTE[stats.pireAvant.step].toLowerCase()} {t('et')} {ETAPE_COURTE[stats.pire.step].toLowerCase()} :{' '}
+            {stats.pire.pctDropFromPrevious} {t('% des visiteurs abandonnent là.')}
           </p>
         )}
       </div>
@@ -216,7 +218,7 @@ export default function ChiffresAcquisition({
 
   const blocFunnelSources = stats.visitorCount > 0 && stats.referrerBreakdown.length > 0 && (
     <div>
-      <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>D’où ils viennent</p>
+      <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] px-0.5 pb-2`}>{t('D’où ils viennent')}</p>
       <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 py-2.5">
         {stats.referrerBreakdown.slice(0, 6).map((r, i) => (
           <div key={r.host} className="flex items-center gap-3 py-[9px]">
@@ -237,7 +239,7 @@ export default function ChiffresAcquisition({
     <div className="space-y-5">
       {evenementsIncomplets && (
         <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)]`} role="status">
-          Une partie des visites n’a pas pu être chargée : ces chiffres peuvent être incomplets.
+          {t('Une partie des visites n’a pas pu être chargée : ces chiffres peuvent être incomplets.')}
         </p>
       )}
 

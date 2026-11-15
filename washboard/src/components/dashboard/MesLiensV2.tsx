@@ -13,6 +13,7 @@ import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { TRAFFIC_SOURCES, buildTrackedBookingLink } from '@/lib/trafficSources'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // « Mes liens » — refonte 2026, destination NEUVE de « Plus » (demande d'Alexandre,
 // 2026-09-25 : « change l'intérieur de mes exports et liens pour que ce soit dans le
@@ -38,6 +39,7 @@ type Copie = { cle: string; ok: boolean } | null
 const sansAbonnement = () => () => {}
 
 export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string; liste: ReglagesListeProps }) {
+  const t = useT()
   const router = useRouter()
   const grandEcran = useGrandEcran()
   // Le lien suit tout de suite un changement réussi, sans attendre le rechargement.
@@ -81,7 +83,7 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
 
   async function partager() {
     try {
-      await navigator.share({ url: base, title: 'Réserver un lavage' })
+      await navigator.share({ url: base, title: t('Réserver un lavage') })
     } catch {
       // Feuille de partage fermée sans choisir : rien à dire.
     }
@@ -89,7 +91,7 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
 
   const affiche = (lien: string) => lien.replace(/^https?:\/\/(www\.)?/, '')
   const messageCopie = copie
-    ? (copie.ok ? 'Lien copié.' : 'Copie impossible : maintenez le doigt sur le lien pour le copier.')
+    ? (copie.ok ? t('Lien copié.') : t('Copie impossible : maintenez le doigt sur le lien pour le copier.'))
     : ''
 
   const contenu = (
@@ -101,24 +103,24 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
       <div className="flex items-center gap-1 pb-3">
         <Link
           href="/dashboard/parametres"
-          aria-label="Retour à Plus"
+          aria-label={t('Retour à Plus')}
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-encre)]"
         >
           <ChevronLeft size={22} strokeWidth={2} />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className={`text-[24px] leading-none ${titre}`}>Mes liens</h1>
+          <h1 className={`text-[24px] leading-none ${titre}`}>{t('Mes liens')}</h1>
           <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            À partager avec vos clients
+            {t('À partager avec vos clients')}
           </p>
         </div>
       </div>
 
       <section
-        aria-label="Lien de réservation"
+        aria-label={t('Lien de réservation')}
         className="mt-1 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4"
       >
-        <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>Votre lien de réservation</p>
+        <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Votre lien de réservation')}</p>
         <p className={`mt-1.5 break-all text-[17px] leading-snug ${corpsFort}`}>{affiche(base)}</p>
         <div className="mt-4 flex gap-2.5">
           <button
@@ -128,7 +130,7 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
             style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
           >
             {copie?.cle === 'principal' && copie.ok && <Check size={18} strokeWidth={2.5} aria-hidden />}
-            {copie?.cle === 'principal' && copie.ok ? 'Copié' : 'Copier le lien'}
+            {copie?.cle === 'principal' && copie.ok ? t('Copié') : t('Copier le lien')}
           </button>
           {peutPartager && (
             <button
@@ -137,7 +139,7 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
               className={`${BOUTON} border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              Partager
+              {t('Partager')}
             </button>
           )}
         </div>
@@ -146,15 +148,14 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
           onClick={() => setFeuille(true)}
           className={`-mb-2 mt-2 flex min-h-11 items-center text-[14px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}
         >
-          Changer mon lien
+          {t('Changer mon lien')}
         </button>
       </section>
 
-      <section aria-label="Un lien par réseau" className="mt-[26px]">
-        <h2 className={`px-0.5 text-[19px] leading-tight ${titre}`}>Un lien par réseau</h2>
+      <section aria-label={t('Un lien par réseau')} className="mt-[26px]">
+        <h2 className={`px-0.5 text-[19px] leading-tight ${titre}`}>{t('Un lien par réseau')}</h2>
         <p className={`mt-1.5 px-0.5 pb-3 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          Partagez le lien du réseau où vous publiez : vous saurez d’où viennent vos clients, même quand
-          Instagram ou TikTok ne le disent pas.
+          {t('Partagez le lien du réseau où vous publiez : vous saurez d’où viennent vos clients, même quand Instagram ou TikTok ne le disent pas.')}
         </p>
         <CarteListe>
           <ul className="divide-y divide-[color:var(--v2-filet)]">
@@ -179,14 +180,14 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
                           </span>
                         )}
                       </span>
-                      <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{affiche(base).split('/')[0]}/…?utm_source={source.key}</span>
+                      <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{affiche(base).split('/')[0]}{t('/…?utm_source=')}{source.key}</span>
                     </span>
                     <span
                       className={`flex shrink-0 items-center gap-1 text-[14.5px] ${corpsFort}`}
                       style={{ color: fait ? 'var(--v2-color-vert)' : 'var(--v2-color-accent)' }}
                     >
                       {fait && <Check size={16} strokeWidth={2.5} aria-hidden />}
-                      {fait ? 'Copié' : 'Copier'}
+                      {fait ? t('Copié') : 'Copier'}
                     </span>
                   </button>
                 </li>
@@ -207,9 +208,9 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
       )}
       {nouveau && (
         <ConfirmationSuppression
-          titre="Changer votre lien ?"
+          titre={t('Changer votre lien ?')}
           texte={`L’ancien lien (${affiche(base)}) ne fonctionnera plus. Remplacez-le partout où vous l’avez publié : bio Instagram, cartes de visite, QR codes.`}
-          libelleAction="Changer le lien"
+          libelleAction={t('Changer le lien')}
           libelleEnCours="Changement…"
           enCours={changementEnCours}
           erreur={changementErreur}

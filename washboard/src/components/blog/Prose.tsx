@@ -1,6 +1,9 @@
+'use client'
+
 import Link from 'next/link'
 import { THEME_LABEL, type Article } from '@/lib/blog'
 import FilAriane from '@/components/landing/vitrine/FilAriane'
+import { useT , useLocale } from '@/components/i18n/I18nProvider'
 
 // Primitives de mise en forme partagées par tous les articles (refonte 2026 : mêmes jetons que
 // la landing). Les classes `pr-*` vivent dans landing/vitrine/pages.css, importé par la coque
@@ -38,9 +41,10 @@ export function Callout({ children }: { children: React.ReactNode }) {
  * et ce que les assistants IA citent quand ils recommandent une page.
  */
 export function Summary({ items }: { items: string[] }) {
+  const t = useT()
   return (
-    <aside aria-label="En bref" className="pr-bref">
-      <p className="sur-titre"><span className="pt" />En bref</p>
+    <aside aria-label={t('En bref')} className="pr-bref">
+      <p className="sur-titre"><span className="pt" />{t('En bref')}</p>
       <ul>
         {items.map(item => (
           <li key={item}>{item}</li>
@@ -52,9 +56,10 @@ export function Summary({ items }: { items: string[] }) {
 
 /** Tableau simple — défile horizontalement sur mobile plutôt que d'élargir la page. */
 export function Table({ head, rows }: { head: string[]; rows: string[][] }) {
+  const t = useT()
   return (
     // tabIndex : une zone qui défile doit être atteignable au clavier.
-    <div className="pr-tab" tabIndex={0} role="region" aria-label="Tableau de données">
+    <div className="pr-tab" tabIndex={0} role="region" aria-label={t('Tableau de données')}>
       <table>
         <thead>
           <tr>
@@ -81,8 +86,10 @@ export function Breadcrumb({ current }: { current: string }) {
 }
 
 export function ArticleHeader({ article, intro }: { article: Article; intro: string }) {
+  const loc = useLocale()
+  const t = useT()
   const fmt = (iso: string) =>
-    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    new Date(iso).toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' })
   const updated = article.updatedAt !== article.publishedAt
   return (
     <header className="pr-tete">
@@ -90,12 +97,12 @@ export function ArticleHeader({ article, intro }: { article: Article; intro: str
       <p className="pr-meta">
         {updated ? (
           <>
-            Mis à jour le <time dateTime={article.updatedAt}>{fmt(article.updatedAt)}</time>
+            {t('Mis à jour le')} <time dateTime={article.updatedAt}>{fmt(article.updatedAt)}</time>
           </>
         ) : (
           <time dateTime={article.publishedAt}>{fmt(article.publishedAt)}</time>
         )}
-        {' · '}{article.readingMinutes} min de lecture
+        {' · '}{article.readingMinutes} {t('min de lecture')}
       </p>
       <h1 className="pr-h1">{article.title}</h1>
       <p className="pr-intro">{intro}</p>
@@ -112,9 +119,10 @@ export type FaqItem = { question: string; answer: string }
  * directement dans les résultats.
  */
 export function Faq({ items }: { items: FaqItem[] }) {
+  const t = useT()
   return (
     <section className="pr-faq">
-      <H2>Questions fréquentes</H2>
+      <H2>{t('Questions fréquentes')}</H2>
       <div className="faq">
         {items.map(item => (
           <details key={item.question}>
@@ -144,24 +152,26 @@ export function Cta({
   children: React.ReactNode
   secondary?: { href: string; label: string }
 }) {
+  const t = useT()
   return (
     <div className="pr-cta">
       <h2>{title}</h2>
       <p>{children}</p>
       <div className="heros-cta">
-        <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
+        <Link href="/signup" className="btn btn-accent">{t('Lancer mon mois gratuit')}</Link>
         {secondary && <Link href={secondary.href} className="pg-lien-doux">{secondary.label}</Link>}
       </div>
-      <p className="rassure">Sans engagement · Sans carte bancaire</p>
+      <p className="rassure">{t('Sans engagement · Sans carte bancaire')}</p>
     </div>
   )
 }
 
 /** Liens vers les autres articles — le maillage interne compte pour le référencement. */
 export function AlsoRead({ items }: { items: { href: string; label: string }[] }) {
+  const t = useT()
   return (
-    <nav className="pr-lire" aria-label="À lire aussi">
-      <p className="titre">À lire aussi</p>
+    <nav className="pr-lire" aria-label={t('À lire aussi')}>
+      <p className="titre">{t('À lire aussi')}</p>
       <ul>
         {items.map(item => (
           <li key={item.href}>
@@ -187,6 +197,7 @@ export function ArticleJsonLd({
   siteUrl: string
   faq?: FaqItem[]
 }) {
+  const loc = useLocale()
   const url = `${siteUrl}/blog/${article.slug}`
   const graph: Record<string, unknown>[] = [
     {
@@ -194,7 +205,7 @@ export function ArticleJsonLd({
       '@id': `${url}#article`,
       headline: article.title,
       description: article.description,
-      inLanguage: 'fr-FR',
+      inLanguage: loc,
       articleSection: THEME_LABEL[article.theme],
       datePublished: article.publishedAt,
       dateModified: article.updatedAt,

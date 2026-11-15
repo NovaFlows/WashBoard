@@ -1,5 +1,8 @@
+'use client'
+
 import { Users, Percent, Smartphone, Globe, CalendarClock, type LucideIcon } from 'lucide-react'
 import { normalizeHost, type PeriodChange, type DeviceBreakdownItem, type ReferrerBreakdownItem, type DeviceConversionItem, type ReferrerConversionItem, type VisitTimingBreakdown, formatConversionRate } from '@/lib/funnelStats'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type Props = {
   visitorCount: number
@@ -29,20 +32,21 @@ function referrerLabel(host: string, websiteHost?: string): string {
 }
 
 function ChangeBadge({ change }: { change: PeriodChange }) {
+  const t = useT()
   if (change.direction === 'new') {
     // Il n'y a rien à comparer : c'est la première période mesurée. L'ancienne
     // formulation, « Aucun visiteur sur les 30 jours précédents », se lisait
     // comme un reproche sur la période en cours alors qu'elle parlait de la
     // précédente — et en bleu, elle attirait l'œil plus que le chiffre.
-    return <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">Première période mesurée</p>
+    return <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">{t('Première période mesurée')}</p>
   }
   if (change.pct === null || change.direction === 'flat') {
-    return <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">Stable par rapport à la période précédente</p>
+    return <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">{t('Stable par rapport à la période précédente')}</p>
   }
   const positive = change.pct > 0
   return (
     <p className={`text-[11px] font-medium mt-1 ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
-      {positive ? '+' : ''}{change.pct}% par rapport à la période précédente
+      {positive ? '+' : ''}{change.pct}{t('% par rapport à la période précédente')}
     </p>
   )
 }
@@ -66,6 +70,7 @@ function BreakdownList({ title, items, accent, icon: Icon }: {
   accent: string
   icon: LucideIcon
 }) {
+  const t = useT()
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
       <div className="flex items-center gap-2 mb-4">
@@ -73,7 +78,7 @@ function BreakdownList({ title, items, accent, icon: Icon }: {
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500 py-2">Pas encore de donnée sur cette période.</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500 py-2">{t('Pas encore de donnée sur cette période.')}</p>
       ) : (
         <div className="space-y-3">
           {items.map(item => (
@@ -99,6 +104,7 @@ function ConversionBreakdownList({ title, items, accent, icon: Icon }: {
   accent: string
   icon: LucideIcon
 }) {
+  const t = useT()
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
       <div className="flex items-center gap-2 mb-4">
@@ -106,14 +112,14 @@ function ConversionBreakdownList({ title, items, accent, icon: Icon }: {
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500 py-2">Pas encore de donnée sur cette période.</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500 py-2">{t('Pas encore de donnée sur cette période.')}</p>
       ) : (
         <div className="space-y-3">
           {items.map(item => (
             <div key={item.key}>
               <div className="flex items-center justify-between mb-1 text-xs">
                 <span className="font-medium text-slate-700 dark:text-slate-300">{item.label}</span>
-                <span className="text-slate-500 dark:text-slate-400 tabular-nums">{formatConversionRate(item.conversions, item.sessions)} sur {item.sessions}</span>
+                <span className="text-slate-500 dark:text-slate-400 tabular-nums">{formatConversionRate(item.conversions, item.sessions)} {t('sur')} {item.sessions}</span>
               </div>
               <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${Math.max(item.conversionRate, 2)}%`, backgroundColor: accent }} />
@@ -127,19 +133,20 @@ function ConversionBreakdownList({ title, items, accent, icon: Icon }: {
 }
 
 function VisitTimingCard({ timing, accent }: { timing: VisitTimingBreakdown; accent: string }) {
+  const t = useT()
   const hasData = timing.byWeekday.some(d => d.sessions > 0)
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
       <div className="flex items-center gap-2 mb-1">
         <CalendarClock size={16} strokeWidth={2} className="text-slate-400 dark:text-slate-500" />
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Quand vos visiteurs viennent</h3>
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('Quand vos visiteurs viennent')}</h3>
       </div>
       {!hasData ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500 py-2">Pas encore de donnée sur cette période.</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500 py-2">{t('Pas encore de donnée sur cette période.')}</p>
       ) : (
         <>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Le plus actif : <span className="font-medium text-slate-700 dark:text-slate-300">{timing.topWeekday}</span>
+            {t('Le plus actif :')} <span className="font-medium text-slate-700 dark:text-slate-300">{timing.topWeekday}</span>
             {timing.topSlot && <> · <span className="font-medium text-slate-700 dark:text-slate-300">{timing.topSlot}</span></>}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -180,6 +187,7 @@ export default function FunnelInsights({
   deviceBreakdown, referrerBreakdown, deviceConversionBreakdown, referrerConversionBreakdown,
   visitTimingBreakdown, websiteHost, accent = '#2563eb', periodLabel,
 }: Props) {
+  const t = useT()
   const deviceItems = deviceBreakdown.map(d => ({
     key: d.device, label: DEVICE_LABELS[d.device] ?? d.device, sessions: d.sessions, pct: d.pct,
   }))
@@ -201,30 +209,30 @@ export default function FunnelInsights({
         {periodLabel}
       </p>
       <div className="grid grid-cols-2 gap-3">
-        <KpiTile icon={Users} label="Visiteurs" footer={<ChangeBadge change={visitorChange} />}>
+        <KpiTile icon={Users} label={t('Visiteurs')} footer={<ChangeBadge change={visitorChange} />}>
           {visitorCount}
         </KpiTile>
-        <KpiTile icon={Percent} label="Taux de conversion">
+        <KpiTile icon={Percent} label={t('Taux de conversion')}>
           {/* Le pourcentage arrondi écrasait « 2 réservations sur 812 » en
               « 0 % ». On garde le taux exact et on rappelle le compte brut :
               c'est lui qui parle au laveur, pas la décimale. */}
           {formatConversionRate(conversionCount, visitorCount)}
           {conversionCount > 0 && (
             <span className="block text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
-              {conversionCount} réservation{conversionCount > 1 ? 's' : ''} sur {visitorCount} visiteurs
+              {conversionCount} {t('réservation')}{conversionCount > 1 ? 's' : ''} {t('sur')} {visitorCount} {t('visiteurs')}
             </span>
           )}
         </KpiTile>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <BreakdownList title="Par appareil" items={deviceItems} accent={accent} icon={Smartphone} />
-        <BreakdownList title="Par source de trafic" items={referrerItems} accent={accent} icon={Globe} />
+        <BreakdownList title={t('Par appareil')} items={deviceItems} accent={accent} icon={Smartphone} />
+        <BreakdownList title={t('Par source de trafic')} items={referrerItems} accent={accent} icon={Globe} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <ConversionBreakdownList title="Conversion par appareil" items={deviceConversionItems} accent={accent} icon={Smartphone} />
-        <ConversionBreakdownList title="Conversion par source de trafic" items={referrerConversionItems} accent={accent} icon={Globe} />
+        <ConversionBreakdownList title={t('Conversion par appareil')} items={deviceConversionItems} accent={accent} icon={Smartphone} />
+        <ConversionBreakdownList title={t('Conversion par source de trafic')} items={referrerConversionItems} accent={accent} icon={Globe} />
       </div>
 
       <VisitTimingCard timing={visitTimingBreakdown} accent={accent} />

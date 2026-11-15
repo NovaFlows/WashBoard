@@ -3,6 +3,7 @@
 import { BOUTON, PRESSION, corps, corpsFort, Feuille } from '@/components/dashboard/FeuilleV2'
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import type { IssueConnexionGoogle } from '@/lib/googleAgendaRetour'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Connexion à Google Agenda, depuis l'Agenda de la PWA (Alexandre, 2026-09-25 :
 // « la connexion Google Agenda devrait être dans Agenda »). Même réglage, mêmes
@@ -25,9 +26,10 @@ export function issueDepuisParametre(valeur: string | null): IssueConnexionGoogl
 export default function FeuilleGoogleAgendaV2({
   connecte, issue, onClose,
 }: { connecte: boolean; issue: IssueConnexionGoogle | null; onClose: () => void }) {
+  const t = useT()
   const message = issue ? ISSUES[issue] : null
   return (
-    <Feuille titre="Google Agenda" onClose={onClose}>
+    <Feuille titre={t('Google Agenda')} onClose={onClose}>
       <div className="flex items-start gap-2.5">
         <span
           className="mt-[7px] h-[9px] w-[9px] shrink-0 rounded-full"
@@ -35,11 +37,11 @@ export default function FeuilleGoogleAgendaV2({
           aria-hidden
         />
         <div className="min-w-0">
-          <p className={`text-[16px] ${corpsFort}`}>{connecte ? 'Connecté' : 'Pas connecté'}</p>
+          <p className={`text-[16px] ${corpsFort}`}>{connecte ? t('Connecté') : t('Pas connecté')}</p>
           <p className={`mt-0.5 text-[14px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
             {connecte
-              ? 'Vos rendez-vous confirmés s’ajoutent tout seuls à votre Google Agenda.'
-              : 'Connectez votre compte Google : vos rendez-vous confirmés s’ajouteront tout seuls à votre Google Agenda.'}
+              ? t('Vos rendez-vous confirmés s’ajoutent tout seuls à votre Google Agenda.')
+              : t('Connectez votre compte Google : vos rendez-vous confirmés s’ajouteront tout seuls à votre Google Agenda.')}
           </p>
         </div>
       </div>
@@ -63,11 +65,11 @@ export default function FeuilleGoogleAgendaV2({
         }`}
         style={connecte ? PRESSION : { background: 'var(--v2-color-accent)', ...PRESSION }}
       >
-        {connecte ? 'Reconnecter le compte' : 'Connecter mon Google Agenda'}
+        {connecte ? t('Reconnecter le compte') : 'Connecter mon Google Agenda'}
       </a>
       {connecte && (
         <p className={`mt-2.5 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          À utiliser si vos rendez-vous n’apparaissent plus dans Google Agenda.
+          {t('À utiliser si vos rendez-vous n’apparaissent plus dans Google Agenda.')}
         </p>
       )}
     </Feuille>
