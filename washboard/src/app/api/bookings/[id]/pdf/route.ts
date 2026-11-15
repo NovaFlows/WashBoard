@@ -76,8 +76,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // et son client cherchent en retrouvant une facture dans leurs téléchargements.
   const dateRdv = new Date(booking.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })
   const nomFichier = facture
-    ? `facture-${facture.numero}-${dateRdv}.pdf`
-    : `recapitulatif-${booking.id.slice(0, 8).toUpperCase()}.pdf`
+    ? `${t('facture').toLowerCase()}-${facture.numero}-${dateRdv}.pdf`
+    : `${t('recapitulatif').toLowerCase()}-${booking.id.slice(0, 8).toUpperCase()}.pdf`
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer = await renderToBuffer(document as any)

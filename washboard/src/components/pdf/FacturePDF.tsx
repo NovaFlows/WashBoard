@@ -135,7 +135,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo, t = sansTra
             {/* Un devis chiffre un travail qui n'a pas encore de date : le dire vaut mieux
                 que d'imprimer la date du jour, que le client lirait comme un rendez-vous. */}
             <Text>{prestation.date ? quandPrestation(prestation.date) : t('Date à convenir')}</Text>
-            {prestation.lieu ? <Text>{prestation.lieu}</Text> : null}
+            {prestation.lieu ? <Text>{prestation.lieu.startsWith('Centre auto · ') ? t('Centre auto · {adresse}', { adresse: prestation.lieu.slice('Centre auto · '.length) }) : prestation.lieu}</Text> : null}
           </View>
         </View>
 
@@ -159,7 +159,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo, t = sansTra
             {/* Sur une facture de réservation, la remise ne peut venir que du créneau
                 optimisé, et le client l'a vue nommée ainsi en réservant. Sur un document
                 écrit à la main, c'est une remise, point. */}
-            <Text style={s.cDesig}>{contenu.libelleRemise ?? (contenu.genre ? t('Remise') : t('Remise créneau optimisé'))}</Text>
+            <Text style={s.cDesig}>{contenu.libelleRemise ? t(contenu.libelleRemise) : (contenu.genre ? t('Remise') : t('Remise créneau optimisé'))}</Text>
             <Text style={s.cQte}>1</Text>
             <Text style={s.cPu}>{euros(-ht(remiseTtc))}</Text>
             <Text style={s.cTot}>{euros(-ht(remiseTtc))}</Text>

@@ -277,8 +277,8 @@ export function validerDocument(saisie: SaisieDocument, aujourdhui: string): str
  *  Ici, et non près du rendu du PDF : le navigateur en a besoin pour le partage natif, et
  *  `lib/pdfDocument.ts` tire `sharp` (module natif, serveur uniquement) — l'y laisser faisait
  *  échouer toute la compilation côté navigateur. */
-export const nomFichierDocument = (d: { genre: string; numero: string | null }) =>
-  `${d.genre === 'devis' ? 'devis' : 'facture'}-${d.numero ?? ''}.pdf`
+export const nomFichierDocument = (d: { genre: string; numero: string | null }, t: (phrase: string) => string = p => p) =>
+  `${t(d.genre === 'devis' ? 'devis' : 'facture').toLowerCase()}-${d.numero ?? ''}.pdf`
 
 // ── WhatsApp ───────────────────────────────────────────────────────────────
 
