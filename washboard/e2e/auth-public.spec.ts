@@ -24,7 +24,7 @@ test.describe('Inscription — validations', () => {
     mdp: page.getByLabel('Mot de passe', { exact: true }),
     confirmation: page.getByLabel('Confirmer le mot de passe'),
     cgv: page.getByLabel(/conditions générales de vente/),
-    envoyer: page.getByRole('button', { name: 'Lancer mon mois gratuit' }),
+    envoyer: page.getByRole('button', { name: 'Lancer mes 14 jours gratuits' }),
   })
 
   test('la page affiche les cinq champs attendus et la case des CGV', async ({ page }) => {
@@ -115,6 +115,18 @@ test.describe('Inscription — validations', () => {
     await c.cgv.check()
     await c.envoyer.click()
     await expect(page.getByText('Cet email est déjà utilisé')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('un code parrain inconnu est signalé, un champ vide laisse passer', async ({ page }) => {
+    const c = champs(page)
+    const code = page.getByLabel('Code parrain (facultatif)')
+    // La vérification part du code React : taper avant l'hydratation ne déclencherait rien.
+    await page.waitForLoadState('networkidle')
+    await code.fill('ZZZZZZ-ZZZZ')
+    await expect(page.getByText('Ce code n’existe pas. Corrige-le ou laisse le champ vide.')).toBeVisible({ timeout: 15_000 })
+    await expect(c.envoyer).toBeVisible()
+    await code.fill('')
+    await expect(page.getByText('Ce code n’existe pas. Corrige-le ou laisse le champ vide.')).toBeHidden()
   })
 
   test('lien vers la connexion présent', async ({ page }) => {
