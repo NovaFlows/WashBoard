@@ -309,7 +309,7 @@ export default function FeuillePrestationV2({
           {orphelins.length > 0 && (
             <div className="space-y-1">
               <Constat ton="ambre">
-                {orphelins.length === 1 ? tr('Un type coché n’existe plus') : `${orphelins.length} types cochés n’existent plus`} {tr('dans «')} {categorie?.name} {tr('» : vos clients')} {orphelins.length === 1 ? 'le' : 'les'} {tr('voient sous un nom brut.')}
+                {orphelins.length === 1 ? tr('Un type coché n’existe plus') : tr('{length} types cochés n’existent plus', { length: orphelins.length })} {tr('dans «')} {categorie?.name} {tr('» : vos clients')} {orphelins.length === 1 ? 'le' : 'les'} {tr('voient sous un nom brut.')}
               </Constat>
               <button
                 type="button"
@@ -376,7 +376,7 @@ export default function FeuillePrestationV2({
                   <button
                     type="button"
                     onClick={() => setForm(f => ({ ...f, addons: f.addons.filter(x => x.id !== a.id) }))}
-                    aria-label={`Retirer l’option ${a.label}`}
+                    aria-label={tr('Retirer l’option {label}', { label: a.label })}
                     className="flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-gris)]"
                   >
                     <X size={18} strokeWidth={2} />

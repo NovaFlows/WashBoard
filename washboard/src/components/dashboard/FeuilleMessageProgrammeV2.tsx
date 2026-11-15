@@ -50,7 +50,7 @@ export default function FeuilleMessageProgrammeV2({
           className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          {enCours === 'decaler' ? 'Enregistrement…' : `Décaler de ${libelleJours(jours)}`}
+          {enCours === 'decaler' ? 'Enregistrement…' : t('Décaler de {libelleJours}', { libelleJours: libelleJours(jours) })}
         </button>
       }
     >

@@ -610,7 +610,7 @@ export default function PrestationsV2({
                   <button
                     type="button"
                     onClick={() => setFeuille({ quoi: 'categorie', categorie: cat })}
-                    aria-label={`Modifier la catégorie ${cat.name}`}
+                    aria-label={t('Modifier la catégorie {name}', { name: cat.name })}
                     className={`-mr-2 flex min-h-11 shrink-0 items-center px-2 text-[14.5px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}
                   >
                     {t('Modifier')}
@@ -811,7 +811,7 @@ export default function PrestationsV2({
           texte={
             suppression.nbPrestations === 0
               ? t('Aucune prestation n’y est rattachée.')
-              : `Ses ${suppression.nbPrestations} prestation${suppression.nbPrestations > 1 ? 's' : ''} resteront, sans catégorie.`
+              : t('Ses {nbPrestations} prestation{v1} resteront, sans catégorie.', { nbPrestations: suppression.nbPrestations, v1: suppression.nbPrestations > 1 ? 's' : '' })
           }
           remarque={
             suppression.nbPrestations === 0

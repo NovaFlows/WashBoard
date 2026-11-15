@@ -396,7 +396,7 @@ export default function StepService({ services, categories, selected, factureApr
                       type="button"
                       data-testid="vehicle-decrement"
                       data-vehicle-type={type}
-                      aria-label={`Retirer un véhicule (${type})`}
+                      aria-label={tr('Retirer un véhicule ({type})', { type })}
                       onClick={() => setVehicleCount(type, count - 1)}
                       disabled={count === 0}
                       className="w-8 h-8 rounded-lg border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-30"
@@ -406,7 +406,7 @@ export default function StepService({ services, categories, selected, factureApr
                       type="button"
                       data-testid="vehicle-increment"
                       data-vehicle-type={type}
-                      aria-label={`Ajouter un véhicule (${type})`}
+                      aria-label={tr('Ajouter un véhicule ({type})', { type })}
                       onClick={() => setVehicleCount(type, count + 1)}
                       className="w-8 h-8 rounded-lg border-2 font-bold flex items-center justify-center transition-colors"
                       style={count > 0

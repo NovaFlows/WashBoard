@@ -95,7 +95,7 @@ export default function FeuillePlageV2({ joursInitiaux, plages, onAjouter, onClo
           className={`${BOUTON} flex-[1.4] text-white`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          {enCours ? 'Ajout…' : jours.length > 1 ? `Ajouter (${jours.length} jours)` : 'Ajouter'}
+          {enCours ? 'Ajout…' : jours.length > 1 ? t('Ajouter ({length} jours)', { length: jours.length }) : 'Ajouter'}
         </button>
       </div>
     </div>

@@ -108,19 +108,19 @@ export function ImportFactures() {
             entrees.push({ nom: x.nom, type: x.type, donnees: new Blob([new Uint8Array(x.donnees)], { type: x.type }), modifieLe: f.lastModified })
           }
         } catch {
-          refus.push(`${f.name} : ZIP illisible ou abîmé`)
+          refus.push(tr('{name} : ZIP illisible ou abîmé', { name: f.name }))
         }
       } else if (TYPES_ACCEPTES[ext]) {
-        if (f.size > LIMITES.tailleFichier) refus.push(`${f.name} : plus de 10 Mo`)
+        if (f.size > LIMITES.tailleFichier) refus.push(tr('{name} : plus de 10 Mo', { name: f.name }))
         else entrees.push({ nom: f.name, type: TYPES_ACCEPTES[ext], donnees: f, modifieLe: f.lastModified })
       } else {
-        refus.push(`${f.name} : format non accepté (PDF, JPG, PNG ou ZIP)`)
+        refus.push(tr('{name} : format non accepté (PDF, JPG, PNG ou ZIP)', { name: f.name }))
       }
     }
 
     const place = LIMITES.nombreFichiers - lignes.length
     if (entrees.length > place) {
-      refus.push(`${entrees.length - place} fichier(s) au-delà de ${LIMITES.nombreFichiers} par import`)
+      refus.push(tr('{v0} fichier(s) au-delà de {nombreFichiers} par import', { v0: entrees.length - place, nombreFichiers: LIMITES.nombreFichiers }))
       entrees.length = Math.max(0, place)
     }
     setIgnores(prev => [...prev, ...refus])
@@ -302,7 +302,7 @@ export function ImportFactures() {
           disabled={!peutEnregistrer}
           className="px-4 py-2.5 bg-[#1651E8] hover:bg-[#1244c4] text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
         >
-          {enregistrement ? 'Enregistrement…' : `Enregistrer ${prets.length} facture${prets.length > 1 ? 's' : ''}`}
+          {enregistrement ? 'Enregistrement…' : tr('Enregistrer {length} facture{v1}', { length: prets.length, v1: prets.length > 1 ? 's' : '' })}
         </button>
         <button
           type="button"

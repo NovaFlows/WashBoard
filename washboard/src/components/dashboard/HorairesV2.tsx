@@ -118,7 +118,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
     const phrase = phraseEchecAjout(resultats)
     if (!phrase) { setBanniere(null); return null }
     if (resultats.some(r => r.ok)) {
-      setBanniere(`${phrase} Complétez avec « + Plage ».`)
+      setBanniere(t('{phrase} Complétez avec « + Plage ».', { phrase }))
       return null
     }
     return phrase
@@ -299,7 +299,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
 
       {retrait && (
         <ConfirmationSuppression
-          titre={`Retirer ${libellePlage(retrait)} le ${NOMS_JOURS[retrait.day_of_week].toLowerCase()} ?`}
+          titre={t('Retirer {libellePlage} le {v1} ?', { libellePlage: libellePlage(retrait), v1: NOMS_JOURS[retrait.day_of_week].toLowerCase() })}
           texte={t('Ce jour-là, plus de créneaux sur cette plage.')}
           remarque={t('Les rendez-vous déjà pris ne sont pas touchés.')}
           enCours={retraitEnCours}

@@ -93,10 +93,10 @@ export default function FeuilleActionsDocumentV2({
               if (partage === 'annule') return
               const cible = `${libelleGenre(d.genre)} ${d.numero ?? ''}`.trim()
               if (partage === 'envoye') {
-                confirmerEnvoi({ titre: t('PDF envoyé'), detail: `${cible} pour ${client}` })
+                confirmerEnvoi({ titre: t('PDF envoyé'), detail: t('{cible} pour {client}', { cible, client }) })
                 return
               }
-              annoncerApresRetour({ titre: t('Message envoyé'), detail: `${cible} pour ${client}` })
+              annoncerApresRetour({ titre: t('Message envoyé'), detail: t('{cible} pour {client}', { cible, client }) })
               // Repli (ordinateur, navigateur trop ancien) : `wa.me` ne transporte qu'un
               // message, le lien y est donc indispensable — sinon le client n'a rien.
               window.open(

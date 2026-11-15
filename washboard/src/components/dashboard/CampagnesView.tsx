@@ -171,7 +171,7 @@ function LigneCreation({ b, rang, lien, onSupprimer }: {
             <Chiffre
               label={b.fiable ? 'Transformation' : t('Peu de données')}
               valeur={b.fiable ? pourcent(b.tauxConversion) : '—'}
-              aide={b.fiable ? undefined : `dès ${SEUIL_FIABILITE} visites`}
+              aide={b.fiable ? undefined : t('dès {SEUIL_FIABILITE} visites', { SEUIL_FIABILITE })}
               discret={!b.fiable}
             />
             <Chiffre
@@ -179,7 +179,7 @@ function LigneCreation({ b, rang, lien, onSupprimer }: {
               valeur={`${formatEuros(b.chiffreAffaires)} €`}
               aide={b.coutParReservation === null
                 ? undefined
-                : `${formatEuros(Math.round(b.coutParReservation * 100) / 100)} € / client`}
+                : t('{formatEuros} € / client', { formatEuros: formatEuros(Math.round(b.coutParReservation * 100) / 100) })}
             />
           </div>
 
@@ -198,7 +198,7 @@ function LigneCreation({ b, rang, lien, onSupprimer }: {
           )}
 
           <div className="mt-2.5 flex items-center gap-2">
-            <LigneLien lien={lien} libelle={`Copier le lien de ${b.creation.nom}`} />
+            <LigneLien lien={lien} libelle={t('Copier le lien de {nom}', { nom: b.creation.nom })} />
             <button
               onClick={() => onSupprimer(b.creation.id)}
               aria-label={`Retirer ${b.creation.nom}`}
@@ -461,7 +461,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
           valeur={mesurable ? multiple(b.retour) : '—'}
           aide={b.coutParReservation === null
             ? undefined
-            : `${formatEuros(Math.round(b.coutParReservation * 100) / 100)} € / client`}
+            : t('{formatEuros} € / client', { formatEuros: formatEuros(Math.round(b.coutParReservation * 100) / 100) })}
           accent={couleur}
         />
         <Chiffre label={t('Visites')} valeur={String(b.visites)} />
@@ -507,7 +507,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
             {c.creations.length === 0
               ? t('Suivre chaque vidéo séparément')
-              : `Vos vidéos (${c.creations.length})`}
+              : t('Vos vidéos ({length})', { length: c.creations.length })}
           </span>
           <ChevronDown
             size={16} strokeWidth={2.5}
@@ -542,7 +542,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
             {c.creations.length > 0 && c.reste.visites > 0 && (
               <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
                 {c.reste.visites} {t('visite')}{c.reste.visites > 1 ? 's' : ''}
-                {c.reste.reservations > 0 && ` et ${c.reste.reservations} client${c.reste.reservations > 1 ? 's' : ''}`}
+                {c.reste.reservations > 0 && t(' et {reservations} client{v1}', { reservations: c.reste.reservations, v1: c.reste.reservations > 1 ? 's' : '' })}
                 {' '}{t('sans vidéo identifiée — du trafic arrivé par le lien de la campagne, avant que vous ne déclariez vos vidéos ou par une vidéo retirée depuis.')}
               </p>
             )}
@@ -568,7 +568,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
           {t('Lien de la campagne')} {c.creations.length > 0 && <span className="font-medium normal-case tracking-normal">{t('— à n’utiliser que si vous ne suivez pas les vidéos une par une')}</span>}
         </p>
         <div className="flex items-center gap-2">
-          <LigneLien lien={lienCampagne(baseUrl, c.cle, c.plateforme)} libelle={`Copier le lien de ${c.nom}`} />
+          <LigneLien lien={lienCampagne(baseUrl, c.cle, c.plateforme)} libelle={t('Copier le lien de {nom}', { nom: c.nom })} />
           <button
             onClick={() => onSupprimer(c.id)}
             className="shrink-0 px-2.5 py-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"

@@ -7,6 +7,9 @@ export type Variables = Readonly<Record<string, string | number>>
  */
 export function traduire(dictionnaire: Dictionnaire | null, phrase: string, variables?: Variables): string {
   const base = dictionnaire?.[phrase] || phrase
+  // Outil de relecture (jamais en production) : `I18N_LOG=1 npm run dev` liste dans la console les phrases
+  // passées à t() qui n'ont pas de traduction, pour les compléter page par page.
+  if (dictionnaire && !dictionnaire[phrase] && process.env.I18N_LOG === '1' && /[A-Za-zÀ-ÿ]{3}/.test(phrase)) console.warn('[i18n-manquant]', JSON.stringify(phrase))
   if (!variables) return base
   return base.replace(/\{(\w+)\}/g, (m, nom: string) => (nom in variables ? String(variables[nom]) : m))
 }

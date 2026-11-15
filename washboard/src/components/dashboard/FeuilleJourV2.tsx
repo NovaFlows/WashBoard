@@ -38,7 +38,7 @@ export default function FeuilleJourV2({ jour, plages, onAjouter, onRetirer, onCl
               <button
                 type="button"
                 onClick={() => onRetirer(p)}
-                aria-label={`Retirer la plage ${libellePlage(p)} du ${nomJour.toLowerCase()}`}
+                aria-label={t('Retirer la plage {libellePlage} du {v1}', { libellePlage: libellePlage(p), v1: nomJour.toLowerCase() })}
                 className={`-mr-2 flex h-11 shrink-0 items-center px-2 text-[15px] ${corpsFort}`}
                 style={{ color: TEXTE_ROUGE }}
               >

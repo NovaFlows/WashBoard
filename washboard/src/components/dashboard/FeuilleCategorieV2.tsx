@@ -153,7 +153,7 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
                   <input
                     type="text"
                     autoComplete="off"
-                    aria-label={`Nom du type ${t.name}`}
+                    aria-label={tr('Nom du type {name}', { name: t.name })}
                     value={t.name}
                     onChange={e => setTypes(ts => ts.map(x => (x.id === t.id ? { ...x, name: e.target.value } : x)))}
                     className={CHAMP}
@@ -161,7 +161,7 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
                   <button
                     type="button"
                     onClick={() => setTypes(ts => ts.filter(x => x.id !== t.id))}
-                    aria-label={`Retirer le type ${t.name}`}
+                    aria-label={tr('Retirer le type {name}', { name: t.name })}
                     className="flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-gris)]"
                   >
                     <X size={18} strokeWidth={2} />

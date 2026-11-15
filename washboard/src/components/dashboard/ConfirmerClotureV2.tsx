@@ -114,7 +114,7 @@ export default function ConfirmerClotureV2({
               ? t('Indiquez un montant, par exemple 45 ou 45,50.')
               : montant === montantPrevu
                 ? t('Le prix prévu. Changez-le si votre client a payé autre chose.')
-                : `Prévu : ${formater(montantPrevu)} €. La facture et vos chiffres prendront ${formater(montant)} €.`}
+                : t('Prévu : {formater} €. La facture et vos chiffres prendront {v1} €.', { formater: formater(montantPrevu), v1: formater(montant) })}
           </p>
         </div>
 

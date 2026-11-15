@@ -184,7 +184,7 @@ export function FeuilleEquipeV2({
           )}
           <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
             {n > 1
-              ? `Jusqu’à ${n} rendez-vous en même temps sur votre page de réservation.`
+              ? t('Jusqu’à {n} rendez-vous en même temps sur votre page de réservation.', { n })
               : t('Un seul rendez-vous à la fois : aucun chevauchement possible.')}
           </p>
           {erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}

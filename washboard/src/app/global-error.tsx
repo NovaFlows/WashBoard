@@ -7,6 +7,7 @@
 
 import { useEffect } from 'react'
 import { logger } from '@/lib/logger'
+import { useT } from '@/components/i18n/I18nProvider'
 
 export default function GlobalError({
   error,
@@ -15,6 +16,7 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const t = useT()
   useEffect(() => {
     // Trace côté client (visible dans la console navigateur / outils de session),
     // et alerte Sentry avec la vraie stack (voir logger.ts) — d'où `error` passé
@@ -27,21 +29,21 @@ export default function GlobalError({
       <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif', background: '#0f172a', color: '#e2e8f0' }}>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ textAlign: 'center', maxWidth: 420 }}>
-            <p style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0 }}>Oups.</p>
-            <h1 style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 8 }}>Une erreur inattendue est survenue</h1>
+            <p style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0 }}>{t('Oups.')}</p>
+            <h1 style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 8 }}>{t('Une erreur inattendue est survenue')}</h1>
             <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginTop: 8 }}>
-              L&apos;incident a été enregistré. Réessayez, et si le problème persiste, contactez le support en indiquant le code ci-dessous.
+              {t('L’incident a été enregistré. Réessayez, et si le problème persiste, contactez le support en indiquant le code ci-dessous.')}
             </p>
             {error.digest && (
               <p style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#64748b', marginTop: 12 }}>
-                Code : {error.digest}
+                {t('Code :')} {error.digest}
               </p>
             )}
             <button
               onClick={reset}
               style={{ marginTop: 20, padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: 12, fontWeight: 600, cursor: 'pointer' }}
             >
-              Réessayer
+              {t('Réessayer')}
             </button>
           </div>
         </div>

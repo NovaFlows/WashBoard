@@ -443,9 +443,9 @@ export default function ClientsViewV2({
         <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`} aria-live="polite">
           {affiches.length === 0
             ? recherche.trim()
-              ? `Aucun client ne correspond à « ${recherche.trim()} ».`
+              ? t('Aucun client ne correspond à « {v0} ».', { v0: recherche.trim() })
               : t('Aucun client professionnel pour l’instant.')
-            : `${affiches.length} client${affiches.length > 1 ? 's' : ''} trouvé${affiches.length > 1 ? 's' : ''}`}
+            : t('{length} client{v1} trouvé{v2}', { length: affiches.length, v1: affiches.length > 1 ? 's' : '', v2: affiches.length > 1 ? 's' : '' })}
         </p>
       )}
 
@@ -536,7 +536,7 @@ export default function ClientsViewV2({
         {filtre !== 'relancer' && filtre !== 'entreprises' && bloques.length > 0 && (
           <p className={`text-[13px] mt-0.5 ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
             {bloques.length} {t('masqué')}{bloques.length > 1 ? 's' : ''}
-            {montantBloque > 0 && ` · ${formatEuros(montantBloque)} € de lavages`}
+            {montantBloque > 0 && t(' · {formatEuros} € de lavages', { formatEuros: formatEuros(montantBloque) })}
           </p>
         )}
       </div>
@@ -787,7 +787,7 @@ function LigneClient({ client: c, maintenant, onOuvrir, selectionnee, ouverte, o
         <button
           type="button"
           onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
-          aria-label={`Voir la fiche de ${titreClient}`}
+          aria-label={t('Voir la fiche de {titreClient}', { titreClient })}
           aria-current={selectionnee ? 'true' : undefined}
           className={`w-full flex items-start gap-3 px-4 py-3 text-left focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors ${
             selectionnee ? 'bg-[color:var(--v2-filet)]' : 'hover:bg-[color:var(--v2-filet)]'
@@ -865,7 +865,7 @@ function LigneARelancerVue({ ligne: l, onOuvrir, selectionnee, ouverte, onOuvrir
         <button
           type="button"
           onClick={() => { if (!clicAbsorbe()) onOuvrir() }}
-          aria-label={`Voir la fiche de ${l.nom}`}
+          aria-label={t('Voir la fiche de {nom}', { nom: l.nom })}
           aria-current={selectionnee ? 'true' : undefined}
           className={`w-full flex items-start gap-3 px-4 py-3 text-left focus:outline-none focus-visible:bg-[color:var(--v2-filet)] transition-colors ${
             selectionnee ? 'bg-[color:var(--v2-filet)]' : 'hover:bg-[color:var(--v2-filet)]'

@@ -21,6 +21,7 @@ import {
   TOTAL_ETAPES_ONBOARDING, TitreEntree,
 } from '@/components/entree/Entree'
 import { CarteZones, Mousse } from '@/components/entree/AnimationsEntree'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Onboarding : 5 étapes, puis un écran de fin « Ton espace est prêt ».
 //
@@ -86,11 +87,12 @@ function Question({ q, reponse, onChoisir, disabled, derniere }: {
   disabled: boolean
   derniere: string | null
 }) {
+  const t = useT()
   return (
     <fieldset className="min-w-0">
       <legend className="mb-2.5 text-[15px] font-semibold">
         {q.question}
-        {q.multiple && <span className="font-normal text-[color:var(--v2-color-gris)]"> plusieurs choix</span>}
+        {q.multiple && <span className="font-normal text-[color:var(--v2-color-gris)]"> {t('plusieurs choix')}</span>}
       </legend>
       <div className="flex flex-wrap gap-[7px]">
         {q.choix.map(x => {
@@ -114,11 +116,12 @@ function Question({ q, reponse, onChoisir, disabled, derniere }: {
 }
 
 function Vignette({ logoUrl, nom, grande }: { logoUrl: string | null; nom: string; grande?: boolean }) {
+  const t = useT()
   const taille = grande ? 'h-[88px] w-[88px] rounded-[18px] text-[34px]' : 'h-11 w-11 rounded-[11px] text-[19px]'
   if (logoUrl) {
     // Entier, jamais rogné : sa largeur suit sa forme.
     // eslint-disable-next-line @next/next/no-img-element -- adresse Supabase, comme Apparence
-    return <img src={logoUrl} alt="Ton logo" className={`${grande ? 'h-[88px] max-w-[220px]' : 'h-11 max-w-[120px]'} w-auto shrink-0 object-contain`} />
+    return <img src={logoUrl} alt={t('Ton logo')} className={`${grande ? 'h-[88px] max-w-[220px]' : 'h-11 max-w-[120px]'} w-auto shrink-0 object-contain`} />
   }
   return (
     <div aria-hidden className={`${taille} flex shrink-0 select-none items-center justify-center border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-fond)] font-semibold text-[color:var(--v2-color-gris)]`}>
@@ -130,6 +133,7 @@ function Vignette({ logoUrl, nom, grande }: { logoUrl: string | null; nom: strin
 /** `etapeInitiale` : uniquement pour le banc d'essai de développement (`/dev/booking-preview?mode=onboarding`) ;
  *  la vraie page part toujours de l'étape 1. */
 export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: string; nom: string; etapeInitiale?: Etape }) {
+  const t = useT()
   const router = useRouter()
   const [etape, setEtape] = useState<Etape>(etapeInitiale)
   // Sens du dernier changement d'étape : l'écran glisse dans ce sens. Nul au premier rendu.
@@ -248,7 +252,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
 
   async function choisirLogo(fichier: File) {
     if (!estImageAcceptee(fichier.type)) {
-      setEtatLogo({ phase: 'echec', attenteLongue: false, erreur: 'Ce fichier n’est pas une image. Choisis un logo en JPG, PNG ou WebP.' })
+      setEtatLogo({ phase: 'echec', attenteLongue: false, erreur: t('Ce fichier n’est pas une image. Choisis un logo en JPG, PNG ou WebP.') })
       return
     }
     logoOriginal.current = fichier
@@ -271,7 +275,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
         setEtatLogo({
           phase: 'echec', attenteLongue: false,
           erreur: r.etape === 'detourage' || !r.message
-            ? 'Le fond n’a pas pu être retiré. Vérifie ta connexion (un modèle se télécharge la première fois) puis réessaie.'
+            ? t('Le fond n’a pas pu être retiré. Vérifie ta connexion (un modèle se télécharge la première fois) puis réessaie.')
             : r.message,
         })
         return
@@ -335,7 +339,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
               />
               <span>
                 {ETAPES[n].parcours}
-                {ETAPES[n].facultative && <small className="ml-1.5 font-normal text-[color:var(--v2-color-gris)]">facultatif</small>}
+                {ETAPES[n].facultative && <small className="ml-1.5 font-normal text-[color:var(--v2-color-gris)]">{t('facultatif')}</small>}
               </span>
             </li>
           )
@@ -343,17 +347,17 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
       </ol>
       <div className="mt-auto flex flex-col gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
         <p className="flex justify-between text-xs text-[color:var(--v2-color-gris)]">
-          <span>Ta page de réservation</span><span>se remplit au fil des étapes</span>
+          <span>{t('Ta page de réservation')}</span><span>{t('se remplit au fil des étapes')}</span>
         </p>
         <div className="flex items-center gap-3">
           <Vignette logoUrl={logoUrl} nom={nom} />
           <div className="min-w-0">
             <p className="text-[15px] font-semibold">{nom || 'Ton entreprise'}</p>
-            <p className="break-all text-xs text-[color:var(--v2-color-accent)]">{DOMAINE}/book/{candidat || '…'}</p>
+            <p className="break-all text-xs text-[color:var(--v2-color-accent)]">{DOMAINE}{t('/book/')}{candidat || '…'}</p>
           </div>
         </div>
         <p className="flex justify-between gap-3 border-t border-[color:var(--v2-filet)] pt-2.5 text-[13px]">
-          <span className="text-[color:var(--v2-color-gris)]">Départ</span>
+          <span className="text-[color:var(--v2-color-gris)]">{t('Départ')}</span>
           <span className="min-w-0 text-right">{adresse.trim() || '—'}</span>
         </p>
       </div>
@@ -374,8 +378,8 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
       <div key={etape} className={sens ? `wb-entree-vue-${sens}` : ''}>
         {info && (
           <div className="mb-5">
-            {etape === 1 && <Guide gens={['rectangles']} texte="Choisis un lien facile à dire au téléphone." />}
-            {etape === 4 && <Guide gens={['rondes']} texte="Ça nous aide à te conseiller. Une touche par réponse, c’est rapide." />}
+            {etape === 1 && <Guide gens={['rectangles']} texte={t('Choisis un lien facile à dire au téléphone.')} />}
+            {etape === 4 && <Guide gens={['rondes']} texte={t('Ça nous aide à te conseiller. Une touche par réponse, c’est rapide.')} />}
             <TitreEntree
               titre={info.titre}
               sousTitre={info.sousTitre}
@@ -383,10 +387,10 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                 <>
                   {info.facultative && (
                     <p className="mb-2.5 flex items-center gap-[7px] text-[13px] font-[550] text-[color:var(--v2-color-vert)]">
-                      <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-current" />Dernière étape
+                      <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-current" />{t('Dernière étape')}
                     </p>
                   )}
-                  <p className="mb-2 hidden text-[13px] tabular-nums text-[color:var(--v2-color-gris)] lg:block">Étape {etape} sur {TOTAL_ETAPES_ONBOARDING}</p>
+                  <p className="mb-2 hidden text-[13px] tabular-nums text-[color:var(--v2-color-gris)] lg:block">{t('Étape')} {etape} {t('sur')} {TOTAL_ETAPES_ONBOARDING}</p>
                 </>
               }
             />
@@ -396,9 +400,9 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
         {etape === 1 && (
           <form onSubmit={validerLien} noValidate className="flex flex-col gap-4">
             <GroupeChamps>
-              <Champ id="slug" label="Personnalise ton lien">
+              <Champ id="slug" label={t('Personnalise ton lien')}>
                 <div className="flex items-baseline text-base">
-                  <span className="whitespace-nowrap text-[color:var(--v2-color-gris)]">{DOMAINE}/book/</span>
+                  <span className="whitespace-nowrap text-[color:var(--v2-color-gris)]">{DOMAINE}{t('/book/')}</span>
                   <input
                     id="slug"
                     type="text"
@@ -419,11 +423,11 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
 
             <p id="etat-lien" role="status" aria-live="polite" className={`flex min-h-5 items-center gap-[7px] text-[13px] ${couleurEtat}`}>
               {point && <span aria-hidden className="h-[7px] w-[7px] shrink-0 rounded-full bg-current" />}
-              {disponibilite === 'actuel' && 'C’est ton lien actuel. Tu pourras le changer plus tard dans tes réglages.'}
+              {disponibilite === 'actuel' && t('C’est ton lien actuel. Tu pourras le changer plus tard dans tes réglages.')}
               {disponibilite === 'invalide' && PHRASE_SLUG_INVALIDE}
-              {disponibilite === 'verification' && <span className="inline-flex items-center gap-1.5"><Spinner />Vérification…</span>}
+              {disponibilite === 'verification' && <span className="inline-flex items-center gap-1.5"><Spinner />{t('Vérification…')}</span>}
               {disponibilite === 'libre' && 'Disponible'}
-              {disponibilite === 'pris' && 'Ce lien est déjà utilisé. Choisis-en un autre.'}
+              {disponibilite === 'pris' && t('Ce lien est déjà utilisé. Choisis-en un autre.')}
               {disponibilite === 'erreur' && verification?.message}
             </p>
 
@@ -431,7 +435,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
 
             <BarreActions>
               <BoutonPrincipal type="submit" chargement={envoi} libelleChargement="Enregistrement…" disabled={disponibilite !== 'actuel' && disponibilite !== 'libre'}>
-                Continuer
+                {t('Continuer')}
               </BoutonPrincipal>
             </BarreActions>
           </form>
@@ -440,29 +444,29 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
         {etape === 2 && (
           <form onSubmit={validerAdresse} noValidate className="flex flex-col gap-4">
             <GroupeChamps>
-              <Champ id="adresse" label="Ton adresse">
+              <Champ id="adresse" label={t('Ton adresse')}>
                 <AddressAutocomplete
                   id="adresse"
                   value={adresse}
                   onChange={v => { setAdresse(v); setErreur(null) }}
-                  placeholder="12 rue de la Paix, 75001 Paris"
+                  placeholder={t('12 rue de la Paix, 75001 Paris')}
                   className={SAISIE}
                 />
               </Champ>
             </GroupeChamps>
             <CarteZones adressePosee={!!adresse.trim()} />
             <p className="text-xs text-[color:var(--v2-color-gris)]">
-              Exemple de zones : tu régleras tes vrais tarifs de déplacement plus tard. Ton adresse n’est jamais montrée à tes clients.
+              {t('Exemple de zones : tu régleras tes vrais tarifs de déplacement plus tard. Ton adresse n’est jamais montrée à tes clients.')}
             </p>
 
             {erreur && <Erreur texte={erreur} />}
 
             <BarreActions>
               <BoutonPrincipal type="submit" chargement={envoi} libelleChargement="Enregistrement…" disabled={!adresse.trim()}>
-                Continuer
+                {t('Continuer')}
               </BoutonPrincipal>
               <button type="button" onClick={() => allerA(1)} disabled={envoi} className={`${LIEN_DISCRET} hidden lg:block`}>
-                Revenir au lien
+                {t('Revenir au lien')}
               </button>
             </BarreActions>
           </form>
@@ -474,7 +478,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
               <div className="flex flex-col gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
                 <ApercuLogoV2 logoUrl={logoUrl} nom={nom} couleur={COULEUR_PAR_DEFAUT} />
                 <p className="text-sm leading-snug text-[color:var(--v2-color-gris)]">
-                  C’est ce que voient tes clients en haut de ta page : le logo entier.
+                  {t('C’est ce que voient tes clients en haut de ta page : le logo entier.')}
                 </p>
               </div>
             ) : (
@@ -485,13 +489,13 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                   <Vignette logoUrl={null} nom={nom} grande />
                 )}
                 <p className="min-w-0 text-sm leading-snug text-[color:var(--v2-color-gris)]">
-                  {etatLogo.phase === 'detourage' ? 'Ton logo se prépare…' : 'Pas encore de logo : tes clients voient les initiales de ton nom.'}
+                  {etatLogo.phase === 'detourage' ? t('Ton logo se prépare…') : t('Pas encore de logo : tes clients voient les initiales de ton nom.')}
                 </p>
               </div>
             )}
 
             <p className="text-xs leading-snug text-[color:var(--v2-color-gris)]">
-              Le fond de l’image est retiré automatiquement. La première fois, c’est un peu plus long.
+              {t('Le fond de l’image est retiré automatiquement. La première fois, c’est un peu plus long.')}
             </p>
             {!occupeLogo && retouches.creuxRetires && (
               <button
@@ -499,7 +503,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                 onClick={() => { if (logoOriginal.current) envoyerLogo(logoOriginal.current, 'sans-creux') }}
                 className="-mt-2 text-left text-sm font-semibold underline underline-offset-2"
               >
-                Une partie du logo a disparu ? La remettre
+                {t('Une partie du logo a disparu ? La remettre')}
               </button>
             )}
             {!occupeLogo && retouches.fondRetire && (
@@ -508,7 +512,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                 onClick={() => { if (logoOriginal.current) envoyerLogo(logoOriginal.current, 'original') }}
                 className="-mt-2 text-left text-sm font-semibold underline underline-offset-2"
               >
-                Le résultat ne te plaît pas ? Garder le fond d’origine
+                {t('Le résultat ne te plaît pas ? Garder le fond d’origine')}
               </button>
             )}
 
@@ -528,19 +532,19 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
               {logoUrl ? (
                 <>
                   <BoutonPrincipal type="button" onClick={() => { setEtatLogo(REPOS_LOGO); allerA(4) }} chargement={occupeLogo} libelleChargement="En cours…">
-                    Continuer
+                    {t('Continuer')}
                   </BoutonPrincipal>
                   <button type="button" onClick={() => inputLogo.current?.click()} disabled={occupeLogo} className={LIEN_DISCRET}>
-                    Changer l’image
+                    {t('Changer l’image')}
                   </button>
                 </>
               ) : (
                 <>
                   <BoutonPrincipal type="button" onClick={() => inputLogo.current?.click()} chargement={occupeLogo} libelleChargement="En cours…">
-                    Choisir une image
+                    {t('Choisir une image')}
                   </BoutonPrincipal>
                   <button type="button" onClick={() => { setEtatLogo(REPOS_LOGO); allerA(4) }} disabled={occupeLogo} className={LIEN_DISCRET}>
-                    Plus tard
+                    {t('Plus tard')}
                   </button>
                 </>
               )}
@@ -556,7 +560,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
 
             <BarreActions>
               <BoutonPrincipal type="submit" disabled={!obligatoiresOk} className={brille ? 'wb-entree-brille' : ''}>
-                {obligatoiresOk ? 'Continuer' : `Continuer · ${nbRepondues} sur ${QUESTIONS_OBLIGATOIRES.length}`}
+                {obligatoiresOk ? 'Continuer' : t('Continuer · {nbRepondues} sur {length}', { nbRepondues, length: QUESTIONS_OBLIGATOIRES.length })}
               </BoutonPrincipal>
             </BarreActions>
           </form>
@@ -569,7 +573,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
             ))}
 
             <fieldset className="min-w-0">
-              <legend className="mb-2.5 text-[15px] font-semibold">Comment as-tu connu WashBoard ?</legend>
+              <legend className="mb-2.5 text-[15px] font-semibold">{t('Comment as-tu connu WashBoard ?')}</legend>
               <div className="flex flex-wrap gap-[7px]">
                 {SOURCES_ACQUISITION.map(s => {
                   const choisi = source === s.valeur
@@ -589,9 +593,9 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
               </div>
               {source === 'autre' && (
                 <div className="mt-3">
-                  <label htmlFor="source-precision" className="sr-only">Où as-tu connu WashBoard ?</label>
+                  <label htmlFor="source-precision" className="sr-only">{t('Où as-tu connu WashBoard ?')}</label>
                   <input id="source-precision" value={precisionSource} onChange={e => setPrecisionSource(e.target.value)}
-                    maxLength={PRECISION_SOURCE_MAX} disabled={envoi} placeholder="Précise si tu veux (facultatif)" className={SAISIE} />
+                    maxLength={PRECISION_SOURCE_MAX} disabled={envoi} placeholder={t('Précise si tu veux (facultatif)')} className={SAISIE} />
                 </div>
               )}
             </fieldset>
@@ -600,12 +604,12 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
               <>
                 <Erreur texte={erreur} />
                 {/* Une réponse qui ne s'enregistre pas ne doit pas fermer l'accès au compte. */}
-                <Link href="/dashboard" className={`${LIEN_DISCRET} self-start`}>Aller au tableau de bord</Link>
+                <Link href="/dashboard" className={`${LIEN_DISCRET} self-start`}>{t('Aller au tableau de bord')}</Link>
               </>
             )}
 
             <BarreActions>
-              <BoutonPrincipal type="submit" chargement={envoi} libelleChargement="Enregistrement…">Terminer</BoutonPrincipal>
+              <BoutonPrincipal type="submit" chargement={envoi} libelleChargement="Enregistrement…">{t('Terminer')}</BoutonPrincipal>
             </BarreActions>
           </form>
         )}
@@ -613,8 +617,8 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
         {etape === PRET && (
           <div className="flex flex-col gap-5">
             <div>
-              <Guide gens={['rectangles', 'ryan', 'rondes']} texte="On est là si tu as besoin d’aide." />
-              <TitreEntree titre="Ton espace est prêt" sousTitre="Partage ton lien : tes clients peuvent déjà réserver dès que tes prestations et tes horaires sont en place." />
+              <Guide gens={['rectangles', 'ryan', 'rondes']} texte={t('On est là si tu as besoin d’aide.')} />
+              <TitreEntree titre={t('Ton espace est prêt')} sousTitre={t('Partage ton lien : tes clients peuvent déjà réserver dès que tes prestations et tes horaires sont en place.')} />
             </div>
 
             <div className="flex flex-col gap-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
@@ -622,23 +626,23 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                 <Vignette logoUrl={logoUrl} nom={nom} />
                 <div className="min-w-0">
                   <p className="text-[15px] font-semibold">{nom || 'Ton entreprise'}</p>
-                  <p className="text-xs text-[color:var(--v2-color-gris)]">Ta page de réservation</p>
+                  <p className="text-xs text-[color:var(--v2-color-gris)]">{t('Ta page de réservation')}</p>
                 </div>
               </div>
               <div className="flex items-center justify-between gap-2.5 border-t border-[color:var(--v2-filet)] pt-3 text-[13px]">
                 <span className="min-w-0 select-all break-all text-[color:var(--v2-color-accent)]">{lienComplet}</span>
                 <button type="button" onClick={copierLien} className="wb-entree-bouton shrink-0 rounded-[10px] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-fond)] px-3 py-[7px] text-[13px] font-semibold">
-                  {copie ? 'Copié' : 'Copier'}
+                  {copie ? t('Copié') : 'Copier'}
                 </button>
               </div>
             </div>
 
             <ul className="flex flex-col gap-2 text-sm">
               {[
-                { texte: 'Ton lien de réservation', fait: true },
-                { texte: 'Ton adresse de départ', fait: true },
+                { texte: t('Ton lien de réservation'), fait: true },
+                { texte: t('Ton adresse de départ'), fait: true },
                 { texte: 'Ton logo', fait: !!logoUrl },
-                { texte: 'Tes prestations et tes horaires, dans le tableau de bord', fait: false },
+                { texte: t('Tes prestations et tes horaires, dans le tableau de bord'), fait: false },
               ].map((l, i) => (
                 <li key={l.texte} style={{ animationDelay: `${i * 120}ms` }} className={`wb-entree-coche grid grid-cols-[18px_1fr] items-center gap-2.5 ${l.fait ? '' : 'text-[color:var(--v2-color-gris)]'}`}>
                   <span aria-hidden className={l.fait ? 'font-bold text-[color:var(--v2-color-vert)]' : ''}>{l.fait ? '✓' : '○'}</span>
@@ -649,7 +653,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
 
             <BarreActions>
               <BoutonPrincipal type="button" onClick={ouvrirTableauDeBord} chargement={envoi} libelleChargement="Ouverture…">
-                Ouvrir mon tableau de bord
+                {t('Ouvrir mon tableau de bord')}
               </BoutonPrincipal>
             </BarreActions>
           </div>

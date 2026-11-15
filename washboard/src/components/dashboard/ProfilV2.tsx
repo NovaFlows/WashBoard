@@ -98,7 +98,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
   const adresse = resumeAdresseDepart(fiche.base_address)
   const paliers = fiche.travel_fee_tiers ?? []
   const deplacement = paliers.length === 0 && !peut('frais_deplacement')
-    ? { texte: `Inclus dans l’offre ${requiredPlanLabel('frais_deplacement')}` }
+    ? { texte: t('Inclus dans l’offre {requiredPlanLabel}', { requiredPlanLabel: requiredPlanLabel('frais_deplacement') }) }
     : resumeFraisDeplacement(paliers)
   const etatCompte = fiche.account_status === 'deactivated' || fiche.account_status === 'pending_deletion'
     ? fiche.account_status : null

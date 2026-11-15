@@ -8,10 +8,12 @@ import './recu.css'
 import { adresseAvecLieu } from '@/lib/centreAuto'
 import { getLangue } from '@/lib/i18n/serveur'
 import { LOCALES_INTL } from '@/lib/i18n/langues'
+import { getT } from '@/lib/i18n/serveur'
 
 type Props = { params: Promise<{ id: string }> }
 
 export default async function ConfirmationPage({ params }: Props) {
+  const t = await getT()
   const loc = LOCALES_INTL[await getLangue()]
   const { id } = await params
 
@@ -67,7 +69,7 @@ export default async function ConfirmationPage({ params }: Props) {
 
         {/* Barre d'actions */}
         <div className="no-print wb-recu-barre">
-          <p>Confirmation de réservation · Réf. <b>{ref}</b></p>
+          <p>{t('Confirmation de réservation · Réf.')} <b>{ref}</b></p>
           <a
             href={`/api/bookings/${booking.id}/pdf`}
             download={`confirmation-${ref}.pdf`}
@@ -76,15 +78,15 @@ export default async function ConfirmationPage({ params }: Props) {
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
             </svg>
-            Télécharger PDF
+            {t('Télécharger PDF')}
           </a>
         </div>
 
         {/* Document */}
         <div className="wb-recu-doc">
           <div className="wb-recu-kicker">
-            <span>Reçu de prestation de service</span>
-            <b>Réf. {ref}</b>
+            <span>{t('Reçu de prestation de service')}</span>
+            <b>{t('Réf.')} {ref}</b>
           </div>
 
           {/* En-tête */}
@@ -95,13 +97,13 @@ export default async function ConfirmationPage({ params }: Props) {
                 <img src={washer.logo_url} alt={washer.name} className="wb-recu-logo" />
               )}
               <h1>{washer.name}</h1>
-              <p className="wb-recu-doux">Prestataire de nettoyage et d&apos;entretien à domicile</p>
+              <p className="wb-recu-doux">{t('Prestataire de nettoyage et d’entretien à domicile')}</p>
               {washer.phone && <p className="wb-recu-doux">{washer.phone}</p>}
             </div>
             <div className="wb-recu-droite">
-              <p className="lib">Date d&apos;émission</p>
+              <p className="lib">{t('Date d’émission')}</p>
               <p className="val">{today}</p>
-              <p className="lib" style={{ marginTop: 12 }}>Référence</p>
+              <p className="lib" style={{ marginTop: 12 }}>{t('Référence')}</p>
               <p className="wb-recu-ref">{ref}</p>
             </div>
           </div>
@@ -109,12 +111,12 @@ export default async function ConfirmationPage({ params }: Props) {
           {/* Prestataire / Client */}
           <div className="wb-recu-parties">
             <div className="wb-recu-partie">
-              <p className="lib">Prestataire</p>
+              <p className="lib">{t('Prestataire')}</p>
               <p className="nom">{washer.name}</p>
               {washer.phone && <p className="wb-recu-doux">{washer.phone}</p>}
             </div>
             <div className="wb-recu-partie">
-              <p className="lib">Client</p>
+              <p className="lib">{t('Client')}</p>
               <p className="nom">{booking.client_name}</p>
               <p className="wb-recu-doux">{booking.client_email}</p>
               {booking.client_phone && <p className="wb-recu-doux">{booking.client_phone}</p>}
@@ -132,11 +134,11 @@ export default async function ConfirmationPage({ params }: Props) {
                 <p className="petit">{formattedDate} à {time}</p>
                 <p className="petit">{adresseAvecLieu(booking.address, booking.lieu)}</p>
                 {booking.is_smart_slot && discount > 0 && (
-                  <p className="promo">★ Créneau optimisé (remise de {discount}€)</p>
+                  <p className="promo">{t('★ Créneau optimisé (remise de')} {discount}€)</p>
                 )}
               </div>
               <div className="prix">
-                <span className="vh">Montant TTC : </span>
+                <span className="vh">{t('Montant TTC :')} </span>
                 {booking.is_smart_slot && discount > 0 ? (
                   <>
                     <s>{baseStr}€</s>
@@ -151,20 +153,19 @@ export default async function ConfirmationPage({ params }: Props) {
           </div>
 
           <div className="wb-recu-total">
-            <span className="lib">Total à régler sur place</span>
+            <span className="lib">{t('Total à régler sur place')}</span>
             <span className="montant">{finalStr}€</span>
           </div>
-          <p className="wb-recu-reglement">Mode de règlement : paiement comptant sur place</p>
+          <p className="wb-recu-reglement">{t('Mode de règlement : paiement comptant sur place')}</p>
 
           {/* Encart justificatif */}
           <div className="wb-recu-just">
-            <b>Justificatif de prestation — facture</b>
-            Ce document fait office de reçu de prestation de service et peut être utilisé pour une facture.
-            Référence : <strong>{ref}</strong> · Émis le {today}
+            <b>{t('Justificatif de prestation — facture')}</b>
+            {t('Ce document fait office de reçu de prestation de service et peut être utilisé pour une facture. Référence :')} <strong>{ref}</strong> {t('· Émis le')} {today}
           </div>
 
           <div className="wb-recu-pied">
-            Ce reçu a été généré automatiquement par <strong>WashBoard</strong> · Plateforme de réservation de prestations à domicile
+            {t('Ce reçu a été généré automatiquement par')} <strong>{t('WashBoard')}</strong> {t('· Plateforme de réservation de prestations à domicile')}
           </div>
         </div>
       </div>

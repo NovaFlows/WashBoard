@@ -191,7 +191,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
             rang={i + 1}
             titre={v.creation.nom}
             sousTitre={`${v.campagne} · ${v.visites} visite${v.visites > 1 ? 's' : ''}`}
-            valeur={`${v.reservations} client${v.reservations > 1 ? 's' : ''}`}
+            valeur={t('{reservations} client{v1}', { reservations: v.reservations, v1: v.reservations > 1 ? 's' : '' })}
             aide={v.chiffreAffaires > 0 ? `${formatEuros(v.chiffreAffaires)} €` : undefined}
           />
         ))}
@@ -214,7 +214,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
             key={p.plateforme}
             rang={i + 1}
             titre={labelPlateforme(p.plateforme)}
-            sousTitre={`${formatEuros(p.budget)} € dépensés · ${p.campagnes} campagne${p.campagnes > 1 ? 's' : ''}`}
+            sousTitre={t('{formatEuros} € dépensés · {campagnes} campagne{v2}', { formatEuros: formatEuros(p.budget), campagnes: p.campagnes, v2: p.campagnes > 1 ? 's' : '' })}
             valeur={p.reservations > 0 ? multiple(p.retour) : '—'}
             aide={`${formatEuros(p.chiffreAffaires)} €`}
             couleur={couleurRetour(p.retour, p.reservations)}
@@ -232,7 +232,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
             key={c.id}
             rang={i + 1}
             titre={c.nom}
-            sousTitre={`${labelPlateforme(c.plateforme)} · ${formatEuros(c.budget)} € dépensés`}
+            sousTitre={t('{labelPlateforme} · {formatEuros} € dépensés', { labelPlateforme: labelPlateforme(c.plateforme), formatEuros: formatEuros(c.budget) })}
             valeur={c.bilan.reservations > 0 ? multiple(c.bilan.retour) : '—'}
             aide={`${formatEuros(c.bilan.chiffreAffaires)} €`}
             couleur={couleurRetour(c.bilan.retour, c.bilan.reservations)}

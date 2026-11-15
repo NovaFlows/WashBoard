@@ -312,9 +312,9 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
   const recentBookings = isFiltered ? displayBookings : displayBookings.slice(0, 6)
 
   const finSemaine = new Date(period.weekStart); finSemaine.setDate(period.weekStart.getDate() + 6)
-  const titreFrise = period.type === 'year'  ? `${period.year}, par mois`
-                   : period.type === 'month' ? `${MOIS_COURTS[period.month]} ${period.year}, par jour`
-                   : period.type === 'week'  ? `Semaine du ${dateCourte(period.weekStart, loc)} au ${dateCourte(finSemaine, loc)}`
+  const titreFrise = period.type === 'year'  ? t('{year}, par mois', { year: period.year })
+                   : period.type === 'month' ? t('{v0} {year}, par jour', { v0: MOIS_COURTS[period.month], year: period.year })
+                   : period.type === 'week'  ? t('Semaine du {dateCourte} au {v1}', { dateCourte: dateCourte(period.weekStart, loc), v1: dateCourte(finSemaine, loc) })
                    : '6 derniers mois'
 
   async function handleExport() {
@@ -383,7 +383,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
         return ligne + lignes.length + 2
       }
 
-      cs.getCell('A1').value = `Synthèse — ${crmPeriodLabel(period)}`
+      cs.getCell('A1').value = t('Synthèse — {crmPeriodLabel}', { crmPeriodLabel: crmPeriodLabel(period) })
       cs.getCell('A1').font = { bold: true, size: 14 }
       let ligne = tableau(3, ['Indicateur', 'Valeur'], [
         ["Chiffre d'affaires (€)", Math.round(resume.ca)],
@@ -523,7 +523,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
             <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{t('Toutes, quel que soit leur statut')}</p>
             <div ref={graphVolumeRef}>
               <Colonnes donnees={chartData} cle="reservations" teinte={TEINTE_VOLUME}
-                formater={v => `${nombre.format(v)} réservation${v > 1 ? 's' : ''}`} hauteur={110} />
+                formater={v => t('{v0} réservation{v1}', { v0: nombre.format(v), v1: v > 1 ? 's' : '' })} hauteur={110} />
             </div>
           </div>
 
@@ -544,7 +544,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
                 <tbody className="tabular-nums text-slate-700 dark:text-slate-300">
                   {chartData.filter(l => l.reservations > 0).map(l => (
                     <tr key={l.label} className="border-b border-slate-50 dark:border-slate-800/60 last:border-0">
-                      <td className="py-1.5">{l.label}</td>
+                      <td className="py-1.5">{t(l.label)}</td>
                       <td className="py-1.5 text-right">{nombre.format(l.reservations)}</td>
                       <td className="py-1.5 text-right">{euros(l.ca)}</td>
                     </tr>
@@ -678,7 +678,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
                   <button
                     type="button"
                     onClick={() => setOpenClient(b.client_email)}
-                    aria-label={`Voir la fiche de ${b.client_name}`}
+                    aria-label={t('Voir la fiche de {client_name}', { client_name: b.client_name })}
                     title={t('Voir la fiche client')}
                     className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-semibold text-slate-500 shrink-0 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1651E8]"
                   >
@@ -702,7 +702,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
                     {statut && (
                       <p className="flex items-center justify-end gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                         <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: statut.couleur }} aria-hidden />
-                        {statut.label}
+                        {t(statut.label)}
                       </p>
                     )}
                   </div>

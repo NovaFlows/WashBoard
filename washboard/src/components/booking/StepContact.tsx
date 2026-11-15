@@ -133,7 +133,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
                 </svg>
                 {estIde
                   ? t('Numéro IDE : CHE suivi de 9 chiffres (CHE-123.456.789)')
-                  : siretDigits.length < 14 ? `Numéro incomplet (${siretDigits.length} chiffres : 10 pour un n° BCE, 14 pour un SIRET)` : t('Numéro trop long — 14 chiffres attendus')}
+                  : siretDigits.length < 14 ? t('Numéro incomplet ({length} chiffres : 10 pour un n° BCE, 14 pour un SIRET)', { length: siretDigits.length }) : t('Numéro trop long — 14 chiffres attendus')}
               </p>
             ) : (
               <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t('14 chiffres sans espaces (Suisse : CHE-123.456.789)')}</p>
@@ -216,7 +216,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
               </svg>
-              {phoneDigits.length < 10 ? `Numéro trop court (${phoneDigits.length}/10 chiffres)` : t('Numéro trop long — 10 chiffres attendus')}
+              {phoneDigits.length < 10 ? t('Numéro trop court ({length}/10 chiffres)', { length: phoneDigits.length }) : t('Numéro trop long — 10 chiffres attendus')}
             </p>
           )}
         </div>

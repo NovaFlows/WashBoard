@@ -44,7 +44,7 @@ export default function AccesSupportV2() {
           />
           <span className={`text-[13.5px] leading-snug ${corpsFort}`}>
             {ouvert
-              ? `Accès ouvert : il reste ${etat.minutesLeft} minute${etat.minutesLeft > 1 ? 's' : ''}. Notre équipe peut se connecter à votre compte.`
+              ? t('Accès ouvert : il reste {minutesLeft} minute{v1}. Notre équipe peut se connecter à votre compte.', { minutesLeft: etat.minutesLeft, v1: etat.minutesLeft > 1 ? 's' : '' })
               : t('Accès fermé : personne ne peut se connecter à votre compte.')}
           </span>
         </p>

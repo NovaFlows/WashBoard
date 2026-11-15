@@ -247,12 +247,12 @@ export default function ProposerCreneauV2({
               {distance === null
                 ? t('Tous vos clients, sans filtre de distance.')
                 : origineEnAttente
-                  ? `Localisation du rendez-vous ${origine.voisin}…`
+                  ? t('Localisation du rendez-vous {voisin}…', { voisin: origine.voisin })
                   : !origineEffective
-                    ? `L’adresse du rendez-vous ${origine.voisin} est introuvable : impossible de filtrer par distance.`
+                    ? t('L’adresse du rendez-vous {voisin} est introuvable : impossible de filtrer par distance.', { voisin: origine.voisin })
                     : localisation.fait < localisation.total
-                      ? `Localisation des adresses… ${localisation.fait} sur ${localisation.total}`
-                      : `À moins de ${distance} km du rendez-vous ${origine.voisin}, à vol d’oiseau. Les plus proches d’abord.`}
+                      ? t('Localisation des adresses… {fait} sur {total}', { fait: localisation.fait, total: localisation.total })
+                      : t('À moins de {distance} km du rendez-vous {voisin}, à vol d’oiseau. Les plus proches d’abord.', { distance, voisin: origine.voisin })}
             </p>
           </>
         ) : (
@@ -269,8 +269,8 @@ export default function ProposerCreneauV2({
       ) : lignes.length === 0 ? (
         <p className={`py-8 text-center text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
           {filtre
-            ? `Aucun client à moins de ${distance} km${recherche ? ` pour « ${recherche} »` : ''}. Élargissez la distance.`
-            : `Aucun client ne correspond à « ${recherche} ».`}
+            ? t('Aucun client à moins de {distance} km{v1}. Élargissez la distance.', { distance: distance ?? '', v1: recherche ? ` pour « ${recherche} »` : '' })
+            : t('Aucun client ne correspond à « {recherche} ».', { recherche })}
         </p>
       ) : (
         <ul className="mt-1">
@@ -291,8 +291,8 @@ export default function ProposerCreneauV2({
                       href={`https://wa.me/${whatsappDigits(c.phone)}?text=${encodeURIComponent(message)}`}
                       target="_blank"
                       rel="noopener"
-                      aria-label={`Proposer ce créneau à ${c.name} sur WhatsApp`}
-                      onClick={() => annoncerApresRetour({ titre: t('Message envoyé'), detail: `Créneau proposé à ${c.name}` })}
+                      aria-label={t('Proposer ce créneau à {name} sur WhatsApp', { name: c.name })}
+                      onClick={() => annoncerApresRetour({ titre: t('Message envoyé'), detail: t('Créneau proposé à {name}', { name: c.name }) })}
                       className={boutonEnvoi}
                       style={stylePression}
                     >
@@ -300,8 +300,8 @@ export default function ProposerCreneauV2({
                     </a>
                     <a
                       href={smsHref(c.phone, message)}
-                      aria-label={`Proposer ce créneau à ${c.name} par SMS`}
-                      onClick={() => annoncerApresRetour({ titre: t('Message envoyé'), detail: `Créneau proposé à ${c.name}` })}
+                      aria-label={t('Proposer ce créneau à {name} par SMS', { name: c.name })}
+                      onClick={() => annoncerApresRetour({ titre: t('Message envoyé'), detail: t('Créneau proposé à {name}', { name: c.name }) })}
                       className={boutonEnvoi}
                       style={stylePression}
                     >

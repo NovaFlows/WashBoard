@@ -161,7 +161,7 @@ function Departements({
         <div className="mt-3">
           <Repliable
             id="zone-tous-departements"
-            titre={`Voir les ${DEPARTMENTS.length}`}
+            titre={t('Voir les {length}', { length: DEPARTMENTS.length })}
             resume=""
             ouvert={listeOuverte}
             onBascule={() => setListeOuverte(v => !v)}

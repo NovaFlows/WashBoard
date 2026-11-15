@@ -33,7 +33,7 @@ export default function FeuilleNotificationsV2({ onClose }: { onClose: () => voi
   return (
     <Feuille
       titre={t('Notifications')}
-      sousTitre={`Être prévenu sur ${mobile ? t('ce téléphone') : 'cet ordinateur'} dès qu’un client réserve, sans attendre l’e-mail.`}
+      sousTitre={t('Être prévenu sur {v0} dès qu’un client réserve, sans attendre l’e-mail.', { v0: mobile ? t('ce téléphone') : 'cet ordinateur' })}
       onClose={onClose}
     >
       {etat === 'ios-non-installe' && (

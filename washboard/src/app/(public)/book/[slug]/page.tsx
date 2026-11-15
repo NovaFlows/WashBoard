@@ -23,6 +23,7 @@ import { pixelIdValide, pixelIdDev } from '@/lib/consentement'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
 import { getLangue } from '@/lib/i18n/serveur'
 import { LOCALES_INTL } from '@/lib/i18n/langues'
+import { getT } from '@/lib/i18n/serveur'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -108,6 +109,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BookingPage({ params }: Props) {
+  const t = await getT()
   const { slug } = await params
   const admin = createAdminClient()
 
@@ -136,14 +138,13 @@ export default async function BookingPage({ params }: Props) {
       <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
         <div style={{ maxWidth: '400px', textAlign: 'center' }}>
           <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔒</div>
-          <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>Page temporairement indisponible</h1>
+          <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>{t('Page temporairement indisponible')}</h1>
           <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.6', marginBottom: '24px' }}>
-            La page de réservation de <strong>{washer.name}</strong> est momentanément suspendue.
-            Contactez directement votre prestataire pour prendre rendez-vous.
+            {t('La page de réservation de')} <strong>{washer.name}</strong> {t('est momentanément suspendue. Contactez directement votre prestataire pour prendre rendez-vous.')}
           </p>
           {washer.phone && (
             <a href={`tel:${washer.phone}`} style={{ display: 'inline-block', background: '#2563eb', color: '#fff', textDecoration: 'none', fontWeight: '700', fontSize: '14px', padding: '12px 24px', borderRadius: '10px' }}>
-              Appeler {washer.name}
+              {t('Appeler')} {washer.name}
             </a>
           )}
         </div>
@@ -359,14 +360,14 @@ export default async function BookingPage({ params }: Props) {
           // La marque de l'offre gratuite. Discrète mais cliquable : c'est le
           // seul canal d'acquisition que le produit s'offre à lui-même.
           <p className="mt-10 text-center text-xs text-slate-400 dark:text-slate-500">
-            Réservation propulsée par{' '}
+            {t('Réservation propulsée par')}{' '}
             <a
               href="https://www.washboard.fr"
               target="_blank"
               rel="noopener"
               className="font-semibold text-slate-500 dark:text-slate-400 underline underline-offset-2"
             >
-              WashBoard
+              {t('WashBoard')}
             </a>
           </p>
         )}
@@ -393,8 +394,9 @@ export default async function BookingPage({ params }: Props) {
 // sur cette page, donc un texte simple plutôt qu'un lien vers une ancre
 // qui n'existe plus.
 async function ReviewSummary({ websiteUrl, googlePlaceId }: { websiteUrl: string | null; googlePlaceId: string | null }) {
+  const t = await getT()
   const loc = LOCALES_INTL[await getLangue()]
   const { aggregate } = await reviewsForWasher({ website_url: websiteUrl, google_place_id: googlePlaceId })
   if (!aggregate || aggregate.count <= 0) return null
-  return <span>★ {aggregate.value.toLocaleString(loc)} · {aggregate.count} avis</span>
+  return <span>★ {aggregate.value.toLocaleString(loc)} · {aggregate.count} {t('avis')}</span>
 }

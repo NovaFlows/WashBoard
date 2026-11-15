@@ -194,7 +194,7 @@ export default function AbonnementV2({
             <Constat ton={joursRestants <= 7 ? 'ambre' : 'accent'}>
               {joursRestants === 0
                 ? t('Votre essai gratuit a expiré aujourd’hui.')
-                : `Il vous reste ${joursRestants} jour${joursRestants > 1 ? 's' : ''} d’essai gratuit.`}
+                : t('Il vous reste {joursRestants} jour{v1} d’essai gratuit.', { joursRestants, v1: joursRestants > 1 ? 's' : '' })}
             </Constat>
           )}
           {subscriptionStatus === 'active' && (plan !== 'decouverte' || grandfathered) && (
@@ -223,7 +223,7 @@ export default function AbonnementV2({
                 titre={t('Réservations ce mois')}
                 utilise={reservationsCeMois}
                 plafond={plafondReservations}
-                unite={`vos clients ne peuvent plus réserver en ligne jusqu’au ${remiseAZero}.`}
+                unite={t('vos clients ne peuvent plus réserver en ligne jusqu’au {remiseAZero}.', { remiseAZero })}
               />
             )}
             {plafondPrestations !== null && prestationsAuCatalogue !== null && (

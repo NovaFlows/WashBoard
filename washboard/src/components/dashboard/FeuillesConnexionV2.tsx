@@ -155,7 +155,7 @@ export function FeuilleMotDePasseV2({ email, onClose }: { email: string; onClose
             autoComplete="new-password"
             value={nouveau}
             onChange={e => { setNouveau(e.target.value); setErreur(null) }}
-            placeholder={`${MOT_DE_PASSE_MIN} caractères minimum`}
+            placeholder={t('{MOT_DE_PASSE_MIN} caractères minimum', { MOT_DE_PASSE_MIN })}
             aria-label={t('Nouveau mot de passe')}
             className={CHAMP}
           />

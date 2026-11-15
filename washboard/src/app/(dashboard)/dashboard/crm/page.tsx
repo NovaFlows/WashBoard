@@ -21,6 +21,7 @@ import { UpgradePrompt } from '@/components/dashboard/UpgradePrompt'
 import { ApercuCrm, ApercuCampagnes } from '@/components/dashboard/ApercusVerrouilles'
 import { getLangue } from '@/lib/i18n/serveur'
 import { LOCALES_INTL } from '@/lib/i18n/langues'
+import { getT } from '@/lib/i18n/serveur'
 
 // Fenêtre d'événements chargée. Elle borne ce qu'on peut analyser : au-delà,
 // les statistiques de visite n'existent tout simplement pas. Un an couvre les
@@ -31,6 +32,7 @@ const FUNNEL_HISTORY_DAYS = 365
 export default async function CrmPage({ searchParams }: {
   searchParams: Promise<{ onglet?: string }>
 }) {
+  const t = await getT()
   const loc = LOCALES_INTL[await getLangue()]
   const { onglet } = await searchParams
   const ongletActif: OngletCrm = onglet === 'campagnes' ? 'campagnes' : 'apercu'
@@ -75,11 +77,11 @@ export default async function CrmPage({ searchParams }: {
           <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">CRM</h1>
         </div>
         <UpgradePrompt
-          title="Sachez d’où viennent vos clients"
-          description="Visiteurs, réservations, sources de trafic : comprenez ce qui remplit votre planning."
+          title={t('Sachez d’où viennent vos clients')}
+          description={t('Visiteurs, réservations, sources de trafic : comprenez ce qui remplit votre planning.')}
           feature="crm"
           apercu={<ApercuCrm />}
-          rassurance={`Vos visites et vos réservations sont déjà enregistrées depuis le ${depuisLabel}. Vous ne perdez rien à attendre : tout s’affichera d’un coup le jour où vous changez d’offre.`}
+          rassurance={t('Vos visites et vos réservations sont déjà enregistrées depuis le {depuisLabel}. Vous ne perdez rien à attendre : tout s’affichera d’un coup le jour où vous changez d’offre.', { depuisLabel })}
         />
       </div>,
     )
@@ -102,11 +104,11 @@ export default async function CrmPage({ searchParams }: {
         <div>
           {onglets}
           <UpgradePrompt
-            title="Savoir laquelle de vos vidéos vous rapporte"
-            description="Déclarez votre budget, collez un lien par vidéo : WashBoard compte les visites, les réservations, et ce qu’elles ont rapporté — vidéo par vidéo."
+            title={t('Savoir laquelle de vos vidéos vous rapporte')}
+            description={t('Déclarez votre budget, collez un lien par vidéo : WashBoard compte les visites, les réservations, et ce qu’elles ont rapporté — vidéo par vidéo.')}
             feature="campagnes"
             apercu={<ApercuCampagnes />}
-            rassurance="Vos visites et vos réservations sont déjà enregistrées. Une campagne créée aujourd’hui commence à compter dès son premier clic."
+            rassurance={t('Vos visites et vos réservations sont déjà enregistrées. Une campagne créée aujourd’hui commence à compter dès son premier clic.')}
           />
         </div>,
       )
@@ -195,9 +197,9 @@ export default async function CrmPage({ searchParams }: {
           ils repoussaient les statistiques sous la ligne de flottaison. */}
       <div className="mt-6">
         <div data-visite-cible="lien" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Liens par réseau</h2>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">{t('Liens par réseau')}</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            Partagez le lien correspondant sur chaque réseau pour que la source apparaisse fiablement dans les statistiques ci-dessus, même quand Instagram ou TikTok ne transmettent pas l&apos;origine du clic.
+            {t('Partagez le lien correspondant sur chaque réseau pour que la source apparaisse fiablement dans les statistiques ci-dessus, même quand Instagram ou TikTok ne transmettent pas l’origine du clic.')}
           </p>
           <TrafficSourceLinks baseUrl={`${SITE_URL_FALLBACK}/book/${washer.slug}`} accent={washer.brand_color ?? undefined} />
         </div>

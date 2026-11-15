@@ -54,8 +54,11 @@ describe('dictionnaires', () => {
   it.each([['en', en], ['es', es], ['de', de]] as const)('%s : aucune traduction vide, mêmes {variables} que le français', (_l, d) => {
     for (const [cle, valeur] of Object.entries(d)) {
       expect(valeur.trim(), cle).not.toBe('')
-      const vars = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join()
-      expect(vars(valeur), cle).toBe(vars(cle))
+      const vars = (s: string) => new Set(s.match(/\{\w+\}/g) ?? [])
+      // Une traduction peut OMETTRE une variable de pluriel (`{v1}` = « s » ou rien dans la phrase française, inutile
+      // en allemand par exemple), jamais en inventer une, ni omettre une vraie valeur.
+      for (const v of vars(valeur)) expect(vars(cle).has(v), `${cle} : ${v} inconnue`).toBe(true)
+      for (const v of vars(cle)) if (!vars(valeur).has(v)) expect(/^\{v\d+\}$/.test(v), `${cle} : ${v} omise`).toBe(true)
     }
   })
 })

@@ -315,7 +315,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
                     onClick={() => { if (done) setStep(stepDepuisPos(n)) }}
                     disabled={!done}
                     aria-current={active ? 'step' : undefined}
-                    aria-label={done ? `Revenir à l'étape ${label}` : label}
+                    aria-label={done ? tr('Revenir à l\'étape {label}', { label }) : label}
                     className={`flex flex-col items-center gap-1 shrink-0 rounded-lg px-1 py-0.5 transition-opacity ${
                       done ? 'cursor-pointer hover:opacity-70' : 'cursor-default'
                     }`}

@@ -85,7 +85,7 @@ function LigneFil({
         onClick={onSupprimer}
         tabIndex={ouverte ? 0 : -1}
         aria-hidden={!ouverte}
-        aria-label={`Supprimer la conversation ${fil.title}`}
+        aria-label={tr('Supprimer la conversation {title}', { title: fil.title })}
         className={`absolute inset-y-1.5 right-0 flex flex-col items-center justify-center gap-1 rounded-[12px] text-[12px] text-white ${corpsFort}`}
         style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
@@ -121,7 +121,7 @@ function LigneFil({
           )}
           <Chevron />
         </button>
-        <BoutonSupprimerSurvol libelle={`Supprimer la conversation ${fil.title}`} onClick={onSupprimer} />
+        <BoutonSupprimerSurvol libelle={tr('Supprimer la conversation {title}', { title: fil.title })} onClick={onSupprimer} />
       </div>
     </li>
   )

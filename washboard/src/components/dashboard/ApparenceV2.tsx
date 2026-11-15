@@ -150,7 +150,7 @@ export default function ApparenceV2({ nom, slug, initial, liste }: Props) {
   }
 
   const valeurLogo = aLogo ? t('Ajouté') : t('Pas encore : votre initiale s’affiche')
-  const valeurMessage = h.message ?? `Pas encore : « ${MESSAGE_PAR_DEFAUT} » s’affiche`
+  const valeurMessage = h.message ?? t('Pas encore : « {MESSAGE_PAR_DEFAUT} » s’affiche', { MESSAGE_PAR_DEFAUT })
 
   // Bloc des réglages (boutons + liste de 5 lignes) et bloc de l'aperçu : deux fragments
   // qu'on arrange soit empilés (téléphone, ou fenêtre entre 1024 et 1280px — voir

@@ -35,16 +35,16 @@ export default function SignupPage() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!name.trim()) { setError('Le nom de ton entreprise est requis'); return }
+    if (!name.trim()) { setError(t('Le nom de ton entreprise est requis')); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Adresse email invalide'); return }
     // Le numéro est lu sous le pays choisi dans la liste, puis envoyé sous sa forme canonique.
     const telephone = telephoneDuPays(phone, pays)
-    if (!telephone) { setError(`Numéro de téléphone invalide pour ${choixPays.libelle} (ex. ${choixPays.exemple})`); return }
+    if (!telephone) { setError(t('Numéro de téléphone invalide pour {libelle} (ex. {exemple})', { libelle: choixPays.libelle, exemple: choixPays.exemple })); return }
     // Le code de confirmation arrive par SMS (2026-10-21) : un mobile, forcément.
-    if (!normaliserMobile(telephone)) { setError(`Il faut un numéro de mobile (ex. ${choixPays.exemple}) : le code de confirmation arrive par SMS.`); return }
+    if (!normaliserMobile(telephone)) { setError(t('Il faut un numéro de mobile (ex. {exemple}) : le code de confirmation arrive par SMS.', { exemple: choixPays.exemple })); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
-    if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères'); return }
-    if (!cgvAcceptees) { setError('Merci d’accepter les CGV pour continuer'); return }
+    if (password.length < 6) { setError(t('Le mot de passe doit contenir au moins 6 caractères')); return }
+    if (!cgvAcceptees) { setError(t('Merci d’accepter les CGV pour continuer')); return }
     setLoading(true)
     // Sans ce try, un serveur injoignable faisait rejeter le fetch en silence :
     // le bouton restait sur « Création du compte… » pour toujours.
@@ -56,7 +56,7 @@ export default function SignupPage() {
         body: JSON.stringify({ name, email, password, phone: telephone, cgv_acceptees: cgvAcceptees }),
       })
     } catch {
-      setError('Connexion impossible. Vérifie ta connexion internet et réessaie.')
+      setError(t('Connexion impossible. Vérifie ta connexion internet et réessaie.'))
       setLoading(false)
       return
     }
@@ -64,7 +64,7 @@ export default function SignupPage() {
       // Une erreur renvoyée par l'hébergeur plutôt que par la route n'est pas
       // du JSON : ne pas laisser `res.json()` lever à son tour.
       const json = await res.json().catch(() => null)
-      setError(json?.error ?? 'Une erreur est survenue. Réessaie dans un instant.')
+      setError(json?.error ?? t('Une erreur est survenue. Réessaie dans un instant.'))
       setLoading(false)
       return
     }
@@ -79,27 +79,27 @@ export default function SignupPage() {
     <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/' }}>
       <form onSubmit={handleSignup} noValidate className="flex flex-col gap-5">
         <div>
-          <Guide gens={['ryan']} texte="Bienvenue ! On s’occupe de l’organisation, toi des voitures." />
-          <TitreEntree titre="Crée ton espace laveur" sousTitre="1 mois gratuit, sans carte bancaire." />
+          <Guide gens={['ryan']} texte={t('Bienvenue ! On s’occupe de l’organisation, toi des voitures.')} />
+          <TitreEntree titre={t('Crée ton espace laveur')} sousTitre={t('1 mois gratuit, sans carte bancaire.')} />
         </div>
 
         <GroupeChamps>
-          <Champ id="name" label="Nom de ton entreprise">
-            <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="CleanCar" autoComplete="organization" className={SAISIE} />
+          <Champ id="name" label={t('Nom de ton entreprise')}>
+            <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} required placeholder={t('CleanCar')} autoComplete="organization" className={SAISIE} />
           </Champ>
-          <Champ id="email" label="Email">
+          <Champ id="email" label={t('Email')}>
             <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder={t('toi@exemple.fr')} autoComplete="email" className={SAISIE} />
           </Champ>
-          <Champ id="phone" label="Téléphone" aide={<>{t('Un code de confirmation t’arrive par SMS.')}<br />{t('Il sert aussi à te joindre en cas de souci.')}</>}>
+          <Champ id="phone" label={t('Téléphone')} aide={<>{t('Un code de confirmation t’arrive par SMS.')}<br />{t('Il sert aussi à te joindre en cas de souci.')}</>}>
             <div className="flex items-center gap-2">
               <SelecteurPays valeur={pays} onChange={setPays} pays={proposes} />
               <input id="phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder={choixPays.exemple} autoComplete="tel-national" className={SAISIE} />
             </div>
           </Champ>
-          <Champ id="password" label="Mot de passe">
+          <Champ id="password" label={t('Mot de passe')}>
             <PasswordInput id="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder={t('6 caractères minimum')} autoComplete="new-password" className={SAISIE} />
           </Champ>
-          <Champ id="confirm" label="Confirmer le mot de passe">
+          <Champ id="confirm" label={t('Confirmer le mot de passe')}>
             <PasswordInput id="confirm" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" autoComplete="new-password" className={SAISIE} />
           </Champ>
         </GroupeChamps>
@@ -124,9 +124,9 @@ export default function SignupPage() {
         {error && <Erreur texte={error} />}
 
         <BarreActions>
-          <BoutonPrincipal type="submit" chargement={loading} libelleChargement="Création du compte…">Lancer mon mois gratuit</BoutonPrincipal>
+          <BoutonPrincipal type="submit" chargement={loading} libelleChargement={t('Création du compte…')}>{t('Lancer mon mois gratuit')}</BoutonPrincipal>
           <Link href="/login" className={`${LIEN_DISCRET} flex items-center justify-center`}>
-            {t('Déjà un compte ?')}&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('Se connecter')}</b>
+            {t('Déjà un compte ?')}{t(' ')}<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('Se connecter')}</b>
           </Link>
         </BarreActions>
       </form>

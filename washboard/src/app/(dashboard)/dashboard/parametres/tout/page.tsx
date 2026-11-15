@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ParametresFormV1 from '@/components/dashboard/ParametresFormV1'
 import ToutLesReglages from '@/components/dashboard/ToutLesReglages'
+import { getT } from '@/lib/i18n/serveur'
 
 // « Tous les réglages » — refonte 2026, passe 6. Rend l'ancien formulaire de
 // réglages (ParametresFormV1, deux onglets) tel quel, à une nouvelle adresse,
@@ -27,6 +28,7 @@ import ToutLesReglages from '@/components/dashboard/ToutLesReglages'
 // Depuis le 2026-09-30 cette page est réservée au SITE : chaque bloc a son écran v2 dans la PWA
 // installée, et `ToutLesReglages` y renvoie selon l'ancre (les liens ci-dessus n'y mènent plus).
 export default async function TousLesReglagesPage() {
+  const t = await getT()
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -45,10 +47,10 @@ export default async function TousLesReglagesPage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 5l-7 7 7 7" />
           </svg>
-          Plus
+          {t('Plus')}
         </Link>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Tous les réglages</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Gérez vos informations et votre page client</p>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('Tous les réglages')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('Gérez vos informations et votre page client')}</p>
       </div>
       <ParametresFormV1 washer={washer} email={user.email ?? ''} />
       </ToutLesReglages>

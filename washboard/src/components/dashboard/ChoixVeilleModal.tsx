@@ -206,7 +206,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
           {/* ── Bandeau : offre + avancement ─────────────────────────────── */}
           <div className="flex items-center justify-between gap-3 mb-5">
             <span className={V.surtitre} style={{ color: V.accent }}>{t('Offre')} {PLAN_LABELS[offre]}</span>
-            <span className="flex items-center gap-1.5" aria-label={`Étape ${etape} sur 2`}>
+            <span className="flex items-center gap-1.5" aria-label={t('Étape {etape} sur 2', { etape })}>
               <span
                 className="w-6 h-[3px] rounded-full transition-colors duration-200 ease-out"
                 style={{ backgroundColor: etape === 1 ? V.accent : V.inactif }}

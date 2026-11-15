@@ -71,7 +71,7 @@ function LigneFrais({
         onClick={onSupprimer}
         tabIndex={ouverte ? 0 : -1}
         aria-hidden={!ouverte}
-        aria-label={`Supprimer le frais ${depense.label}`}
+        aria-label={t('Supprimer le frais {label}', { label: depense.label })}
         className={`absolute inset-y-1.5 right-0 flex flex-col items-center justify-center gap-1 rounded-[12px] text-[12px] text-white ${corpsFort}`}
         style={{ width: LARGEUR_ACTION_PX, background: 'var(--v2-color-rouge)' }}
       >
@@ -91,7 +91,7 @@ function LigneFrais({
           </span>
         </span>
         <span className={`shrink-0 text-[15px] ${corpsFort} tabular-nums`}>{euros.format(Number(depense.amount))}</span>
-        <BoutonSupprimerSurvol libelle={`Supprimer le frais ${depense.label}`} onClick={onSupprimer} placement="ligne" />
+        <BoutonSupprimerSurvol libelle={t('Supprimer le frais {label}', { label: depense.label })} onClick={onSupprimer} placement="ligne" />
       </div>
     </li>
   )

@@ -549,7 +549,7 @@ export default function LegacyStepSlot({
               </svg>
               <p className={`text-sm ${dureeTropLongue ? 'text-amber-700 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
                 {dureeTropLongue
-                  ? `Avec les options choisies, la prestation dure ${formatDureeFr(serviceDuration)} et ne rentre dans aucun de vos horaires disponibles ce jour-là.`
+                  ? tr('Avec les options choisies, la prestation dure {formatDureeFr} et ne rentre dans aucun de vos horaires disponibles ce jour-là.', { formatDureeFr: formatDureeFr(serviceDuration) })
                   : tr('Aucun créneau disponible ce jour')}
               </p>
             </div>

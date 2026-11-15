@@ -110,7 +110,7 @@ export default function FeuilleCentreAutoV2({
                     {centres.length > 1 && (
                       <input
                         type="text"
-                        aria-label={`Nom du centre ${i + 1}`}
+                        aria-label={t('Nom du centre {v0}', { v0: i + 1 })}
                         placeholder={t('Nom (ex. Centre Lyon Nord)')}
                         maxLength={80}
                         value={c.nom}

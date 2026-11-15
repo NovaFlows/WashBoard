@@ -98,8 +98,8 @@ function FeuillePaiement({ numero, montant, occupe, onRepondre, onClose }: {
   const secondaire = `${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`
   return (
     <Feuille
-      titre={`Facture ${numero ?? ''}`.trim()}
-      sousTitre={`${euros.format(montant)} · déjà payée ?`}
+      titre={tr('Facture {v0}', { v0: numero ?? '' }).trim()}
+      sousTitre={tr('{v0} · déjà payée ?', { v0: euros.format(montant) })}
       onClose={onClose}
     >
       <div className="flex flex-col gap-2.5">
@@ -322,10 +322,10 @@ function FicheDocumentBureauV2({
                 if (partage === 'annule') return
                 const cible = `${libelleGenre(d.genre)} ${d.numero ?? ''}`.trim()
                 if (partage === 'envoye') {
-                  confirmerEnvoi({ titre: tr('PDF envoyé'), detail: `${cible} pour ${client}` })
+                  confirmerEnvoi({ titre: tr('PDF envoyé'), detail: tr('{cible} pour {client}', { cible, client }) })
                   return
                 }
-                annoncerApresRetour({ titre: tr('Message envoyé'), detail: `${cible} pour ${client}` })
+                annoncerApresRetour({ titre: tr('Message envoyé'), detail: tr('{cible} pour {client}', { cible, client }) })
                 window.open(
                   `https://wa.me/${whatsappDigits(d.contenu.client.telephone!)}?text=${encodeURIComponent(messageWhatsapp(d, lien, nomLaveur))}`,
                   '_blank', 'noopener',
@@ -675,7 +675,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
           onEnregistrer={async saisie => {
             const r = await creerDocument(saisie)
             if (!r.ok) return r.message
-            setMessage(`${libelleGenre(saisie.genre)} ${r.data.numero ?? ''} créé${saisie.genre === 'facture' ? 'e' : ''}.`)
+            setMessage(tr('{libelleGenre} {v1} créé{v2}.', { libelleGenre: libelleGenre(saisie.genre), v1: r.data.numero ?? '', v2: saisie.genre === 'facture' ? 'e' : '' }))
             await charger()
             // Une facture écrite directement pose la même question qu'une facture née d'un
             // devis : l'argent est-il déjà là ? Même feuille, même défaut prudent.
@@ -704,7 +704,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
 
       {suppression && (
         <ConfirmationSuppression
-          titre={`Supprimer le devis ${suppression.numero} ?`}
+          titre={tr('Supprimer le devis {numero} ?', { numero: suppression.numero ?? '' })}
           texte={tr('Il disparaît de votre liste. Le client garde le PDF que vous lui avez envoyé.')}
           enCours={suppressionEnCours}
           erreur={suppressionErreur}

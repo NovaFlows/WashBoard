@@ -118,7 +118,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
               key={c.email}
               type="button"
               onClick={() => setOuvert(c.email)}
-              aria-label={`Voir la fiche de ${titreClient}`}
+              aria-label={t('Voir la fiche de {titreClient}', { titreClient })}
               className="w-full min-h-11 grid grid-cols-[18px_1fr_auto_40px] gap-2.5 items-center py-2.5 text-left"
             >
               <span className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{i + 1}</span>
@@ -225,7 +225,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
           <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed`} aria-live="polite">
             {finitAvant(periode, premierJour)
               ? `Pas de données avant le ${formaterJour(premierJour!)}, date de votre premier rendez-vous.`
-              : `Aucune prestation honorée${libelleFiltre ? ` pour un client ${libelleFiltre}` : ''} sur cette période.`}
+              : t('Aucune prestation honorée{v0} sur cette période.', { v0: libelleFiltre ? ` pour un client ${libelleFiltre}` : '' })}
           </p>
           {blocRelances}
         </>

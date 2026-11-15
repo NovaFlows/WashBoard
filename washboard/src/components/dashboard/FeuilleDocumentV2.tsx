@@ -50,14 +50,14 @@ function LigneSaisieV2({
           value={ligne.designation}
           onChange={e => onChange({ ...ligne, designation: e.target.value })}
           placeholder={t('Nettoyage canapé 3 places')}
-          aria-label={`Désignation de la ligne ${index + 1}`}
+          aria-label={t('Désignation de la ligne {v0}', { v0: index + 1 })}
           className={CHAMP}
         />
         {!seule && (
           <button
             type="button"
             onClick={onRetirer}
-            aria-label={`Retirer la ligne ${index + 1}`}
+            aria-label={t('Retirer la ligne {v0}', { v0: index + 1 })}
             className="flex h-11 w-9 shrink-0 items-center justify-center text-[color:var(--v2-color-gris)]"
           >
             <Trash2 size={18} strokeWidth={2} aria-hidden />
@@ -78,7 +78,7 @@ function LigneSaisieV2({
                 setQuantite(e.target.value)
                 onChange({ ...ligne, quantite: Math.trunc(montantNombre(e.target.value)) || 0 })
               }}
-              aria-label={`Quantité de la ligne ${index + 1}`}
+              aria-label={t('Quantité de la ligne {v0}', { v0: index + 1 })}
               className={`${CHAMP} text-center tabular-nums`}
             />
           </span>
@@ -93,7 +93,7 @@ function LigneSaisieV2({
               onChange({ ...ligne, prixUnitaireTtc: montantNombre(e.target.value) || 0 })
             }}
             placeholder="0,00"
-            aria-label={`Prix unitaire de la ligne ${index + 1}`}
+            aria-label={t('Prix unitaire de la ligne {v0}', { v0: index + 1 })}
             className={`${CHAMP} pr-8 text-right tabular-nums`}
           />
           <span

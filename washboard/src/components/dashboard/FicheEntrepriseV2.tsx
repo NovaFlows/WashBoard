@@ -462,7 +462,7 @@ export default function FicheEntrepriseV2({
             <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: 'var(--v2-color-ambre)' }} aria-hidden />
             {facturesImpayees.length === 1
               ? t('Une facture n’est pas encore encaissée :')
-              : `${facturesImpayees.length} factures ne sont pas encore encaissées, pour ${euros.format(facturesImpayees.reduce((s, f) => s + f.document.contenu.totaux.ttc, 0))} au total :`}
+              : t('{length} factures ne sont pas encore encaissées, pour {v1} au total :', { length: facturesImpayees.length, v1: euros.format(facturesImpayees.reduce((s, f) => s + f.document.contenu.totaux.ttc, 0)) })}
           </p>
           <ul className="mt-1 divide-y divide-[color:var(--v2-color-ambre)]/20">
             {facturesImpayees.map(f => (

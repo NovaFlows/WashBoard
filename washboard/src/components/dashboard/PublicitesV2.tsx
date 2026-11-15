@@ -162,7 +162,7 @@ function Video({ b, rang, lien }: { b: BilanCreation; rang: number; lien: string
         <Mesure
           label={t('Transformation')}
           valeur={b.fiable ? pourcent(b.tauxConversion) : t('Peu de données')}
-          aide={b.fiable ? undefined : `dès ${SEUIL_FIABILITE} visites`}
+          aide={b.fiable ? undefined : t('dès {SEUIL_FIABILITE} visites', { SEUIL_FIABILITE })}
           pale={!b.fiable}
         />
         <Mesure
@@ -170,7 +170,7 @@ function Video({ b, rang, lien }: { b: BilanCreation; rang: number; lien: string
           valeur={`${formatEuros(b.chiffreAffaires)} €`}
           aide={b.coutParReservation === null
             ? undefined
-            : `${formatEuros(Math.round(b.coutParReservation * 100) / 100)} € par client`}
+            : t('{formatEuros} € par client', { formatEuros: formatEuros(Math.round(b.coutParReservation * 100) / 100) })}
         />
 
         {b.partReservations !== null && (
@@ -445,7 +445,7 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
             couleur={couleur}
             aide={b.coutParReservation === null
               ? undefined
-              : `${formatEuros(Math.round(b.coutParReservation * 100) / 100)} € par client`}
+              : t('{formatEuros} € par client', { formatEuros: formatEuros(Math.round(b.coutParReservation * 100) / 100) })}
           />
           <Mesure label={t('Visites')} valeur={String(b.visites)} />
           <Mesure label={t('Clients')} valeur={String(b.reservations)} />
@@ -508,7 +508,7 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
           {c.creations.length > 0 && c.reste.visites > 0 && (
             <p className={`mt-3 text-[12px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
               {c.reste.visites} {t('visite')}{c.reste.visites > 1 ? 's' : ''}
-              {c.reste.reservations > 0 && ` et ${c.reste.reservations} client${c.reste.reservations > 1 ? 's' : ''}`}
+              {c.reste.reservations > 0 && t(' et {reservations} client{v1}', { reservations: c.reste.reservations, v1: c.reste.reservations > 1 ? 's' : '' })}
               {' '}{t('sans vidéo identifiée — arrivées par le lien de la campagne.')}
             </p>
           )}
@@ -568,7 +568,7 @@ export default function PublicitesV2({ campagnes, baseUrl, indisponible }: Publi
     ? t('Pas encore activé')
     : campagnes.length === 0
       ? t('Aucune campagne')
-      : `${campagnes.length} campagne${campagnes.length > 1 ? 's' : ''} · ${formatEuros(totaux.budget)} € dépensés`
+      : t('{length} campagne{v1} · {formatEuros} € dépensés', { length: campagnes.length, v1: campagnes.length > 1 ? 's' : '', formatEuros: formatEuros(totaux.budget) })
 
   return (
     <div

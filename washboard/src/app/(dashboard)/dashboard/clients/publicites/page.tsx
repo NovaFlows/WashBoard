@@ -8,6 +8,7 @@ import { ApercuCampagnes } from '@/components/dashboard/ApercusVerrouilles'
 import { SITE_URL_FALLBACK, hasFeature } from '@/lib/plan'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { chargerCampagnes } from '@/lib/campagnesServeur'
+import { getT } from '@/lib/i18n/serveur'
 
 // Refonte 2026 — « Publicités » dans l'application installée.
 //
@@ -22,6 +23,7 @@ import { chargerCampagnes } from '@/lib/campagnesServeur'
 // campagne, aujourd'hui et après la prochaine correction d'une règle de
 // comptage.
 export default async function PublicitesPage() {
+  const t = await getT()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -40,11 +42,11 @@ export default async function PublicitesPage() {
     return coque(
       <div className="p-4">
         <UpgradePrompt
-          title="Savoir laquelle de vos vidéos vous rapporte"
-          description="Déclarez votre budget, collez un lien par vidéo : WashBoard compte les visites, les réservations, et ce qu’elles ont rapporté — vidéo par vidéo."
+          title={t('Savoir laquelle de vos vidéos vous rapporte')}
+          description={t('Déclarez votre budget, collez un lien par vidéo : WashBoard compte les visites, les réservations, et ce qu’elles ont rapporté — vidéo par vidéo.')}
           feature="campagnes"
           apercu={<ApercuCampagnes />}
-          rassurance="Vos visites et vos réservations sont déjà enregistrées. Une campagne créée aujourd’hui commence à compter dès son premier clic."
+          rassurance={t('Vos visites et vos réservations sont déjà enregistrées. Une campagne créée aujourd’hui commence à compter dès son premier clic.')}
         />
       </div>,
     )

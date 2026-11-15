@@ -78,7 +78,7 @@ export default function FeuilleMessageV2({ message, onEnregistrer, onClose, pann
             )}
             <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
               {vide
-                ? `Si vous laissez ce champ vide, votre page affiche « ${MESSAGE_PAR_DEFAUT} ».`
+                ? t('Si vous laissez ce champ vide, votre page affiche « {MESSAGE_PAR_DEFAUT} ».', { MESSAGE_PAR_DEFAUT })
                 : t('Il sert aussi de description quand vous partagez votre lien.')}
             </p>
           </div>

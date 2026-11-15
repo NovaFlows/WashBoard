@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
     })
     const json = await res.json()
     setLoading(false)
-    if (!res.ok) { setError(json.error ?? 'Une erreur est survenue.'); return }
+    if (!res.ok) { setError(json.error ?? t('Une erreur est survenue.')); return }
     setSent(true)
   }
 
@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
     <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/login' }}>
       {sent ? (
         <div className="flex flex-col gap-5">
-          <TitreEntree titre="Email envoyé" sousTitre={t('Lien envoyé à {email}', { email })} />
+          <TitreEntree titre={t('Email envoyé')} sousTitre={t('Lien envoyé à {email}', { email })} />
           <p className="flex items-start gap-2 text-sm">
             <span aria-hidden className="mt-[7px] h-[7px] w-[7px] shrink-0 rounded-full bg-[color:var(--v2-color-vert)]" />
             <span>
@@ -48,10 +48,10 @@ export default function ForgotPasswordPage() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
-          <TitreEntree titre="Mot de passe oublié" sousTitre="Saisis ton email pour recevoir un lien de réinitialisation" />
+          <TitreEntree titre={t('Mot de passe oublié')} sousTitre={t('Saisis ton email pour recevoir un lien de réinitialisation')} />
 
           <GroupeChamps>
-            <Champ id="email" label="Email">
+            <Champ id="email" label={t('Email')}>
               <input
                 id="email"
                 type="email"
@@ -68,9 +68,9 @@ export default function ForgotPasswordPage() {
           {error && <Erreur texte={error} />}
 
           <BarreActions>
-            <BoutonPrincipal type="submit" disabled={!email.trim()} chargement={loading} libelleChargement="Envoi…">Envoyer le lien</BoutonPrincipal>
+            <BoutonPrincipal type="submit" disabled={!email.trim()} chargement={loading} libelleChargement="Envoi…">{t('Envoyer le lien')}</BoutonPrincipal>
             <Link href="/login" className={`${LIEN_DISCRET} flex items-center justify-center`}>
-              {t('Tu te souviens ?')}&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('Se connecter')}</b>
+              {t('Tu te souviens ?')}{t(' ')}<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('Se connecter')}</b>
             </Link>
           </BarreActions>
         </form>

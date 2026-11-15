@@ -69,7 +69,7 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
       uid: `${bookingId}@washboard.fr`,
       title: `Lavage${service ? ` ${service.name}` : ''} — ${washerName}`,
       location: form.address,
-      description: `Rendez-vous avec ${washerName}. À régler sur place : ${formatPrice(total)}.`,
+      description: t('Rendez-vous avec {washerName}. À régler sur place : {formatPrice}.', { washerName, formatPrice: formatPrice(total) }),
       start: date,
       durationMinutes: duree,
     })

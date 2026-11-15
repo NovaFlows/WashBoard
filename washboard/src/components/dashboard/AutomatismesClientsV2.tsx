@@ -73,23 +73,23 @@ export default function AutomatismesClientsV2({ automatismes }: { automatismes: 
   // laisser cliquer vers un mur.
   const publicites: ResumePublicites = publicitesAutorisees
     ? resumePublicites(campagnes, new Date().toLocaleDateString('en-CA'))
-    : { texte: `Inclus dans l’offre ${libellePlanPublicites}` }
+    : { texte: t('Inclus dans l’offre {libellePlanPublicites}', { libellePlanPublicites }) }
   const avisDisponible = avisAutorise || messages.review_enabled
   const relanceDisponible = relanceAutorisee || messages.followup_enabled
 
   const blocage = messages.review_enabled ? blocageAvis(messages, ctx) : null
   const avis = !avisDisponible
-    ? { texte: `Inclus dans l’offre ${libellePlanAvis}` }
+    ? { texte: t('Inclus dans l’offre {libellePlanAvis}', { libellePlanAvis }) }
     : avisActif(messages, ctx)
       ? { texte: `${libelleDelaiAvis(messages.review_delay_hours)} · ${libelleCanal(messages.review_channel)}` }
       : blocage === 'lien'
         ? { texte: t('Rien ne part : ajoutez votre lien d’avis Google'), ton: 'ambre' as const }
         : blocage === 'sms'
-          ? { texte: `Rien ne part : le SMS est inclus dès l’offre ${requiredPlanLabel('avis_sms')}`, ton: 'ambre' as const }
+          ? { texte: t('Rien ne part : le SMS est inclus dès l’offre {requiredPlanLabel}', { requiredPlanLabel: requiredPlanLabel('avis_sms') }), ton: 'ambre' as const }
           : { texte: t('Désactivée. Un avis après chaque lavage, sans y penser.') }
 
   const relance = !relanceDisponible
-    ? { texte: `Inclus dans l’offre ${libellePlanRelance}` }
+    ? { texte: t('Inclus dans l’offre {libellePlanRelance}', { libellePlanRelance }) }
     : relanceActive(messages)
       ? { texte: `${libelleDelaiRelance(messages.followup_delay_days)} · ${libelleCanal(messages.review_channel)}` }
       : messages.followup_enabled
@@ -138,7 +138,7 @@ export default function AutomatismesClientsV2({ automatismes }: { automatismes: 
             label={t('Créneaux intelligents')}
             valeur={peut('creneaux_intelligents')
               ? resumeCreneaux(creneaux)
-              : `Inclus dans l’offre ${requiredPlanLabel('creneaux_intelligents')}`}
+              : t('Inclus dans l’offre {requiredPlanLabel}', { requiredPlanLabel: requiredPlanLabel('creneaux_intelligents') })}
             onClick={() => setFeuille(true)}
           />
         </ul>

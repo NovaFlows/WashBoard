@@ -213,7 +213,7 @@ export default function GuideV2({ liste }: Props) {
 
       {cherche && (
         <p className={`mt-2 px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`} aria-live="polite">
-          {total === 0 ? tr('Aucune réponse.') : `${total} réponse${total > 1 ? 's' : ''}`}
+          {total === 0 ? tr('Aucune réponse.') : tr('{total} réponse{v1}', { total, v1: total > 1 ? 's' : '' })}
         </p>
       )}
 

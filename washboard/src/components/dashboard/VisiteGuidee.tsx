@@ -594,7 +594,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
           <button
             type="button"
             onClick={() => setReduite(false)}
-            aria-label={`Reprendre la visite guidée — étape ${etape + 1} sur ${etapes.length}`}
+            aria-label={t('Reprendre la visite guidée — étape {v0} sur {length}', { v0: etape + 1, length: etapes.length })}
             className={`wb-visite-verre pointer-events-auto absolute right-3 h-11 px-3.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
             style={styleCarte}
           >

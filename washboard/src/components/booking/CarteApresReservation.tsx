@@ -55,7 +55,7 @@ export default function CarteApresReservation({ fidelite }: { fidelite: Fidelite
           scenario="reservation"
           nouveaux={gain}
           largeur={340}
-          legende={complete ? t('Votre récompense vous attend pour la prochaine réservation') : `+${gain} tampon${gain > 1 ? 's' : ''} dès que la prestation sera terminée`}
+          legende={complete ? t('Votre récompense vous attend pour la prochaine réservation') : t('+{gain} tampon{v1} dès que la prestation sera terminée', { gain, v1: gain > 1 ? 's' : '' })}
         />
       </div>
       <p className="mt-1 text-[13px] leading-snug text-slate-500 dark:text-slate-400">{fidelite.phrase}</p>

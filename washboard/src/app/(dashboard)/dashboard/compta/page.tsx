@@ -10,8 +10,10 @@ import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { logger } from '@/lib/logger'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { revenuNet } from '@/lib/pricing'
+import { getT } from '@/lib/i18n/serveur'
 
 export default async function ComptaPage() {
+  const t = await getT()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -24,11 +26,11 @@ export default async function ComptaPage() {
       <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
         <div className="p-4">
           <div className="mb-6">
-            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Comptabilité</h1>
+            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">{t('Comptabilité')}</h1>
           </div>
           <UpgradePrompt
-            title="Gérez votre comptabilité"
-            description="Suivez votre chiffre d’affaires, vos dépenses et votre résultat chaque mois."
+            title={t('Gérez votre comptabilité')}
+            description={t('Suivez votre chiffre d’affaires, vos dépenses et votre résultat chaque mois.')}
             feature="compta"
             apercu={<ApercuCompta />}
           />
@@ -67,8 +69,8 @@ export default async function ComptaPage() {
     <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
       <div className="p-4 max-w-2xl mx-auto">
         <div className="mb-5">
-          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Comptabilité</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">CA et dépenses par mois</p>
+          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">{t('Comptabilité')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t('CA et dépenses par mois')}</p>
         </div>
         <ComptaDashboard initialRevenue={initialRevenue} washerId={washer.id} />
       </div>

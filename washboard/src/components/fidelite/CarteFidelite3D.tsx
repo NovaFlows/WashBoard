@@ -380,7 +380,7 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
   const style = { ...variablesCarte(couleur), '--wb-cf-max': `${largeur}px` } as CSSProperties
   const initiale = (nom.trim().charAt(0) || 'W').toUpperCase()
   const dansLaPhrase = recompense.charAt(0).toLowerCase() + recompense.slice(1)
-  const libelleCases = `${nPleins} tampon${nPleins > 1 ? 's' : ''} sur ${requis}`
+  const libelleCases = tr('{nPleins} tampon{v1} sur {requis}', { nPleins, v1: nPleins > 1 ? 's' : '', requis })
 
   return (
     <div ref={racine} className="wb-cf" style={style} data-halo={halo ? 'oui' : 'non'}
@@ -401,7 +401,7 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
       <div className="wb-cf-scene">
         <div ref={ombre} className="wb-cf-ombre" aria-hidden />
         <div ref={entree} className="wb-cf-entree" data-cache={scenario === 'apercu' ? 'non' : 'oui'}
-          role="button" tabIndex={0} aria-label={`Carte de fidélité ${nom}, ${libelleCases}. Retourner la carte`}
+          role="button" tabIndex={0} aria-label={tr('Carte de fidélité {nom}, {libelleCases}. Retourner la carte', { nom, libelleCases })}
           onPointerDown={e => { const g = geste.current; g.glisse = true; g.deplacement = 0; g.dernier = { x: e.clientX, y: e.clientY }; incliner(e) }}
           onPointerUp={e => relacher(e, false)}
           onPointerCancel={e => relacher(e, true)}
@@ -472,7 +472,7 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
                       )
                     })}
                   </div>
-                  <div className="wb-cf-recompense">{complet ? `★ Récompense débloquée : ${dansLaPhrase}` : `Au ${requis}e tampon : ${dansLaPhrase}`}</div>
+                  <div className="wb-cf-recompense">{complet ? tr('★ Récompense débloquée : {dansLaPhrase}', { dansLaPhrase }) : `Au ${requis}e tampon : ${dansLaPhrase}`}</div>
                 </div>
                 <div className="wb-cf-holo" /><div className="wb-cf-reflet" /><div className="wb-cf-arete" />
               </div>

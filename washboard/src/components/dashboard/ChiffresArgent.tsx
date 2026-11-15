@@ -236,7 +236,7 @@ export default function ChiffresArgent({
     afficherLabel: pt.afficherLabel,
     libelleLong: pt.libelleLong,
     valeur: enResultat && serie!.fraisParCreneau ? pt.resultat : pt.encaisse,
-    detail: enResultat && serie!.fraisParCreneau ? `Encaissé ${euros(pt.encaisse)} · Dépensé ${euros(pt.depense)}` : undefined,
+    detail: enResultat && serie!.fraisParCreneau ? t('Encaissé {euros} · Dépensé {v1}', { euros: euros(pt.encaisse), v1: euros(pt.depense) }) : undefined,
     futur: pt.futur,
     courant: pt.courant,
   })), [serie, enResultat])
@@ -263,7 +263,7 @@ export default function ChiffresArgent({
   const parResultat = enResultat && !!serie?.fraisParCreneau
   const resume = serie && !serie.vide
     ? `${enResultat ? titreGraphique(periode.type) : titreGraphiqueCa(periode.type)}, ${plage.label}. ${parResultat ? t('Résultat') : t('Encaissé')} total ${euros(parResultat ? serie.resultat : serie.encaisse)}.`
-      + (meilleur ? ` Meilleur créneau : ${meilleur.libelleLong}, ${euros(meilleur.valeur)}.` : '')
+      + (meilleur ? t(' Meilleur créneau : {libelleLong}, {euros}.', { libelleLong: meilleur.libelleLong, euros: euros(meilleur.valeur) }) : '')
       + t(' Flèches gauche et droite pour parcourir les barres.')
     : ''
 
@@ -346,7 +346,7 @@ export default function ChiffresArgent({
       points={points}
       formaterValeur={euros}
       resume={resume}
-      titreParDefaut={`${enResultat ? titreGraphique(periode.type) : titreGraphiqueCa(periode.type)} · touchez une barre pour lire sa valeur`}
+      titreParDefaut={t('{v0} · touchez une barre pour lire sa valeur', { v0: enResultat ? titreGraphique(periode.type) : titreGraphiqueCa(periode.type) })}
       hauteur={grandEcran ? 140 : undefined}
     />
   )
@@ -391,7 +391,7 @@ export default function ChiffresArgent({
   const blocFacturesLiens = hasCompta && (
     <>
       {([
-        { href: '/dashboard/factures', texte: `Factures · ${nombre.format(facturesCount)} émise${facturesCount > 1 ? 's' : ''}` },
+        { href: '/dashboard/factures', texte: t('Factures · {v0} émise{v1}', { v0: nombre.format(facturesCount), v1: facturesCount > 1 ? 's' : '' }) },
         { href: '/dashboard/chiffres/documents', texte: t('Devis et factures à la main') },
       ] as const).map(l => (
         <Link key={l.href} href={l.href} className="flex items-center justify-between px-1 h-11">

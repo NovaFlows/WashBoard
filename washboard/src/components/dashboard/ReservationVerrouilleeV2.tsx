@@ -162,7 +162,7 @@ function FicheVerrouilleeV2({ reservation: r, offre, onClose }: { reservation: R
   return (
     <Feuille
       titre={<NomMasque />}
-      sousTitre={`Réservation le ${jourSeul(r.scheduled_at) ?? '—'}`}
+      sousTitre={t('Réservation le {v0}', { v0: jourSeul(r.scheduled_at) ?? '—' })}
       onClose={onClose}
       pied={
         <Link

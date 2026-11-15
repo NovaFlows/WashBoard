@@ -276,7 +276,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                 </div>
                 <p className={`mt-1.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
                   {b.delai_heures
-                    ? `Sans paiement confirmé par vous dans les ${libelleHeures(b.delai_heures)}, une réservation encore en attente est annulée et le créneau libéré.`
+                    ? t('Sans paiement confirmé par vous dans les {libelleHeures}, une réservation encore en attente est annulée et le créneau libéré.', { libelleHeures: libelleHeures(b.delai_heures) })
                     : t('La réservation n’est jamais annulée automatiquement.')}
                   {b.virementActif && b.delai_heures !== null && b.delai_heures < 24 && (
                     <span className="mt-1.5 flex items-start gap-2" style={{ color: 'var(--v2-color-encre)' }}>

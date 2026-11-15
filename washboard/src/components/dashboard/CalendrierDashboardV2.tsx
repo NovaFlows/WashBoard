@@ -503,7 +503,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 
   const estAujourdhui = dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate()
   const sousTitre = estAujourdhui
-    ? `Aujourd’hui · ${dayDate.toLocaleDateString(loc, { day: 'numeric' })}`
+    ? tr('Aujourd’hui · {v0}', { v0: dayDate.toLocaleDateString(loc, { day: 'numeric' }) })
     : dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric' })
 
   // ── Passe bureau (2026-10-06) ───────────────────────────────────────────────────────────────
@@ -521,10 +521,10 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
       0,
     )
     const sousTitreBureau = vueBureau === 'jour'
-      ? `${actifs.length} rendez-vous ${estAujourdhui ? tr('aujourd’hui') : dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric' })}${totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}`
+      ? tr('{length} rendez-vous {v1}{v2}', { length: actifs.length, v1: estAujourdhui ? tr('aujourd’hui') : dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric' }), v2: totalRoute !== null ? ` · ~${totalRoute} min de route` : '' })
       : vueBureau === 'semaine'
-        ? `${semaineBureau[0].toLocaleDateString(loc, { day: 'numeric', month: 'short' })} – ${semaineBureau[6].toLocaleDateString(loc, { day: 'numeric', month: 'short' })} · ${nbRdvSemaine} rendez-vous cette semaine`
-        : `${MOIS[dayDate.getMonth()]} ${dayDate.getFullYear()} · ${dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric' })} sélectionné · ${actifs.length} rendez-vous${totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}`
+        ? tr('{v0} – {v1} · {nbRdvSemaine} rendez-vous cette semaine', { v0: semaineBureau[0].toLocaleDateString(loc, { day: 'numeric', month: 'short' }), v1: semaineBureau[6].toLocaleDateString(loc, { day: 'numeric', month: 'short' }), nbRdvSemaine })
+        : tr('{v0} {v1} · {v2} sélectionné · {length} rendez-vous{v4}', { v0: MOIS[dayDate.getMonth()], v1: dayDate.getFullYear(), v2: dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric' }), length: actifs.length, v4: totalRoute !== null ? ` · ~${totalRoute} min de route` : '' })
 
     return (
       <>
@@ -674,7 +674,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                                 <button
                                   type="button"
                                   onClick={() => setCreneauPropose({ debut: finRendezVous(b), fin: new Date(suivant.scheduled_at), ville: villeTrou, origine: origineDuTrou(b, suivant) })}
-                                  aria-label={`Proposer ce créneau libre de ${dureeLisible(gapMin)} à un client`}
+                                  aria-label={tr('Proposer ce créneau libre de {dureeLisible} à un client', { dureeLisible: dureeLisible(gapMin) })}
                                   className={`text-[12px] ${corpsFort}`}
                                   style={{ color: 'var(--v2-color-accent)' }}
                                 >
@@ -740,7 +740,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
             {actifs.length > 0 && (
               <div className="flex items-center justify-between border-t border-[color:var(--v2-filet)] pt-3.5">
                 <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
-                  {actifs.length} rendez-vous{totalRoute !== null ? ` · ${totalRoute} min de route` : ''}
+                  {actifs.length} rendez-vous{totalRoute !== null ? tr(' · {totalRoute} min de route', { totalRoute }) : ''}
                 </span>
                 <span className={`text-[14px] ${corpsFort} tabular-nums`}>{totalPrix} €</span>
               </div>
@@ -918,7 +918,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
               touche le mot. `-my-2 py-2` : cible de 44 px sans agrandir la
               ligne. */}
           <h1 className={`text-[21px] ${titre} capitalize`}>
-            <button type="button" onClick={() => setVue('mois')} aria-label={`${MOIS[dayDate.getMonth()]} : ouvrir la vue du mois`} className="-my-2 block py-2 text-left">
+            <button type="button" onClick={() => setVue('mois')} aria-label={tr('{v0} : ouvrir la vue du mois', { v0: MOIS[dayDate.getMonth()] })} className="-my-2 block py-2 text-left">
               {MOIS[dayDate.getMonth()]}
             </button>
           </h1>
@@ -1052,7 +1052,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                       <button
                         type="button"
                         onClick={() => setCreneauPropose({ debut: finRendezVous(b), fin: new Date(suivant.scheduled_at), ville: villeTrou, origine: origineDuTrou(b, suivant) })}
-                        aria-label={`Proposer ce créneau libre de ${dureeLisible(gapMin)} à un client`}
+                        aria-label={tr('Proposer ce créneau libre de {dureeLisible} à un client', { dureeLisible: dureeLisible(gapMin) })}
                         className={`-my-2.5 -mr-1.5 flex h-11 shrink-0 items-center px-2.5 text-[13px] ${corpsFort}`}
                         style={{ color: 'var(--v2-color-accent)' }}
                       >
@@ -1092,7 +1092,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
       {actifs.length > 0 && (
         <div className="flex items-center justify-between border-t border-[color:var(--v2-filet)] pt-3.5">
           <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
-            {actifs.length} rendez-vous{totalRoute !== null ? ` · ${totalRoute} min de route` : ''}
+            {actifs.length} rendez-vous{totalRoute !== null ? tr(' · {totalRoute} min de route', { totalRoute }) : ''}
           </span>
           <span className={`text-[14px] ${corpsFort} tabular-nums`}>{totalPrix} €</span>
         </div>
@@ -1276,6 +1276,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 }
 
 function RendezVousCarte({ booking: b, onOuvrir, estompe }: { booking: Booking; onOuvrir: () => void; estompe: boolean }) {
+  const tr = useT()
   const statut = STATUT[statutAffiche(b)]
   const ville = b.lieu === 'centre' ? 'Centre auto' : villeDepuisAdresse(b.address)
   return (
@@ -1313,7 +1314,7 @@ function RendezVousCarte({ booking: b, onOuvrir, estompe }: { booking: Booking; 
             : <span />}
           <span className="flex shrink-0 items-center gap-1.5">
             <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: statut.couleur }} aria-hidden />
-            <span className={`text-[12.5px] ${corpsFort}`} style={{ color: statut.couleur }}>{statut.label}</span>
+            <span className={`text-[12.5px] ${corpsFort}`} style={{ color: statut.couleur }}>{tr(statut.label)}</span>
           </span>
         </span>
       </button>
@@ -1414,7 +1415,7 @@ function DetailRendezVous({
   const modifiable = b.status !== 'cancelled' && b.status !== 'done'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={`Rendez-vous de ${b.client_name}`}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={tr('Rendez-vous de {client_name}', { client_name: b.client_name })}>
       <button
         aria-hidden
         tabIndex={-1}
@@ -1439,7 +1440,7 @@ function DetailRendezVous({
           <div className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5 mb-1.5">
               <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: statut.couleur }} aria-hidden />
-              <span className={`text-[12.5px] ${corpsFort}`} style={{ color: statut.couleur }}>{statut.label}</span>
+              <span className={`text-[12.5px] ${corpsFort}`} style={{ color: statut.couleur }}>{tr(statut.label)}</span>
             </span>
             <h2 className={`truncate text-[22px] ${titre}`}>{b.client_name}</h2>
 
@@ -1770,6 +1771,7 @@ function LigneRdvBureauV2({
   selectionnee: boolean
   onOuvrir: () => void
 }) {
+  const tr = useT()
   const statut = STATUT[statutAffiche(b)]
   return (
     <button
@@ -1790,7 +1792,7 @@ function LigneRdvBureauV2({
       </span>
       <span className="flex shrink-0 flex-col items-end gap-0.5">
         <span className={`text-[13px] ${corpsFort} tabular-nums`}>{prixAffiche(b)}</span>
-        <span className={`text-[11px] ${corpsFort}`} style={{ color: statut.couleur }}>{statut.label}</span>
+        <span className={`text-[11px] ${corpsFort}`} style={{ color: statut.couleur }}>{tr(statut.label)}</span>
       </span>
     </button>
   )
@@ -2370,7 +2372,7 @@ function MoisBureauV2({
             {dayDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
           <p className={`mt-0.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
-            {actifs.length} rendez-vous{actifs.length > 0 ? ` · ${totalPrix} €` : ''}{totalRoute !== null ? ` · ~${totalRoute} min de route` : ''}
+            {actifs.length} rendez-vous{actifs.length > 0 ? ` · ${totalPrix} €` : ''}{totalRoute !== null ? tr(' · ~{totalRoute} min de route', { totalRoute }) : ''}
           </p>
         </div>
         <div className="flex-1 overflow-y-auto">

@@ -126,7 +126,7 @@ export default function ChiffresAcquisition({
 
   const meilleur = points.filter(p => !p.futur).reduce<PointBarre | null>((m, p) => (!m || p.valeur > m.valeur ? p : m), null)
   const resume = `${titreVisites(periode.type)}, ${plage.label}. ${nombre.format(stats.visitorCount)} visiteur${stats.visitorCount > 1 ? 's' : ''}.`
-    + (meilleur && meilleur.valeur > 0 ? ` Créneau le plus fréquenté : ${meilleur.libelleLong}, ${nombre.format(meilleur.valeur)}.` : '')
+    + (meilleur && meilleur.valeur > 0 ? t(' Créneau le plus fréquenté : {libelleLong}, {v1}.', { libelleLong: meilleur.libelleLong, v1: nombre.format(meilleur.valeur) }) : '')
     + t(' Flèches gauche et droite pour parcourir les barres.')
 
   const maxReferrer = stats.referrerBreakdown[0]?.sessions ?? 1
@@ -173,7 +173,7 @@ export default function ChiffresAcquisition({
   const blocAppareilsHoraires = stats.visitorCount > 0 && (
     <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed ${grandEcran ? 'mt-1' : 'px-1'}`}>
       {stats.deviceBreakdown.map(d => `${LABEL_APPAREIL[d.device] ?? d.device} ${d.pct} %`).join(' · ')}
-      {stats.visitTiming.topSlot && ` · les visites montent surtout en ${stats.visitTiming.topSlot.toLowerCase()}`}
+      {stats.visitTiming.topSlot && t(' · les visites montent surtout en {v0}', { v0: stats.visitTiming.topSlot.toLowerCase() })}
     </p>
   )
 
@@ -184,7 +184,7 @@ export default function ChiffresAcquisition({
         points={points}
         formaterValeur={v => `${nombre.format(v)} visiteur${v > 1 ? 's' : ''}`}
         resume={resume}
-        titreParDefaut={`${titreVisites(periode.type)} · touchez une barre pour lire sa valeur`}
+        titreParDefaut={t('{titreVisites} · touchez une barre pour lire sa valeur', { titreVisites: titreVisites(periode.type) })}
         hauteur={grandEcran ? 140 : undefined}
       />
     </div>

@@ -46,10 +46,10 @@ export default function LoginPage() {
   return (
     <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/' }}>
       <form onSubmit={handleLogin} noValidate className="flex flex-col gap-5">
-        <TitreEntree titre="Content de te revoir" sousTitre="Connecte-toi pour retrouver ta journée." />
+        <TitreEntree titre={t('Content de te revoir')} sousTitre={t('Connecte-toi pour retrouver ta journée.')} />
 
         <GroupeChamps>
-          <Champ id="email" label="Email">
+          <Champ id="email" label={t('Email')}>
             <input
               id="email"
               type="email"
@@ -61,7 +61,7 @@ export default function LoginPage() {
               className={SAISIE}
             />
           </Champ>
-          <Champ id="password" label="Mot de passe">
+          <Champ id="password" label={t('Mot de passe')}>
             <PasswordInput
               id="password"
               value={password}
@@ -79,9 +79,9 @@ export default function LoginPage() {
         {error && <Erreur texte={error} />}
 
         <BarreActions>
-          <BoutonPrincipal type="submit" chargement={loading} libelleChargement="Connexion…">Se connecter</BoutonPrincipal>
+          <BoutonPrincipal type="submit" chargement={loading} libelleChargement="Connexion…">{t('Se connecter')}</BoutonPrincipal>
           <Link href="/signup" className={`${LIEN_DISCRET} flex items-center justify-center`}>
-            {t('Pas encore de compte ?')}&nbsp;<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('1 mois d’essai gratuit')}</b>
+            {t('Pas encore de compte ?')}{t(' ')}<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('1 mois d’essai gratuit')}</b>
           </Link>
         </BarreActions>
       </form>

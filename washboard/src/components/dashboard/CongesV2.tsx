@@ -78,7 +78,7 @@ export function BandeauConge({
       <button
         type="button"
         onClick={onSupprimer}
-        aria-label={`Supprimer la période ${libellePeriode(conge)}`}
+        aria-label={t('Supprimer la période {libellePeriode}', { libellePeriode: libellePeriode(conge) })}
         className={`flex h-11 shrink-0 items-center px-3 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
       >
         {t('Supprimer')}
@@ -326,7 +326,7 @@ export function FeuilleAjoutConge({
             <p className={`mt-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
               {toutes
                 ? t('Toute l’équipe — les créneaux seront bloqués.')
-                : `${restants} laveur${restants > 1 ? 's' : ''} restant — capacité réduite.`}
+                : t('{restants} laveur{v1} restant — capacité réduite.', { restants, v1: restants > 1 ? 's' : '' })}
             </p>
           </div>
         )}

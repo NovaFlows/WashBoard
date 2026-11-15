@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { fideliteActive, jetonValide, phraseCarte } from '@/lib/fidelite'
 import { apparenceCarte, etatDuClient } from '@/lib/fideliteServeur'
 import CarteFidelite3D from '@/components/fidelite/CarteFidelite3D'
+import { getT } from '@/lib/i18n/serveur'
 
 // Page de la carte de fidélité d'un client (lien reçu dans ses emails de réservation) :
 // ses tampons chez CE laveur, la récompense qui l'attend, et un bouton pour réserver.
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
 }
 
 export default async function CarteFidelite({ params, searchParams }: { params: Promise<{ jeton: string }>; searchParams: Promise<{ tampon?: string }> }) {
+  const t = await getT()
   const [{ jeton }, { tampon }] = await Promise.all([params, searchParams])
   if (!jetonValide(jeton)) notFound()
   const admin = createAdminClient()
@@ -53,11 +55,11 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
             depuis l'écran de confirmation ou depuis un email, sans historique sur lequel revenir. */}
         <Link href={`/book/${laveur.slug}`} className="-ml-2 mb-3 inline-flex min-h-11 items-center gap-0.5 pr-3 text-[14px] font-semibold text-[#16161A] dark:text-[#F3F3F5]">
           <ChevronLeft size={22} strokeWidth={2} aria-hidden />
-          Page de réservation
+          {t('Page de réservation')}
         </Link>
         <p className="text-[13px] font-medium text-[#6B6B76] dark:text-[#9A9AA4]">{laveur.name}</p>
         <h1 className="mt-1 text-[30px] font-bold leading-[1.05] tracking-[-0.03em] [font-stretch:112%]">
-          {scenario === 'tampon' ? (complete ? 'Votre carte est complète' : nouveaux > 1 ? `Vos ${nouveaux} tampons sont arrivés` : 'Votre tampon est arrivé') : 'Ma carte de fidélité'}
+          {scenario === 'tampon' ? (complete ? t('Votre carte est complète') : nouveaux > 1 ? t('Vos {nouveaux} tampons sont arrivés', { nouveaux }) : t('Votre tampon est arrivé')) : t('Ma carte de fidélité')}
         </h1>
 
         {reglages && etat && apparence ? (
@@ -70,20 +72,20 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
                 scenario={scenario}
                 nouveaux={Math.max(1, nouveaux)}
                 largeur={380}
-                legende={scenario === 'tampon' ? (complete ? 'Carte complète · récompense débloquée' : `+${nouveaux} tampon${nouveaux > 1 ? 's' : ''} · ${surLaCarte} sur ${etat.requis}`) : null}
+                legende={scenario === 'tampon' ? (complete ? t('Carte complète · récompense débloquée') : t('+{nouveaux} tampon{v1} · {surLaCarte} sur {requis}', { nouveaux, v1: nouveaux > 1 ? 's' : '', surLaCarte, requis: etat.requis })) : null}
               />
             </div>
             <p className="mt-2 text-[16px] leading-snug">{phraseCarte(etat, reglages)}</p>
             <p className="mt-2 text-[13px] leading-snug text-[#6B6B76] dark:text-[#9A9AA4]">
-              {reglages.tampon_par_vehicule ? 'Un tampon par véhicule lavé' : 'Un tampon par prestation terminée'}. Réservez avec le même numéro de téléphone et le même email pour qu’il compte. Touchez la carte pour la retourner.
+              {reglages.tampon_par_vehicule ? t('Un tampon par véhicule lavé') : t('Un tampon par prestation terminée')}{t('. Réservez avec le même numéro de téléphone et le même email pour qu’il compte. Touchez la carte pour la retourner.')}
             </p>
           </>
         ) : (
-          <p className="mt-6 text-[15px]">{laveur.name} ne propose plus de carte de fidélité pour le moment.</p>
+          <p className="mt-6 text-[15px]">{laveur.name} {t('ne propose plus de carte de fidélité pour le moment.')}</p>
         )}
 
         <Link href={`/book/${laveur.slug}`} className="mt-6 flex min-h-12 items-center justify-center rounded-2xl bg-[#16161A] px-4 text-[15px] font-semibold text-white active:scale-[.98] dark:bg-white dark:text-[#16161A]">
-          Réserver un lavage
+          {t('Réserver un lavage')}
         </Link>
       </div>
     </main>

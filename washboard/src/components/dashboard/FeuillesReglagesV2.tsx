@@ -243,7 +243,7 @@ export function ChampExpediteurSms({
     setTest({ enCours: false, erreur: null })
     confirmerEnvoi({
       titre: t('SMS envoyé'),
-      detail: telephone ? `Regardez sur votre téléphone (${resumeTelephone(telephone).texte}).` : t('Regardez sur votre téléphone.'),
+      detail: telephone ? t('Regardez sur votre téléphone ({texte}).', { texte: resumeTelephone(telephone).texte }) : t('Regardez sur votre téléphone.'),
     })
   }
 

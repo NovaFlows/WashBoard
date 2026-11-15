@@ -9,8 +9,10 @@ import { Spinner } from '@/components/ui/Spinner'
 import {
   BarreActions, BoutonPrincipal, BOUTON_PRINCIPAL, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, SAISIE, TitreEntree,
 } from '@/components/entree/Entree'
+import { useT } from '@/components/i18n/I18nProvider'
 
 export default function ResetPasswordPage() {
+  const t = useT()
   const [password, setPassword]   = useState('')
   const [confirm, setConfirm]     = useState('')
   const [loading, setLoading]     = useState(false)
@@ -51,7 +53,7 @@ export default function ResetPasswordPage() {
       const { data } = await supabase.auth.getSession()
       if (data.session) { setReady(true); return }
 
-      setError('Lien invalide ou expiré. Recommencez la procédure.')
+      setError(t('Lien invalide ou expiré. Recommencez la procédure.'))
     }
     init()
 
@@ -64,12 +66,12 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (password.length < 6) { setError('Le mot de passe doit faire au moins 6 caractères.'); return }
+    if (password.length < 6) { setError(t('Le mot de passe doit faire au moins 6 caractères.')); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas.'); return }
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password })
     setLoading(false)
-    if (error) { setError('Erreur lors de la mise à jour. Le lien a peut-être expiré.'); return }
+    if (error) { setError(t('Erreur lors de la mise à jour. Le lien a peut-être expiré.')); return }
     setDone(true)
     setTimeout(() => router.push('/login'), 2500)
   }
@@ -78,41 +80,41 @@ export default function ResetPasswordPage() {
     <CadreEntree gauche={<GaucheAccueil />} retour={{ href: '/login' }}>
       {done ? (
         <div className="flex flex-col gap-3">
-          <TitreEntree titre="Mot de passe mis à jour !" sousTitre="Redirection vers la connexion..." />
+          <TitreEntree titre={t('Mot de passe mis à jour !')} sousTitre={t('Redirection vers la connexion...')} />
         </div>
       ) : !ready ? (
         error ? (
           <div className="flex flex-col gap-5">
-            <TitreEntree titre="Nouveau mot de passe" />
+            <TitreEntree titre={t('Nouveau mot de passe')} />
             <Erreur texte={error} />
             <BarreActions>
-              <Link href="/forgot-password" className={`${BOUTON_PRINCIPAL} flex items-center justify-center`}>Renvoyer un lien</Link>
+              <Link href="/forgot-password" className={`${BOUTON_PRINCIPAL} flex items-center justify-center`}>{t('Renvoyer un lien')}</Link>
             </BarreActions>
           </div>
         ) : (
           <div className="flex flex-col gap-5" role="status">
-            <TitreEntree titre="Nouveau mot de passe" />
-            <p className="flex items-center gap-2 text-sm text-[color:var(--v2-color-gris)]"><Spinner className="h-5 w-5" />Vérification du lien...</p>
+            <TitreEntree titre={t('Nouveau mot de passe')} />
+            <p className="flex items-center gap-2 text-sm text-[color:var(--v2-color-gris)]"><Spinner className="h-5 w-5" />{t('Vérification du lien...')}</p>
           </div>
         )
       ) : (
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
-          <TitreEntree titre="Nouveau mot de passe" sousTitre="Choisissez un nouveau mot de passe" />
+          <TitreEntree titre={t('Nouveau mot de passe')} sousTitre={t('Choisissez un nouveau mot de passe')} />
 
           <GroupeChamps>
-            <Champ id="nouveau" label="Nouveau mot de passe">
+            <Champ id="nouveau" label={t('Nouveau mot de passe')}>
               <PasswordInput
                 id="nouveau"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
                 minLength={6}
-                placeholder="6 caractères minimum"
+                placeholder={t('6 caractères minimum')}
                 autoComplete="new-password"
                 className={SAISIE}
               />
             </Champ>
-            <Champ id="confirmation" label="Confirmer le mot de passe">
+            <Champ id="confirmation" label={t('Confirmer le mot de passe')}>
               <PasswordInput
                 id="confirmation"
                 value={confirm}
@@ -128,7 +130,7 @@ export default function ResetPasswordPage() {
           {error && <Erreur texte={error} />}
 
           <BarreActions>
-            <BoutonPrincipal type="submit" chargement={loading} libelleChargement="Mise à jour...">Mettre à jour le mot de passe</BoutonPrincipal>
+            <BoutonPrincipal type="submit" chargement={loading} libelleChargement={t('Mise à jour...')}>{t('Mettre à jour le mot de passe')}</BoutonPrincipal>
           </BarreActions>
         </form>
       )}

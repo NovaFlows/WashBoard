@@ -113,9 +113,9 @@ export default function StepPrestation({ services, categories, category, onCateg
     {activeTypes.map(type => <div key={type} className="flex items-center justify-between gap-3 my-3">
       <span className="text-sm font-medium">{mixed ? label(type) : tr('Nombre de véhicules')}</span>
       <div className="wb-booking-counter">
-        <button type="button" aria-label={`Retirer un véhicule (${type})`} disabled={vehicles.length <= 1} onClick={() => count(type, vehicles.filter(v => v.type === type).length - 1)}>−</button>
+        <button type="button" aria-label={tr('Retirer un véhicule ({type})', { type })} disabled={vehicles.length <= 1} onClick={() => count(type, vehicles.filter(v => v.type === type).length - 1)}>−</button>
         <span aria-live="polite">{vehicles.filter(v => v.type === type).length}</span>
-        <button type="button" aria-label={`Ajouter un véhicule (${type})`} disabled={vehicles.length >= 99} onClick={() => count(type, vehicles.filter(v => v.type === type).length + 1)}>+</button>
+        <button type="button" aria-label={tr('Ajouter un véhicule ({type})', { type })} disabled={vehicles.length >= 99} onClick={() => count(type, vehicles.filter(v => v.type === type).length + 1)}>+</button>
       </div>
     </div>)}
     {vehicles.length > 1 && !mixed && types.length > 1 && <button type="button" className="text-xs underline mb-3" onClick={() => setMixed(true)}>{tr('Mes véhicules sont de types différents')}</button>}

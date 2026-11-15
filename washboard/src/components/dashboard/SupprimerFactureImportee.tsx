@@ -13,7 +13,7 @@ export function SupprimerFactureImportee({ id, nom }: { id: string; nom: string 
   const [enCours, setEnCours] = useState(false)
 
   async function supprimer() {
-    if (!confirm(`Supprimer la facture importée « ${nom} » ? Le fichier sera effacé.`)) return
+    if (!confirm(t('Supprimer la facture importée « {nom} » ? Le fichier sera effacé.', { nom }))) return
     setEnCours(true)
     const res = await fetch(`/api/factures/importees/${id}`, { method: 'DELETE' })
     setEnCours(false)
@@ -26,7 +26,7 @@ export function SupprimerFactureImportee({ id, nom }: { id: string; nom: string 
       type="button"
       onClick={supprimer}
       disabled={enCours}
-      aria-label={`Supprimer la facture importée ${nom}`}
+      aria-label={t('Supprimer la facture importée {nom}', { nom })}
       className="text-sm text-slate-400 hover:text-red-600 disabled:opacity-40 transition-colors"
     >
       {t('Supprimer')}

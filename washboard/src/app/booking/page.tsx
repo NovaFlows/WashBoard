@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { logger } from '@/lib/logger'
 import { toDateStr } from '@/lib/dateUtils'
+import { useT } from '@/components/i18n/I18nProvider'
 
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 const DAYS_FR = ['L','M','M','J','V','S','D']
@@ -36,6 +37,7 @@ function formatDateFr(dateStr: string): string {
 }
 
 export default function BookingPage() {
+  const t = useT()
   const todayRef = new Date(); todayRef.setHours(0, 0, 0, 0)
 
   const [viewYear, setViewYear] = useState(todayRef.getFullYear())
@@ -114,13 +116,13 @@ export default function BookingPage() {
         setStep(3)
         window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
-        setSubmitError(data.error || "Erreur lors de la réservation.")
+        setSubmitError(data.error || t('Erreur lors de la réservation.'))
         if (res.status === 409) {
           setTimeout(() => { setStep(1); setSubmitError(''); fetchAvailability(selectedDate!) }, 2500)
         }
       }
     } catch {
-      setSubmitError('Erreur de connexion. Veuillez réessayer.')
+      setSubmitError(t('Erreur de connexion. Veuillez réessayer.'))
     } finally {
       setSubmitting(false)
     }
@@ -156,19 +158,19 @@ export default function BookingPage() {
     gcalUrl = `https://calendar.google.com/calendar/r/eventedit?text=Appel+WashBoard&dates=${start}/${end}&details=Appel+d%C3%A9couverte+WashBoard`
   }
 
-  const ETAPES = [{ n: 1, label: 'Créneau' }, { n: 2, label: 'Coordonnées' }, { n: 3, label: 'Confirmation' }] as const
+  const ETAPES = [{ n: 1, label: t('Créneau') }, { n: 2, label: t('Coordonnées') }, { n: 3, label: 'Confirmation' }] as const
 
   return (
     <div className="bk">
       <header className="bk-tete">
-        <p className="sur-titre"><span className="pt" />Appel découverte gratuit</p>
-        <h1 className="pr-h1">Planifier un appel</h1>
+        <p className="sur-titre"><span className="pt" />{t('Appel découverte gratuit')}</p>
+        <h1 className="pr-h1">{t('Planifier un appel')}</h1>
         <p className="chapo">
-          Un appel de 30 minutes pour découvrir WashBoard et voir comment il peut simplifier votre activité — sans engagement.
+          {t('Un appel de 30 minutes pour découvrir WashBoard et voir comment il peut simplifier votre activité — sans engagement.')}
         </p>
       </header>
 
-      <ol className="bk-etapes" aria-label="Étapes">
+      <ol className="bk-etapes" aria-label={t('Étapes')}>
         {ETAPES.map(s => (
           <li
             key={s.n}
@@ -183,7 +185,7 @@ export default function BookingPage() {
 
       <div className="bk-surface">
         {submitting && (
-          <div className="bk-attente" role="status" aria-label="Envoi en cours">
+          <div className="bk-attente" role="status" aria-label={t('Envoi en cours')}>
             <div className="bk-spin" />
           </div>
         )}
@@ -194,13 +196,13 @@ export default function BookingPage() {
             <div className="bk-choix">
               <div className="bk-cal">
                 <div className="bk-mois">
-                  <button type="button" className="bk-fleche" onClick={prevMonth} disabled={isCurrentMonth} aria-label="Mois précédent">
+                  <button type="button" className="bk-fleche" onClick={prevMonth} disabled={isCurrentMonth} aria-label={t('Mois précédent')}>
                     <svg fill="none" viewBox="0 0 16 16" aria-hidden="true">
                       <path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </button>
                   <h2>{MONTHS_FR[viewMonth]} {viewYear}</h2>
-                  <button type="button" className="bk-fleche" onClick={nextMonth} aria-label="Mois suivant">
+                  <button type="button" className="bk-fleche" onClick={nextMonth} aria-label={t('Mois suivant')}>
                     <svg fill="none" viewBox="0 0 16 16" aria-hidden="true">
                       <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -233,22 +235,21 @@ export default function BookingPage() {
               </div>
 
               <div className="bk-heures">
-                <h2 className="bk-titre-h">Horaire disponible</h2>
+                <h2 className="bk-titre-h">{t('Horaire disponible')}</h2>
                 {!selectedDate ? (
-                  <p className="bk-vide">Sélectionnez une date pour voir les créneaux disponibles</p>
+                  <p className="bk-vide">{t('Sélectionnez une date pour voir les créneaux disponibles')}</p>
                 ) : loadingSlots ? (
                   <div className="bk-vide" role="status">
                     <div>
                       <div className="bk-spin" style={{ margin: '0 auto 10px' }} />
-                      Chargement…
+                      {t('Chargement…')}
                     </div>
                   </div>
                 ) : (
                   <div className="bk-liste-h">
                     {slotsError && (
                       <p className="bk-info" role="alert">
-                        Les créneaux déjà pris n’ont pas pu être vérifiés. Choisissez un horaire :
-                        nous vous confirmerons sa disponibilité.
+                        {t('Les créneaux déjà pris n’ont pas pu être vérifiés. Choisissez un horaire : nous vous confirmerons sa disponibilité.')}
                       </p>
                     )}
                     {GROUPS.map(group => {
@@ -288,9 +289,9 @@ export default function BookingPage() {
                     <b>{formatDateFr(selectedDate)}</b>{' '}à{' '}<b>{selectedTime}</b>
                   </>
                 ) : selectedDate ? (
-                  'Date choisie — sélectionnez un horaire'
+                  t('Date choisie — sélectionnez un horaire')
                 ) : (
-                  'Aucun créneau sélectionné'
+                  t('Aucun créneau sélectionné')
                 )}
               </div>
               <button
@@ -299,7 +300,7 @@ export default function BookingPage() {
                 onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                 disabled={!selectedDate || !selectedTime}
               >
-                Continuer
+                {t('Continuer')}
               </button>
             </div>
           </>
@@ -310,53 +311,53 @@ export default function BookingPage() {
           <div className="bk-form">
             <div className="bk-rappel">
               <b>{selectedDate ? formatDateFr(selectedDate) : ''} à {selectedTime}</b>
-              <button type="button" onClick={() => setStep(1)}>Modifier</button>
+              <button type="button" onClick={() => setStep(1)}>{t('Modifier')}</button>
             </div>
 
-            <h2>Vos coordonnées</h2>
+            <h2>{t('Vos coordonnées')}</h2>
 
             {submitError && <p className="bk-err" role="alert" style={{ marginBottom: 16 }}>{submitError}</p>}
 
             <form onSubmit={handleSubmit} noValidate>
               <div className="bk-grille">
                 <div className="bk-champ">
-                  <label htmlFor="bk-prenom">Prénom</label>
+                  <label htmlFor="bk-prenom">{t('Prénom')}</label>
                   <input
-                    id="bk-prenom" value={firstname} onChange={e => setFirstname(e.target.value)} placeholder="Jean"
+                    id="bk-prenom" value={firstname} onChange={e => setFirstname(e.target.value)} placeholder={t('Jean')}
                     autoComplete="given-name" aria-invalid={!!errors.firstname}
                   />
                   {errors.firstname && <p className="bk-err">{errors.firstname}</p>}
                 </div>
                 <div className="bk-champ">
-                  <label htmlFor="bk-nom">Nom</label>
+                  <label htmlFor="bk-nom">{t('Nom')}</label>
                   <input
-                    id="bk-nom" value={lastname} onChange={e => setLastname(e.target.value)} placeholder="Dupont"
+                    id="bk-nom" value={lastname} onChange={e => setLastname(e.target.value)} placeholder={t('Dupont')}
                     autoComplete="family-name" aria-invalid={!!errors.lastname}
                   />
                   {errors.lastname && <p className="bk-err">{errors.lastname}</p>}
                 </div>
               </div>
               <div className="bk-champ" style={{ marginBottom: 16 }}>
-                <label htmlFor="bk-email">Email</label>
+                <label htmlFor="bk-email">{t('Email')}</label>
                 <input
-                  id="bk-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jean.dupont@exemple.com"
+                  id="bk-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('jean.dupont@exemple.com')}
                   autoComplete="email" aria-invalid={!!errors.email}
                 />
                 {errors.email && <p className="bk-err">{errors.email}</p>}
               </div>
               <div className="bk-champ" style={{ marginBottom: 20 }}>
-                <label htmlFor="bk-message">Message <small>(optionnel)</small></label>
+                <label htmlFor="bk-message">{t('Message')} <small>{t('(optionnel)')}</small></label>
                 <textarea
                   id="bk-message" value={message} onChange={e => setMessage(e.target.value)} rows={3}
-                  placeholder="Décrivez brièvement votre activité et ce que vous souhaitez savoir sur WashBoard…"
+                  placeholder={t('Décrivez brièvement votre activité et ce que vous souhaitez savoir sur WashBoard…')}
                 />
               </div>
               <p className="bk-note">
-                En confirmant, vous acceptez d&apos;être contacté à l&apos;horaire sélectionné. Un email de confirmation vous sera envoyé.
+                {t('En confirmant, vous acceptez d’être contacté à l’horaire sélectionné. Un email de confirmation vous sera envoyé.')}
               </p>
               <div className="bk-actions">
-                <button type="button" className="btn btn-ligne" onClick={() => setStep(1)}>Retour</button>
-                <button type="submit" className="btn btn-accent" disabled={submitting}>Confirmer le rendez-vous</button>
+                <button type="button" className="btn btn-ligne" onClick={() => setStep(1)}>{t('Retour')}</button>
+                <button type="submit" className="btn btn-accent" disabled={submitting}>{t('Confirmer le rendez-vous')}</button>
               </div>
             </form>
           </div>
@@ -370,17 +371,17 @@ export default function BookingPage() {
                 <path d="M5 12l4.5 4.5L19 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <h2>Rendez-vous confirmé !</h2>
-            <p>Nous vous appellerons à l&apos;horaire choisi. À tout de suite !</p>
+            <h2>{t('Rendez-vous confirmé !')}</h2>
+            <p>{t('Nous vous appellerons à l’horaire choisi. À tout de suite !')}</p>
             <div className="quand">
               <span>{selectedDate ? formatDateFr(selectedDate) : ''}</span>
               <span className="num">{selectedTime}</span>
             </div>
             <div className="bk-actions">
               {gcalUrl && (
-                <a href={gcalUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ligne">Ajouter à mon agenda</a>
+                <a href={gcalUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ligne">{t('Ajouter à mon agenda')}</a>
               )}
-              <Link href="/" className="btn btn-accent">Retour au site</Link>
+              <Link href="/" className="btn btn-accent">{t('Retour au site')}</Link>
             </div>
           </div>
         )}

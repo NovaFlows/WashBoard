@@ -52,10 +52,13 @@ function traiter(fichier, dry) {
   const composants = new Map() // noeud -> true
   const sansComposant = []
 
+  // Fichier SANS « use client » : composant serveur, seul un composant `async` peut appeler `await getT()`.
+  const serveurFichier = !/^\s*(\/\/.*\n|\/\*[\s\S]*?\*\/\s*)*['"]use client['"]/.test(src)
+  const estAsync = f => !!(f.modifiers && f.modifiers.some(m => m.kind === ts.SyntaxKind.AsyncKeyword))
   const comp = n => {
     let p = n.parent
     while (p) {
-      if ((ts.isFunctionDeclaration(p) || ts.isArrowFunction(p) || ts.isFunctionExpression(p)) && estComposant(p)) return p
+      if ((ts.isFunctionDeclaration(p) || ts.isArrowFunction(p) || ts.isFunctionExpression(p)) && estComposant(p) && (!serveurFichier || estAsync(p))) return p
       p = p.parent
     }
     return null
@@ -96,16 +99,16 @@ function traiter(fichier, dry) {
     const corps = c.body
     if (ts.isBlock(corps)) {
       const dejaT = corps.statements.some(s => ts.isVariableStatement(s) && s.declarationList.declarations.some(d => ts.isIdentifier(d.name) && d.name.text === FN))
-      if (!dejaT) edits.push({ start: corps.getStart() + 1, end: corps.getStart() + 1, text: `\n  const ${FN} = useT()` })
+      if (!dejaT) edits.push({ start: corps.getStart() + 1, end: corps.getStart() + 1, text: serveurFichier ? `\n  const ${FN} = await getT()` : `\n  const ${FN} = useT()` })
     } else {
-      edits.push({ start: corps.getStart(), end: corps.getEnd(), text: `{\n  const ${FN} = useT()\n  return ${corps.getText()}\n}` })
+      edits.push({ start: corps.getStart(), end: corps.getEnd(), text: `{\n  const ${FN} = ${serveurFichier ? 'await getT()' : 'useT()'}\n  return ${corps.getText()}\n}` })
     }
   }
   // import
-  if (!/useT\b/.test(src)) {
+  if (serveurFichier ? !/\bgetT\b/.test(src) : !/useT\b/.test(src)) {
     const imports = sf.statements.filter(ts.isImportDeclaration)
     const pos = imports.length ? imports[imports.length - 1].getEnd() : 0
-    edits.push({ start: pos, end: pos, text: "\nimport { useT } from '@/components/i18n/I18nProvider'" })
+    edits.push({ start: pos, end: pos, text: serveurFichier ? "\nimport { getT } from '@/lib/i18n/serveur'" : "\nimport { useT } from '@/components/i18n/I18nProvider'" })
   }
   // 'use client' obligatoire (hook)
   const aClient = /^\s*(\/\/.*\n|\/\*[\s\S]*?\*\/\s*)*['"]use client['"]/.test(src)

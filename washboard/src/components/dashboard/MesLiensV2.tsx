@@ -168,7 +168,7 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
                   <button
                     type="button"
                     onClick={() => copier(source.key, lien)}
-                    aria-label={`Copier le lien ${libelle}`}
+                    aria-label={t('Copier le lien {libelle}', { libelle })}
                     className="flex min-h-[60px] w-full items-center gap-3 py-2.5 text-left"
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -209,7 +209,7 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
       {nouveau && (
         <ConfirmationSuppression
           titre={t('Changer votre lien ?')}
-          texte={`L’ancien lien (${affiche(base)}) ne fonctionnera plus. Remplacez-le partout où vous l’avez publié : bio Instagram, cartes de visite, QR codes.`}
+          texte={t('L’ancien lien ({affiche}) ne fonctionnera plus. Remplacez-le partout où vous l’avez publié : bio Instagram, cartes de visite, QR codes.', { affiche: affiche(base) })}
           libelleAction={t('Changer le lien')}
           libelleEnCours="Changement…"
           enCours={changementEnCours}

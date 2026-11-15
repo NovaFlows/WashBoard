@@ -59,7 +59,7 @@ export default function ClientProfileModalV1({
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={`Fiche de ${titre}`}
+      aria-label={t('Fiche de {titre}', { titre })}
     >
       <button
         aria-hidden
@@ -96,7 +96,7 @@ export default function ClientProfileModalV1({
 
         <div className="p-5 space-y-5">
           <div className="grid grid-cols-3 gap-2">
-            <Stat label={t('Lavages')} value={String(profile.honoredCount)} hint={profile.cancelledCount ? `${profile.cancelledCount} annulé${profile.cancelledCount > 1 ? 's' : ''}` : undefined} />
+            <Stat label={t('Lavages')} value={String(profile.honoredCount)} hint={profile.cancelledCount ? t('{cancelledCount} annulé{v1}', { cancelledCount: profile.cancelledCount, v1: profile.cancelledCount > 1 ? 's' : '' }) : undefined} />
             <Stat label={t('Total')} value={`${profile.totalRevenue}€`} />
             <Stat label={t('Panier moyen')} value={`${profile.averageBasket}€`} />
           </div>
@@ -144,7 +144,7 @@ export default function ClientProfileModalV1({
                     <span className="font-semibold text-sm text-slate-700 dark:text-slate-300 tabular-nums shrink-0">
                       {b.booked_price ?? b.services?.price ?? 0}€
                     </span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${s.bg} ${s.text}`}>{s.label}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${s.bg} ${s.text}`}>{t(s.label)}</span>
                   </div>
                 )
               })}

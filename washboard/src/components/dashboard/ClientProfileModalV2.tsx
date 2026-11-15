@@ -334,7 +334,7 @@ function FeuilleAnonymiserV2({ titreClient, onConfirme, onClose }: { titreClient
 
   return (
     <Feuille
-      titre={`Anonymiser la fiche de ${titreClient} ?`}
+      titre={tr('Anonymiser la fiche de {titreClient} ?', { titreClient })}
       onClose={onClose}
       pied={
         <div>
@@ -617,7 +617,7 @@ export default function ClientProfileModalV2({
   // réservation) : en extraire une ville serait deviner un format qui n'est
   // pas garanti. L'adresse complète la plus récente est affichée à la
   // place, tronquée si besoin.
-  const depuisTexte = profile.firstVisit ? `Client depuis ${depuis(profile.firstVisit, loc)}` : null
+  const depuisTexte = profile.firstVisit ? tr('Client depuis {depuis}', { depuis: depuis(profile.firstVisit, loc) }) : null
   const sousTitre = [depuisTexte, profile.addresses[0] ?? null].filter(Boolean).join(' · ')
 
   // Les modèles donnés par le client lui-même en réservant priment (source directe) ; le champ
@@ -654,7 +654,7 @@ export default function ClientProfileModalV2({
         : 'fixed inset-0 z-50 flex items-end justify-center sm:items-center'}
       role={panneau ? 'region' : 'dialog'}
       aria-modal={panneau ? undefined : true}
-      aria-label={`Fiche de ${titreClient}`}
+      aria-label={tr('Fiche de {titreClient}', { titreClient })}
     >
       {!panneau && (
         <button
@@ -930,7 +930,7 @@ export default function ClientProfileModalV2({
                             </span>
                           </span>
                           <span className={`mt-0.5 block text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                            {dateCourte(e.booking.scheduled_at, maintenant, loc)} · {STATUT[statutAffiche(e.booking)].label}
+                            {dateCourte(e.booking.scheduled_at, maintenant, loc)} · {tr(STATUT[statutAffiche(e.booking)].label)}
                           </span>
                         </>
                       ) : (
@@ -995,7 +995,7 @@ export default function ClientProfileModalV2({
               <LigneOption
                 icone={Users}
                 titre={tr('Se détacher de cette entreprise')}
-                sousTitre={`Rattaché à « ${entrepriseDuContact.nom} »`}
+                sousTitre={tr('Rattaché à « {nom} »', { nom: entrepriseDuContact.nom })}
                 couleur="var(--v2-color-rouge)"
                 disabled={enCours}
                 onClick={() => { setOptionsOuvertes(false); void detacherEntreprise() }}
@@ -1064,7 +1064,7 @@ export default function ClientProfileModalV2({
       )}
       {fusionOuverte && doublon && (
         <ConfirmationSuppression
-          titre={`Fusionner avec ${doublon.identifiant} ?`}
+          titre={tr('Fusionner avec {identifiant} ?', { identifiant: doublon.identifiant })}
           texte={tr('Ses réservations et ses documents rejoignent cette fiche, qui les absorbe. L’autre fiche disparaît.')}
           remarque={tr('Irréversible : deux fiches redevenues une seule ne se re-séparent pas.')}
           libelleAction="Fusionner"
