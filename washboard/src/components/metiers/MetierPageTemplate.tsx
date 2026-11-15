@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import { ARTICLES, THEME_LABEL, type Theme } from '@/lib/blog'
 import { PLAN_CARDS, freeMonthsLabel } from '@/lib/plan'
@@ -7,7 +5,7 @@ import { tarifOffre } from '@/lib/resumeOffres'
 import { Faq, type FaqItem } from '@/components/blog/Prose'
 import Coque from '@/components/landing/vitrine/Coque'
 import FilAriane from '@/components/landing/vitrine/FilAriane'
-import { useT } from '@/components/i18n/I18nProvider'
+import { getT } from '@/lib/i18n/serveur'
 import { trans } from '@/lib/i18n/trans'
 
 // Gabarit commun aux pages métier ("logiciel pour <métier>"). Une page par
@@ -61,7 +59,7 @@ export type MetierPageTemplateProps = {
   ctaTexte: string
 }
 
-export default function MetierPageTemplate({
+export default async function MetierPageTemplate({
   theme,
   eyebrow,
   h1,
@@ -77,7 +75,7 @@ export default function MetierPageTemplate({
   ctaTitre,
   ctaTexte,
 }: MetierPageTemplateProps) {
-  const t = useT()
+  const t = await getT()
   // Avec un thème (page métier) : les articles de ce thème, les plus
   // récemment mis à jour d'abord, comme sur /blog — ajouter un article à
   // ARTICLES avec ce thème suffit à l'afficher ici, sans toucher cette page.
