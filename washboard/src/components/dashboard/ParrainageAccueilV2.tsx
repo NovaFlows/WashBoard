@@ -24,43 +24,51 @@ function animationsReduites() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 }
 
-/** Carte de rappel (sous le prochain rendez-vous) et célébration d'un filleul devenu client. */
-export default function ParrainageAccueilV2() {
-  const [carte, setCarte] = useState(false)
-  const [sortie, setSortie] = useState(false)
-  const [celebration, setCelebration] = useState<Celebration | null>(null)
+type DonneesAccueil = { carte: boolean; celebration: Celebration | null }
 
+// Une seule lecture pour la carte et la célébration, même montées à deux endroits de l'accueil.
+let lecture: { quand: number; promesse: Promise<DonneesAccueil | null> } | null = null
+function lireAccueil(): Promise<DonneesAccueil | null> {
+  if (!lecture || Date.now() - lecture.quand > 5000) {
+    lecture = {
+      quand: Date.now(),
+      promesse: fetch('/api/parrainage/accueil').then(r => (r.ok ? r.json() : null)).catch(() => null),
+    }
+  }
+  return lecture.promesse
+}
+
+function useAccueil() {
+  const [donnees, setDonnees] = useState<DonneesAccueil | null>(null)
   useEffect(() => {
     let actif = true
-    fetch('/api/parrainage/accueil')
-      .then(r => (r.ok ? r.json() : null))
-      .then((d: { carte: boolean; celebration: Celebration | null } | null) => {
-        if (!actif || !d) return
-        setCarte(d.carte)
-        setCelebration(d.celebration)
-      })
-      .catch(() => {})
+    lireAccueil().then(d => { if (actif) setDonnees(d) })
     return () => { actif = false }
   }, [])
+  return donnees
+}
 
-  function fermerCarte() {
+/** Carte de rappel, sous le prochain rendez-vous. */
+export function CarteParrainageV2() {
+  const donnees = useAccueil()
+  const [fermee, setFermee] = useState(false)
+  const [sortie, setSortie] = useState(false)
+  if (!donnees?.carte || fermee) return null
+  function fermer() {
     signaler('fermer_carte')
-    if (animationsReduites()) { setCarte(false); return }
+    if (animationsReduites()) { setFermee(true); return }
     setSortie(true)
-    setTimeout(() => setCarte(false), 250)
+    setTimeout(() => setFermee(true), 250)
   }
+  return <CarteRappel sortie={sortie} onFermer={fermer} />
+}
 
-  function fermerCelebration() {
-    signaler('celebre')
-    setCelebration(null)
-  }
-
-  return (
-    <>
-      {carte && <CarteRappel sortie={sortie} onFermer={fermerCarte} />}
-      {celebration && <FenetreCelebration celebration={celebration} onFermer={fermerCelebration} />}
-    </>
-  )
+/** Célébration d'un filleul devenu client : une seule fois, par-dessus l'accueil. */
+export function CelebrationParrainageV2() {
+  const donnees = useAccueil()
+  const [vue, setVue] = useState(false)
+  if (!donnees?.celebration || vue) return null
+  return <FenetreCelebration celebration={donnees.celebration} onFermer={() => { signaler('celebre'); setVue(true) }} />
 }
 
 function CarteRappel({ sortie, onFermer }: { sortie: boolean; onFermer: () => void }) {
@@ -82,7 +90,7 @@ function CarteRappel({ sortie, onFermer }: { sortie: boolean; onFermer: () => vo
       <button
         type="button"
         onClick={onFermer}
-        aria-label={t('Fermer')}
+        aria-label={t('Fermer le rappel de parrainage')}
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] hover:bg-[color:var(--v2-filet)]"
       >
         <X size={18} />

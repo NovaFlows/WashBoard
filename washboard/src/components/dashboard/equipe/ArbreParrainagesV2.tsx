@@ -199,7 +199,7 @@ export default function ArbreParrainagesV2({ arbre, rechercheInitiale = '' }: { 
           <form onSubmit={e => { e.preventDefault(); lancerRecherche(saisie) }} className="relative" role="search">
             <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--v2-color-gris)]" aria-hidden />
             <input
-              type="search"
+              type="text"
               enterKeyHint="search"
               value={saisie}
               onChange={e => { setSaisie(e.target.value); if (!e.target.value && cherche) { setCherche(''); setOuverts(new Set()) } }}

@@ -22,7 +22,7 @@ import { PLAN_LABELS, PLAN_COULEURS, PLAN_PRICES, PLAN_CARDS, type Plan } from '
 import type { JourSemaine } from '@/lib/semaineAccueil'
 import { adresseAvecLieu } from '@/lib/centreAuto'
 import { useLocale, useT } from '@/components/i18n/I18nProvider'
-import ParrainageAccueilV2 from '@/components/dashboard/ParrainageAccueilV2'
+import { CarteParrainageV2, CelebrationParrainageV2 } from '@/components/dashboard/ParrainageAccueilV2'
 
 // « Aujourd'hui », présentation v2 — réservée à la PWA installée en mode
 // standalone (voir Accueil.tsx, le point de branchement ; décision
@@ -414,7 +414,7 @@ export default function AccueilV2({
         </p>
       )}
 
-      <ParrainageAccueilV2 />
+      <CarteParrainageV2 />
 
       {reste.length > 0 && (
         <section className="mt-6">
@@ -561,6 +561,7 @@ export default function AccueilV2({
         </>
       )}
 
+      <CelebrationParrainageV2 />
       {personnaliser && <PersonnaliserV2 visibles={widgets} onClose={() => setPersonnaliser(false)} />}
     </div>
   )
