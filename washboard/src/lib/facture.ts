@@ -446,6 +446,8 @@ export type FactureContenu = {
   prestation: { date: string | null; lieu: string; nature: 'Prestation de services' }
   lignes: LigneFacture[]
   remiseTtc: number
+  /** Libellé de la ligne de remise ; absent des factures émises avant la remise du laveur. */
+  libelleRemise?: string
   totaux: { ht: number; tva: number; ttc: number }
   /** Devis seulement : jusqu'à quand le prix engage le laveur (`YYYY-MM-DD`). */
   valableJusquau?: string | null
@@ -467,6 +469,8 @@ export type ReservationFacturable = {
   booked_price: number | null
   is_smart_slot: boolean | null
   smart_discount: number | null
+  /** Remise accordée par le laveur, déjà retranchée de `booked_price` (lib/remiseLaveur.ts). */
+  remise_laveur?: number | null
   vehicle_count: number | null
   travel_fee: number | null
   vehicles_detail: { type: string; count: number; unit_price: number; label?: string }[] | null
@@ -490,6 +494,8 @@ const ligne = (designation: string, quantite: number, prixUnitaireTtc: number): 
 
 const somme = (lignes: LigneFacture[]) => arrondi(lignes.reduce((t, l) => t + l.totalTtc, 0))
 
+const remiseLaveur = (r: ReservationFacturable) => Math.max(0, Number(r.remise_laveur ?? 0))
+
 /** Lignes de la facture, avant remise.
  *
  *  Le total enregistré (`booked_price`) est recalculé côté serveur à la
@@ -497,7 +503,8 @@ const somme = (lignes: LigneFacture[]) => arrondi(lignes.reduce((t, l) => t + l.
  *  le navigateur. Une facture dont les lignes ne retombent pas sur le total
  *  serait fausse : en cas d'écart, on facture le total, sur une seule ligne. */
 export function lignesFacture(r: ReservationFacturable): LigneFacture[] {
-  const total = arrondi(Number(r.booked_price ?? 0))
+  // Les lignes portent le prix avant la remise du laveur ; elle s'affiche ensuite à part.
+  const total = arrondi(Number(r.booked_price ?? 0) + remiseLaveur(r))
   const nomService = r.services?.name ?? 'Prestation'
   const uneLigne = [ligne(nomService, 1, total)]
 
@@ -545,9 +552,11 @@ export function prixHt(ttc: number, regime: RegimeTva, taux: number): number {
 export function construireFacture(r: ReservationFacturable, v: VendeurFacturable): FactureContenu {
   const lignes = lignesFacture(r)
   const brut = somme(lignes)
-  const remiseTtc = r.is_smart_slot && Number(r.smart_discount) > 0
-    ? arrondi(Math.min(Number(r.smart_discount), brut))
-    : 0
+  const remiseSmart = r.is_smart_slot && Number(r.smart_discount) > 0 ? Number(r.smart_discount) : 0
+  const remiseTtc = arrondi(Math.min(remiseSmart + remiseLaveur(r), brut))
+  const libelleRemise = remiseLaveur(r) > 0
+    ? (remiseSmart > 0 ? 'Remises (créneau optimisé et geste commercial)' : 'Remise accordée')
+    : 'Remise créneau optimisé'
   const regime: RegimeTva = v.facture_regime_tva === 'assujetti' ? 'assujetti' : 'franchise'
   const taux = regime === 'assujetti' ? Number(v.facture_taux_tva ?? tauxTvaNormal(paysFacturation(v))) : 0
   const statut: StatutJuridique = v.facture_statut === 'societe' ? 'societe' : 'ei'
@@ -588,6 +597,7 @@ export function construireFacture(r: ReservationFacturable, v: VendeurFacturable
     prestation: { date: r.scheduled_at, lieu: adresseAvecLieu(r.address, r.lieu), nature: 'Prestation de services' },
     lignes,
     remiseTtc,
+    ...(remiseTtc > 0 ? { libelleRemise } : {}),
     totaux: totauxFacture(brut - remiseTtc, regime, taux),
   }
 }

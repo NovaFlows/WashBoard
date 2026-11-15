@@ -169,6 +169,26 @@ describe('construireFacture', () => {
     expect(f.client.adresseFacturation).toBe('1 rue de la Démo, 75000 Paris')
   })
 
+  it('remise du laveur : lignes au prix de départ, ligne « Remise accordée », total remisé', () => {
+    // Prix de départ 115 € (lignes détaillées), remise de 20 € : booked_price enregistré à 95 €.
+    const f = construireFacture(reservation({ booked_price: 95, remise_laveur: 20 }), vendeur())
+    expect(f.lignes.map(l => l.totalTtc)).toEqual([40, 45, 15, 15])
+    expect(f.remiseTtc).toBe(20)
+    expect(f.libelleRemise).toBe('Remise accordée')
+    expect(f.totaux.ttc).toBe(95)
+  })
+
+  it('remise du laveur et créneau optimisé : une seule ligne, libellé des deux', () => {
+    const f = construireFacture(reservation({ booked_price: 95, remise_laveur: 20, is_smart_slot: true, smart_discount: 10 }), vendeur())
+    expect(f.remiseTtc).toBe(30)
+    expect(f.libelleRemise).toBe('Remises (créneau optimisé et geste commercial)')
+    expect(f.totaux.ttc).toBe(85)
+  })
+
+  it('sans remise, pas de libellé : les factures existantes ne changent pas', () => {
+    expect(construireFacture(reservation(), vendeur())).not.toHaveProperty('libelleRemise')
+  })
+
   it('au centre auto : pas l’adresse du centre comme adresse du client, lieu « Centre auto »', () => {
     const f = construireFacture(reservation({ lieu: 'centre', address: '8 avenue Foch, 69006 Lyon' }), vendeur())
     expect(f.client.adresseFacturation).toBe('')

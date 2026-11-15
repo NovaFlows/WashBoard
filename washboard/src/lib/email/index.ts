@@ -879,6 +879,39 @@ ${lienReservation ? bouton('Réserver un nouveau créneau', escapeHtml(lienReser
   })
 }
 
+/** Remise accordée par le laveur sur une réservation prise en ligne (lib/remiseLaveur.ts). */
+export async function sendRemiseLaveur({ to, clientName, washerName, serviceName, scheduledAt, ancienPrix, nouveauPrix }: {
+  to: string
+  clientName: string
+  washerName: string
+  serviceName: string
+  scheduledAt: string
+  ancienPrix: number
+  nouveauPrix: number
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const date = new Date(scheduledAt)
+  const jour = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heure = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  return resend.emails.send({
+    from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
+    to,
+    subject: `${washerName} vous a fait une remise`,
+    html: page({
+      titre: 'Une remise sur votre réservation',
+      entete: enteteLaveur(escapeHtml(washerName)),
+      contenu: `
+${titre({ texte: 'Une remise sur votre réservation' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`<strong>${escapeHtml(washerName)}</strong> vous a fait une remise sur votre réservation
+« ${escapeHtml(serviceName)} » du ${jour} à ${heure} : votre lavage passe de
+<strong>${formatEuros(ancienPrix)} €</strong> à <strong>${formatEuros(nouveauPrix)} €</strong>.`, { marge: '0 0 14px' })}
+${paragraphe('Rien à faire de votre côté : le nouveau prix est déjà pris en compte.', { marge: '0' })}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}`,
+    }),
+  })
+}
+
 /** Rappel avant l'échéance de l'acompte, une seule fois (`api/cron/acomptes`, règle dans
  *  `rappelAcompteDu`). Les moyens de paiement sont ceux de « Demande reçue », relus dans les
  *  réglages actuels du laveur. */

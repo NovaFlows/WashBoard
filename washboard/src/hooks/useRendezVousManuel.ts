@@ -325,7 +325,10 @@ export function useRendezVousManuel({
       notes:        manualModal.notes || null,
       is_smart_slot: false,
       smart_discount: 0,
-      booked_price:    manualModal.booked_price,
+      // Le prix retenu par le serveur : le prix tapé n'est gardé que s'il baisse le prix calculé.
+      booked_price:    typeof json.data.booked_price === 'number' ? json.data.booked_price : manualModal.booked_price,
+      remise_laveur:   Number(json.data.remise_laveur ?? 0),
+      saisie_par_laveur: true,
       selected_addons: null,
       travel_fee:      null,
       vehicle_count:   manualModal.vehicle_count,

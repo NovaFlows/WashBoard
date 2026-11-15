@@ -20,6 +20,10 @@ export type Booking = {
   is_smart_slot: boolean
   smart_discount: number
   booked_price: number | null
+  /** Remise accordée par le laveur, déjà retranchée de `booked_price` (lib/remiseLaveur.ts). */
+  remise_laveur?: number | null
+  /** Saisi par le laveur dans son agenda : une remise ne prévient pas le client. */
+  saisie_par_laveur?: boolean | null
   selected_addons: { id: string; label: string; price: number; category: string; duration_minutes?: number }[] | null
   travel_fee: number | null
   vehicle_count: number | null

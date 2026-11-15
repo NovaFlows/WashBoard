@@ -353,6 +353,46 @@ describe('POST /api/bookings — le laveur qui saisit son propre rendez-vous', (
     expect(res.status).toBe(409)
     expect(body.error).toMatch(/horaires/)
   })
+
+  it('un prix tapé plus bas devient une remise gardée en mémoire', async () => {
+    const { res, body } = await poster({ saisie_par_laveur: true, booked_price: 45 })
+    expect(res.status).toBe(201)
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.booked_price).toBe(45)
+    expect(reserv.remise_laveur).toBe(15)
+    expect(body.data).toMatchObject({ booked_price: 45, remise_laveur: 15 })
+  })
+
+  it('un prix tapé plus haut est ignoré : seulement à la baisse', async () => {
+    await poster({ saisie_par_laveur: true, booked_price: 90 })
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.booked_price).toBe(60)
+    expect(reserv).not.toHaveProperty('remise_laveur')
+  })
+
+  it('le prix calculé laissé tel quel : aucune remise, aucune colonne envoyée', async () => {
+    await poster({ saisie_par_laveur: true, booked_price: 60 })
+    expect(rpcAppels[0].args.p_booking as Record<string, unknown>).not.toHaveProperty('remise_laveur')
+  })
+})
+
+describe('POST /api/bookings — un client ne fixe jamais son prix, même plus bas', () => {
+  it('formulaire public : le prix tapé est ignoré, pas de remise', async () => {
+    await poster({ booked_price: 10 })
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.booked_price).toBe(60)
+    expect(reserv).not.toHaveProperty('remise_laveur')
+  })
+
+  it('session d’un autre laveur qui se déclare saisie d’agenda : pas de remise', async () => {
+    plan.utilisateur = null
+    plan.session = { id: 'quelqu-un-dautre' }
+    const { res } = await poster({ saisie_par_laveur: true, booked_price: 10 })
+    expect(res.status).toBe(201)
+    const reserv = rpcAppels[0].args.p_booking as Record<string, unknown>
+    expect(reserv.booked_price).toBe(60)
+    expect(reserv).not.toHaveProperty('remise_laveur')
+  })
 })
 
 describe('POST /api/bookings — email du client facultatif pour le laveur seulement', () => {

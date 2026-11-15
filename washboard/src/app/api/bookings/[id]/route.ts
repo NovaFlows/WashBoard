@@ -108,7 +108,11 @@ export async function PATCH(
 
   // Mettre à jour le statut / les notes / l'horaire
   const updates: Record<string, unknown> = {}
-  if (montant !== null && montant !== montantPrevu(booking)) Object.assign(updates, colonnesMontantEncaisse(montant))
+  if (montant !== null && montant !== montantPrevu(booking)) {
+    Object.assign(updates, colonnesMontantEncaisse(montant))
+    // Le montant encaissé remplace tout : une remise du laveur posée avant ne s'y ajoute pas.
+    if (Number(booking.remise_laveur ?? 0) > 0) updates.remise_laveur = 0
+  }
   if (status       !== undefined) updates.status       = status
   if (notes        !== undefined) updates.notes        = notes
   if (closed_late  !== undefined) updates.closed_late  = closed_late
