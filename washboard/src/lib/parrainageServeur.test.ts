@@ -8,7 +8,7 @@ const { recompenserParrain } = await import('./parrainageServeur')
 type Ligne = Record<string, unknown>
 
 /** Base en mémoire : juste ce que `recompenserParrain` utilise. */
-function fausseBase(tables: Record<string, Ligne[]>, pannes: { ecritureParrain?: boolean } = {}) {
+function fausseBase(tables: Record<string, Ligne[]>, pannes: { ecritureParrain?: boolean; concurrent?: (parrain: Ligne) => void } = {}) {
   return {
     auth: { admin: { getUserById: async () => ({ data: { user: { email: 'parrain@exemple.fr' } }, error: null }) } },
     from(table: string) {
@@ -19,6 +19,8 @@ function fausseBase(tables: Record<string, Ligne[]>, pannes: { ecritureParrain?:
       const appliquer = () => {
         if (!maj) return lignes()
         if (table === 'washers' && pannes.ecritureParrain) return null
+        // Un autre paiement modifie le parrain entre la lecture et l'écriture.
+        if (table === 'washers' && pannes.concurrent) for (const l of tables.washers) pannes.concurrent(l)
         const touchees = lignes()
         for (const l of touchees) Object.assign(l, maj)
         return touchees
@@ -35,7 +37,7 @@ function fausseBase(tables: Record<string, Ligne[]>, pannes: { ecritureParrain?:
         },
         then: (ok: (v: unknown) => void) => {
           const r = appliquer()
-          ok(r === null ? { error: { message: 'panne' } } : { error: null })
+          ok(r === null ? { data: null, error: { message: 'panne' } } : { data: r, error: null })
         },
       })
       return b
@@ -79,6 +81,22 @@ describe('recompenserParrain', () => {
 
   it('écriture chez le parrain en échec : le verrou est levé pour réessayer plus tard', async () => {
     const r = await recompenserParrain(fausseBase(tables, { ecritureParrain: true }) as never, { id: 'clean', name: 'CleanCar' }, 'equipe', NOW)
+    expect(r).toEqual({ statut: 'echec' })
+    expect(tables.parrainages[0].recompense_le).toBeNull()
+  })
+
+  it('un autre mois écrit chez le parrain pendant le calcul : relu et ajouté, aucun mois perdu', async () => {
+    let fois = 0
+    const concurrent = (l: Ligne) => { if (fois++ === 0) l.subscription_ends_at = '2027-01-05T00:00:00.000Z' }
+    const r = await recompenserParrain(fausseBase(tables, { concurrent }) as never, { id: 'clean', name: 'CleanCar' }, 'equipe', NOW)
+    expect(r).toMatchObject({ statut: 'recompense', forme: 'abonnement' })
+    expect(tables.washers[0].subscription_ends_at).toBe('2027-02-05T00:00:00.000Z')
+  })
+
+  it('concurrence sans fin : échec propre, verrou levé pour le rattrapage de nuit', async () => {
+    let n = 0
+    const concurrent = (l: Ligne) => { l.subscription_ends_at = new Date(Date.UTC(2027, 0, 1 + n++)).toISOString() }
+    const r = await recompenserParrain(fausseBase(tables, { concurrent }) as never, { id: 'clean', name: 'CleanCar' }, 'equipe', NOW)
     expect(r).toEqual({ statut: 'echec' })
     expect(tables.parrainages[0].recompense_le).toBeNull()
   })

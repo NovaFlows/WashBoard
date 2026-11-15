@@ -103,6 +103,9 @@ export type ResultatRecompense =
   | { statut: 'echec' }
   | { statut: 'recompense'; parrainId: string; parrainNom: string; forme: FormeRecompense }
 
+const COLONNES_DATES = ['subscription_ends_at', 'trial_ends_at', 'pro_offert_jusqu_au'] as const
+const ESSAIS_ECRITURE = 8
+
 const COLONNES_PARRAIN = 'id, name, user_id, account_status, plan, grandfathered, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au'
 
 /** Donne au parrain son mois quand le filleul devient abonné. Une seule fois par filleul :
@@ -135,25 +138,44 @@ export async function recompenserParrain(
     if (error) logger.error('parrainage.recompense.deverrou', { parrainageId: verrou.id }, error)
   }
 
-  const { data: parrain, error: errParrain } = await admin
-    .from('washers').select(COLONNES_PARRAIN).eq('id', verrou.parrain_id).maybeSingle()
-  if (errParrain) {
-    logger.error('parrainage.recompense.parrain_lecture', { parrainageId: verrou.id }, errParrain)
-    await deverrouiller()
-    return { statut: 'echec' }
-  }
+  type CompteLu = CompteParrainage & { id: string; name: string; user_id?: string | null; account_status?: string | null }
+  let compte: CompteLu | null = null
+  let actif = false
+  let recompense: ReturnType<typeof recompenseParrain> = { forme: 'aucune', colonnes: {} }
+  let ecrit = false
+  // Deux filleuls du même parrain confirmés au même instant liraient la même date et l'un
+  // effacerait le mois de l'autre : l'écriture n'aboutit que si les dates lues n'ont pas
+  // changé entre-temps, sinon on relit et on recommence.
+  for (let essai = 0; essai < ESSAIS_ECRITURE && !ecrit; essai++) {
+    const { data: parrain, error: errParrain } = await admin
+      .from('washers').select(COLONNES_PARRAIN).eq('id', verrou.parrain_id).maybeSingle()
+    if (errParrain) {
+      logger.error('parrainage.recompense.parrain_lecture', { parrainageId: verrou.id }, errParrain)
+      await deverrouiller()
+      return { statut: 'echec' }
+    }
+    compte = (parrain ?? null) as CompteLu | null
+    actif = !!compte && (!compte.account_status || compte.account_status === 'active')
+    recompense = actif ? recompenseParrain(compte!, now) : { forme: 'aucune', colonnes: {} }
+    if (Object.keys(recompense.colonnes).length === 0) { ecrit = true; break }
 
-  const compte = (parrain ?? null) as (CompteParrainage & { id: string; name: string; user_id?: string | null; account_status?: string | null }) | null
-  const actif = !!compte && (!compte.account_status || compte.account_status === 'active')
-  const recompense = actif ? recompenseParrain(compte!, now) : { forme: 'aucune' as const, colonnes: {} }
-
-  if (Object.keys(recompense.colonnes).length > 0) {
-    const { error } = await admin.from('washers').update(recompense.colonnes).eq('id', compte!.id)
+    let maj = admin.from('washers').update(recompense.colonnes).eq('id', compte!.id)
+    for (const col of COLONNES_DATES) {
+      const lu = (compte as Record<string, unknown>)[col] ?? null
+      maj = lu === null ? maj.is(col, null) : maj.eq(col, lu as string)
+    }
+    const { data: touchees, error } = await maj.select('id')
     if (error) {
       logger.error('parrainage.recompense.ecriture', { parrainageId: verrou.id, parrainId: compte!.id }, error)
       await deverrouiller()
       return { statut: 'echec' }
     }
+    ecrit = (touchees ?? []).length > 0
+  }
+  if (!ecrit) {
+    logger.error('parrainage.recompense.concurrence', { parrainageId: verrou.id })
+    await deverrouiller()
+    return { statut: 'echec' }
   }
 
   const { error: errTrace } = await admin.from('parrainages').update({
