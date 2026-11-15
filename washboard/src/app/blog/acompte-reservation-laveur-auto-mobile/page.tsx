@@ -81,6 +81,9 @@ export default async function Page() {
         <P>
           {t('Ce calcul donne l’échelle de l’acompte : il ne s’agit pas de « faire payer d’avance par principe », mais de couvrir ce qu’un lapin vous coûte. Sans cette base, le montant est arbitraire.')}
         </P>
+        <P>
+          {t('Tous les rendez-vous manqués ne sont pas des lapins : certains clients oublient, tout simplement. Contre l’oubli, le rappel automatique est un autre moyen d’éviter la perte, sans rien demander au client. WashBoard envoie un email 24 h puis 3 h avant le rendez-vous, et vous réglez le nombre de rappels (de 1 à 3) et leur délai, ou vous les éteignez. Il ne retient pas celui qui ne veut pas venir : l’acompte et le rappel se complètent.')}
+        </P>
 
         <H2>{t('Quand demander un acompte, et quand s’en passer')}</H2>
         <UL>
