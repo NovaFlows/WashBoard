@@ -1287,7 +1287,7 @@ function RendezVousCarte({ booking: b, onOuvrir, estompe }: { booking: Booking; 
       <button
         type="button"
         onClick={onOuvrir}
-        aria-label={`Voir le rendez-vous de ${b.client_name}`}
+        aria-label={tr('Voir le rendez-vous de {client_name}', { client_name: b.client_name })}
         className={`flex-1 min-w-0 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-3.5 py-3 text-left flex flex-col gap-1 ${estompe ? 'opacity-50' : ''}`}
       >
         <span className="flex items-center justify-between gap-2">
@@ -1773,7 +1773,7 @@ function LigneRdvBureauV2({
     <button
       type="button"
       onClick={onOuvrir}
-      aria-label={`Voir le rendez-vous de ${b.client_name}`}
+      aria-label={tr('Voir le rendez-vous de {client_name}', { client_name: b.client_name })}
       aria-current={selectionnee ? 'true' : undefined}
       className={`flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors focus:outline-none focus-visible:bg-[color:var(--v2-filet)] ${
         selectionnee ? 'bg-[color:var(--v2-filet)]' : 'hover:bg-[color:var(--v2-filet)]'

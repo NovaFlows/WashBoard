@@ -5,6 +5,7 @@ import { corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import { formatPrice } from '@/lib/pricing'
 import { lireMontant, montantPrevu } from '@/lib/cloture'
 import { prixAvantRemiseLaveur, type RdvRemisable } from '@/lib/remiseLaveur'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Remise du laveur sur un rendez-vous, dans sa fiche (téléphone et ordinateur) : seulement à la
 // baisse, tant que la facture n'est pas émise (lib/remiseLaveur.ts).
@@ -19,6 +20,7 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
   rdv: RdvRemise
   onMaj: (champs: { booked_price: number; remise_laveur: number }) => void
 }) {
+  const t = useT()
   const [ouvert, setOuvert] = useState(false)
   const [saisie, setSaisie] = useState('')
   const [enCours, setEnCours] = useState(false)
@@ -42,7 +44,7 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
 
   async function enregistrer() {
     if (remiseSaisie === null) {
-      setErreur(`Indiquez un prix plus bas que ${formatPrice(prixActuel)}.`)
+      setErreur(t('Indiquez un prix plus bas que {formatPrice}.', { formatPrice: formatPrice(prixActuel) }))
       return
     }
     setEnCours(true)
@@ -54,12 +56,12 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
         body: JSON.stringify({ prix: prixSaisi }),
       })
       const json = await res.json().catch(() => null) as { error?: string; booked_price?: number; remise_laveur?: number; client_prevenu?: boolean } | null
-      if (!res.ok || typeof json?.booked_price !== 'number') { setErreur(json?.error ?? 'La modification a échoué.'); return }
+      if (!res.ok || typeof json?.booked_price !== 'number') { setErreur(json?.error ?? t('La modification a échoué.')); return }
       onMaj({ booked_price: json.booked_price, remise_laveur: Number(json.remise_laveur ?? 0) })
-      setInfo(json.client_prevenu ? 'Remise enregistrée. Le client est prévenu par email.' : 'Remise enregistrée.')
+      setInfo(json.client_prevenu ? t('Remise enregistrée. Le client est prévenu par email.') : t('Remise enregistrée.'))
       fermer()
     } catch {
-      setErreur('La modification a échoué. Vérifiez votre connexion.')
+      setErreur(t('La modification a échoué. Vérifiez votre connexion.'))
     } finally {
       setEnCours(false)
     }
@@ -74,7 +76,7 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
         className={`mt-2 px-1 text-[13px] ${corpsFort}`}
         style={{ color: 'var(--v2-color-accent)' }}
       >
-        Faire une remise
+        {t('Faire une remise')}
       </button>
     )
   }
@@ -85,11 +87,11 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
         <div className="min-w-0">
           {remise > 0 ? (
             <>
-              <p className={`text-[14px] ${corps}`}>Remise accordée · −{formatPrice(remise)}</p>
-              <p className={`mt-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>Prix de départ : {formatPrice(prixAvantRemiseLaveur(rdv))}</p>
+              <p className={`text-[14px] ${corps}`}>{t('Remise accordée · −')}{formatPrice(remise)}</p>
+              <p className={`mt-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Prix de départ :')} {formatPrice(prixAvantRemiseLaveur(rdv))}</p>
             </>
           ) : (
-            <p className={`text-[14px] ${corps}`}>Faire une remise</p>
+            <p className={`text-[14px] ${corps}`}>{t('Faire une remise')}</p>
           )}
         </div>
         {modifiable && !ouvert && (
@@ -99,7 +101,7 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
             className={`h-10 shrink-0 rounded-[var(--v2-radius-bouton)] border px-3.5 text-[13.5px] ${corpsFort} transition-transform active:scale-[.97]`}
             style={{ borderColor: 'var(--v2-color-accent)', color: 'var(--v2-color-accent)' }}
           >
-            Faire une remise
+            {t('Faire une remise')}
           </button>
         )}
       </div>
@@ -107,7 +109,7 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
       {ouvert && (
         <div className="mt-3">
           <label htmlFor={`remise-${rdv.id}`} className={`mb-1.5 block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            Nouveau prix (€) · actuellement {formatPrice(prixActuel)}
+            {t('Nouveau prix (€) · actuellement')} {formatPrice(prixActuel)}
           </label>
           <input
             id={`remise-${rdv.id}`}
@@ -121,8 +123,8 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
             className={`h-11 w-full rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[16px] ${corps} text-[color:var(--v2-color-encre)] focus:outline-none focus:ring-2 focus:ring-[color:var(--v2-color-accent)]/40`}
           />
           <p className={`mt-1.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {remiseSaisie !== null ? `Remise de ${formatPrice(remiseSaisie)}. ` : 'Seulement à la baisse. '}
-            {clientPrevenu ? 'Le client sera prévenu par email.' : 'Le client ne reçoit pas de message.'}
+            {remiseSaisie !== null ? t('Remise de {formatPrice}. ', { formatPrice: formatPrice(remiseSaisie) }) : t('Seulement à la baisse. ')}
+            {clientPrevenu ? t('Le client sera prévenu par email.') : t('Le client ne reçoit pas de message.')}
           </p>
           <div className="mt-2.5 flex gap-2">
             <button
@@ -139,7 +141,7 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
               onClick={fermer}
               className={`h-10 rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] px-4 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)]`}
             >
-              Annuler
+              {t('Annuler')}
             </button>
           </div>
         </div>
