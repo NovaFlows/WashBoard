@@ -2,7 +2,7 @@ import { quotaSmsEnClair, requiredPlan, requiredPlanLabel, type Feature } from '
 import { getT } from '@/lib/i18n/serveur'
 
 // `offre` pointe la clé de MIN_PLAN (lib/plan.ts) : le badge en est dérivé, jamais écrit à la
-// main, et reste absent pour ce que l'offre gratuite ouvre. `nouveau` : sorties d'octobre 2026.
+// main, et reste absent pour ce que l'offre gratuite ouvre. `nouveau` : sorties d'octobre et novembre 2026.
 type Item = { titre: string; texte: string; offre?: Feature; nouveau?: boolean }
 type Colonne = { titre: string; sous: string; items: Item[] }
 
@@ -12,9 +12,9 @@ export const COLONNES: Colonne[] = [
     items: [
       { titre: 'Page de réservation à ton image', texte: `Tes prestations et tes prix par type de véhicule, réservables sans compte. Ton logo et tes couleurs dès ${requiredPlanLabel('page_personnalisee')}.` },
       { titre: 'Promotions', texte: 'Une remise en % ou en € sur la période de ton choix, annoncée par un bandeau et un compte à rebours.', nouveau: true },
+      { titre: 'Rappels de rendez-vous', texte: 'Un email au client 24 h puis 3 h avant, réglable. Moins d’oublis, moins de rendez-vous manqués.', nouveau: true },
       { titre: 'Créneaux groupés', texte: 'Les horaires proches d’un rendez-vous déjà prévu mis en avant, avec ta remise.', offre: 'creneaux_intelligents' },
       { titre: 'Avis Google automatiques', texte: `Une demande d’avis après chaque prestation terminée, par email ou SMS (${quotaSmsEnClair()}).`, offre: 'avis_email' },
-      { titre: 'Liens par réseau', texte: 'Un lien pour Instagram, un pour TikTok, un pour Google : tu sais d’où vient chaque réservation.', offre: 'crm' },
     ],
   },
   {
@@ -32,6 +32,7 @@ export const COLONNES: Colonne[] = [
       { titre: 'Carte de fidélité', texte: 'Un tampon par prestation, la récompense de ton choix appliquée toute seule. En 3D, à tes couleurs.', nouveau: true },
       { titre: 'Relances automatiques', texte: 'Un message pour faire revenir un client après sa dernière prestation.', offre: 'followup' },
       { titre: 'Fiche client', texte: 'Historique, dépensé, panier moyen, et une alerte quand un client n’est pas revenu depuis 90 jours.' },
+      { titre: 'Liens par réseau', texte: 'Un lien pour Instagram, un pour TikTok, un pour Google : tu sais d’où vient chaque réservation.', offre: 'crm' },
       { titre: 'CRM et statistiques', texte: `Visiteurs, taux de conversion, sources et export Excel. Suivi de tes campagnes Meta en ${requiredPlanLabel('campagnes')}.`, offre: 'crm' },
     ],
   },
@@ -46,6 +47,9 @@ export const ET_AUSSI = [
   'Devis et factures sans rendez-vous',
   'Clients pros et entreprises',
   `Multi-laveurs (${requiredPlanLabel('multi_laveurs')})`,
+  'Plusieurs prestations par réservation',
+  'Remise sur un rendez-vous',
+  'Centre auto ou à domicile',
 ]
 
 function Badge({ item, t }: { item: Item; t: (fr: string) => string }) {

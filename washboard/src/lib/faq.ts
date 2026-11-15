@@ -99,12 +99,20 @@ export const FAQ_ITEMS: FaqItem[] = [
     a: 'Oui. Il ajoute chaque véhicule à sa réservation, avec ses options propres. Le prix et la durée bloquée dans ton agenda suivent exactement ce qu\'il a choisi, véhicule par véhicule.',
   },
   {
+    q: 'Un client peut-il réserver plusieurs prestations en une seule fois ?',
+    a: 'Oui, si tu l\'allumes : c\'est un réglage de l\'écran Prestations, éteint par défaut. Une fois allumé, ton client cumule par exemple l\'extérieur et l\'intérieur dans la même réservation. Le prix et la durée s\'additionnent, et toutes les prestations sont nommées dans ton agenda, dans les emails, dans la notification et sur la facture. Une limite : une prestation réservée au domicile ne se cumule pas avec une prestation réservée à un centre auto.',
+  },
+  {
     q: 'Comment bloquer mes jours de congé ?',
     a: 'Tu ajoutes une indisponibilité dans tes horaires ou depuis ton agenda : sur plusieurs jours pour tes congés, ou sur quelques heures d\'une seule journée pour une autre activité. Ces créneaux disparaissent aussitôt de ta page de réservation : personne ne peut réserver dessus.',
   },
   {
     q: 'Comment se passe l\'annulation d\'un rendez-vous ?',
     a: 'Ton client te prévient par message ou par appel, et tu annules le rendez-vous depuis ton agenda : le créneau redevient aussitôt réservable sur ta page. C\'est toi qui gardes la main, notamment sur l\'acompte en cas d\'annulation de dernière minute. Si c\'est un particulier qui a réservé en ligne, il dispose en principe de 14 jours pour se rétracter : traite sa demande (message, appel) comme une annulation et regarde si l\'acompte doit lui être rendu. En cas de doute, fais relire tes conditions par un professionnel du droit.',
+  },
+  {
+    q: 'Mes clients sont-ils rappelés avant leur rendez-vous ?',
+    a: 'Oui, par email, sans que tu fasses rien : un rappel 24 h avant, un autre 3 h avant. C\'est allumé d\'office. Dans « Messages automatiques », tu choisis combien de rappels partent (de 1 à 3) et combien d\'heures avant chacun, ou tu les éteins. Un rendez-vous pris trop tard pour un rappel ne reçoit pas celui dont l\'heure était déjà passée : réservé à 10 h pour 14 h, il n\'a pas le rappel de la veille. Sans adresse email, le client n\'est pas rappelé.',
   },
   {
     q: 'Comment marche la carte de fidélité ?',
@@ -139,6 +147,10 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     q: 'Puis-je faire une promotion sur mes prestations ?',
     a: 'Oui, dès l\'offre gratuite. Tu fixes une remise en pourcentage ou en euros pendant une période, sur toutes tes prestations ou sur certaines. Un bandeau en haut de ta page de réservation l\'annonce, avec un compte à rebours si tu le souhaites. La remise s\'applique à toutes les réservations prises pendant la période, hors frais de déplacement.',
+  },
+  {
+    q: 'Puis-je faire une remise sur un rendez-vous précis ?',
+    a: 'Oui, à la baisse seulement et tant que la facture n\'est pas émise. Sur la fiche du rendez-vous, « Faire une remise » : tu tapes le nouveau prix, plus bas que l\'actuel. Il ne peut pas descendre sous l\'acompte demandé. Si ton client a réservé en ligne et laissé son email, il reçoit un message qui lui dit que le lavage passe de l\'ancien prix au nouveau. Pour un rendez-vous que tu saisis toi-même, tu tapes directement un prix plus bas, et le prix normal est gardé en mémoire. Sur la facture, tu vois le prix de départ et une ligne « Remise accordée ».',
   },
   {
     q: 'Puis-je faire un devis ou une facture sans rendez-vous ?',

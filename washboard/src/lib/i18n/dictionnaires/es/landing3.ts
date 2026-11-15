@@ -14,4 +14,8 @@ export const landing3: Dictionnaire = {
   '+3 mois': '+3 meses',
   'Pas revenue ? La relance part toute seule': '¿No ha vuelto? El seguimiento sale solo',
   'Un message au bon moment, et elle reprend rendez-vous sur ta page.': 'Un mensaje en el momento justo y vuelve a reservar en tu página.',
+  'Rappels de rendez-vous': 'Recordatorios de cita',
+  'Un email au client 24 h puis 3 h avant, réglable. Moins d’oublis, moins de rendez-vous manqués.': 'Un email al cliente 24 h y luego 3 h antes, configurable. Menos olvidos, menos citas perdidas.',
+  'Remise sur un rendez-vous': 'Descuento en una cita',
+  'Centre auto ou à domicile': 'Centro de coches o a domicilio',
 }
