@@ -8,6 +8,7 @@ const etat = vi.hoisted(() => ({
   laveur: null as Record<string, unknown> | null,
   majs: [] as Record<string, unknown>[],
   traces: [] as Record<string, unknown>[],
+  recents: [] as Record<string, unknown>[],
   recompense: vi.fn(),
 }))
 
@@ -23,6 +24,9 @@ vi.mock('@/lib/supabase/admin', () => ({
       Object.assign(b, {
         select: () => b,
         eq: () => b,
+        gte: () => b,
+        order: () => b,
+        limit: async () => ({ data: etat.recents, error: null }),
         maybeSingle: async () => ({ data: etat.laveur, error: null }),
         update: (v: Record<string, unknown>) => { etat.majs.push(v); return { eq: async () => ({ error: null }) } },
         insert: async (v: Record<string, unknown>) => { if (table === 'paiements_abonnement') etat.traces.push(v); return { error: null } },
@@ -44,6 +48,7 @@ beforeEach(() => {
   etat.laveur = { id: ID, name: 'CleanCar 77', user_id: 'laveur-1', subscription_status: 'trial', trial_ends_at: new Date(Date.now() + 10 * 86_400_000).toISOString(), subscription_ends_at: null }
   etat.majs = []
   etat.traces = []
+  etat.recents = []
   etat.recompense.mockReset()
   etat.recompense.mockResolvedValue({ statut: 'recompense', parrainId: 'p', parrainNom: 'Bell Auto', forme: 'abonnement' })
   vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -97,5 +102,29 @@ describe('POST /api/support/laveurs/[id]/paiement', () => {
     etat.recompense.mockResolvedValue({ statut: 'echec' })
     const body = await (await appeler({ offre: 'pro', dureeMois: 1 })).json()
     expect(body.parrainage).toEqual({ statut: 'echec' })
+  })
+
+  it('Starter payé pendant l’essai : ne raccourcit pas un Pro offert plus long', async () => {
+    const plusTard = new Date(Date.now() + 40 * 86_400_000).toISOString()
+    etat.laveur = { ...etat.laveur!, pro_offert_jusqu_au: plusTard }
+    await appeler({ offre: 'starter', dureeMois: 1 })
+    expect(etat.majs[0]).not.toHaveProperty('pro_offert_jusqu_au')
+  })
+
+  it('paiement déjà confirmé dans les 24 h : demande confirmation sans rien écrire', async () => {
+    etat.recents = [{ offre: 'pro', duree_mois: 1, confirme_le: new Date().toISOString() }]
+    const res = await appeler({ offre: 'pro', dureeMois: 1 })
+    expect(res.status).toBe(409)
+    expect((await res.json()).doublon).toMatchObject({ offre: 'pro', dureeMois: 1 })
+    expect(etat.majs).toHaveLength(0)
+    expect(etat.traces).toHaveLength(0)
+    expect(etat.recompense).not.toHaveBeenCalled()
+  })
+
+  it('deuxième paiement voulu : enregistré quand l’équipe le confirme', async () => {
+    etat.recents = [{ offre: 'pro', duree_mois: 1, confirme_le: new Date().toISOString() }]
+    const res = await appeler({ offre: 'pro', dureeMois: 1, confirmerDoublon: true })
+    expect(res.status).toBe(200)
+    expect(etat.traces).toHaveLength(1)
   })
 })

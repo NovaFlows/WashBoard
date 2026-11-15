@@ -21,7 +21,7 @@ export async function GET() {
     .maybeSingle()
   if (error) {
     logger.error('parrainage.get.laveur', { userId: user.id }, error)
-    return NextResponse.json({ error: 'Impossible de charger ton parrainage.' }, { status: 503 })
+    return NextResponse.json({ error: 'Impossible de charger votre parrainage.' }, { status: 503 })
   }
   if (!laveur) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
@@ -29,7 +29,7 @@ export async function GET() {
     codeDuLaveur(admin, laveur),
     filleulsDuParrain(admin, laveur.id),
   ])
-  if (!code || !filleuls) return NextResponse.json({ error: 'Impossible de charger ton parrainage.' }, { status: 503 })
+  if (!code || !filleuls) return NextResponse.json({ error: 'Impossible de charger votre parrainage.' }, { status: 503 })
 
   const base = process.env.NEXT_PUBLIC_APP_URL || SITE_URL_FALLBACK
   return NextResponse.json({

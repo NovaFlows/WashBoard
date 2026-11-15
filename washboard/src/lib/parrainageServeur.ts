@@ -91,7 +91,7 @@ export async function annoncerInscriptionFilleul(admin: Admin, filleul: { id: st
   const parrainNom = (data.washers as unknown as { name?: string } | null)?.name ?? null
   await notifierLaveur(data.parrain_id as string, {
     title: 'Nouveau filleul',
-    body: `${filleul.name} s’est inscrit avec ton code. Ton mois offert arrive dès qu’il s’abonne.`,
+    body: `${filleul.name} s’est inscrit avec votre code. Votre mois offert arrive dès qu’il s’abonne.`,
     url: '/dashboard/parrainage',
     tag: `parrainage-inscrit-${filleul.id}`,
   })
@@ -167,8 +167,8 @@ export async function recompenserParrain(
 
   if (actif && recompense.forme !== 'aucune') {
     await notifierLaveur(compte!.id, {
-      title: 'Ton mois est offert',
-      body: `${filleul.name} est devenu client grâce à toi. Ton mois offert est appliqué.`,
+      title: 'Votre mois est offert',
+      body: `${filleul.name} est devenu client grâce à vous. Votre mois offert est appliqué.`,
       url: '/dashboard/parrainage',
       tag: `parrainage-recompense-${filleul.id}`,
     })

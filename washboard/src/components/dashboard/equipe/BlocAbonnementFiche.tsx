@@ -86,6 +86,13 @@ export default function BlocAbonnementFiche({ washer: w, parrainage }: { washer:
   )
 }
 
+function depuisQuand(iso: string): string {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000))
+  if (minutes < 1) return 'à l’instant'
+  if (minutes < 60) return `il y a ${minutes} min`
+  return `il y a ${Math.round(minutes / 60)} h`
+}
+
 type Resultat = { payeJusquAu: string; parrainage: { statut: string; parrain?: string } | null }
 
 function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parrain: string | null; onClose: () => void }) {
@@ -96,18 +103,21 @@ function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parr
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [resultat, setResultat] = useState<Resultat | null>(null)
+  const [doublon, setDoublon] = useState<{ offre: Plan; dureeMois: number; confirmeLe: string } | null>(null)
   const montant = duree === 12 ? yearlyPrice(PLAN_PRICES[offre]) : PLAN_PRICES[offre]
 
   async function confirmer() {
     setEnCours(true)
     setErreur(null)
+    const confirmerDoublon = doublon !== null
     try {
       const res = await fetch(`/api/support/laveurs/${w.id}/paiement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offre, dureeMois: duree }),
+        body: JSON.stringify({ offre, dureeMois: duree, confirmerDoublon }),
       })
       const json = await res.json().catch(() => null)
+      if (res.status === 409 && json?.doublon) { setDoublon(json.doublon); return }
       if (!res.ok) { setErreur(json?.error ?? 'Enregistrement impossible. Réessayez.'); return }
       setResultat({ payeJusquAu: json.payeJusquAu, parrainage: json.parrainage ?? null })
       router.refresh()
@@ -141,7 +151,7 @@ function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parr
         <div className="flex gap-2.5">
           <button type="button" onClick={onClose} className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)]`} style={PRESSION}>Annuler</button>
           <button type="button" onClick={() => void confirmer()} disabled={!verifie || enCours} className={`${BOUTON} flex-[1.4] text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
-            {enCours ? 'Enregistrement…' : 'Confirmer le paiement'}
+            {enCours ? 'Enregistrement…' : doublon ? 'Oui, deuxième paiement' : 'Confirmer le paiement'}
           </button>
         </div>
       }>
@@ -176,6 +186,9 @@ function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parr
           <input type="checkbox" checked={verifie} onChange={e => setVerifie(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[color:var(--v2-color-accent)]" />
           J’ai vérifié que ce paiement vient bien de ce laveur
         </label>
+        {doublon && (
+          <Constat ton="rouge">{`Un paiement a déjà été confirmé ${depuisQuand(doublon.confirmeLe)} : ${PLAN_LABELS[doublon.offre]}, ${doublon.dureeMois === 12 ? '1 an' : '1 mois'}. Le confirmer encore ajoute une période de plus. Si c’est le même virement, annulez.`}</Constat>
+        )}
         {erreur && <Constat ton="rouge">{erreur}</Constat>}
       </div>
     </Feuille>
