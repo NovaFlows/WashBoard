@@ -14,6 +14,8 @@ export function Drapeau({ pays, className = '' }: { pays: PaysTelephone; classNa
       {pays === 'FR' && <><rect width="8" height="16" fill="#0055A4" /><rect x="8" width="8" height="16" fill="#FFFFFF" /><rect x="16" width="8" height="16" fill="#EF4135" /></>}
       {pays === 'BE' && <><rect width="8" height="16" fill="#000000" /><rect x="8" width="8" height="16" fill="#FAE042" /><rect x="16" width="8" height="16" fill="#ED2939" /></>}
       {pays === 'CH' && <><rect width="24" height="16" fill="#DA291C" /><rect x="10" y="3" width="4" height="10" fill="#FFFFFF" /><rect x="7" y="6" width="10" height="4" fill="#FFFFFF" /></>}
+      {pays === 'DE' && <><rect width="24" height="5.34" fill="#000000" /><rect y="5.33" width="24" height="5.34" fill="#DD0000" /><rect y="10.66" width="24" height="5.34" fill="#FFCE00" /></>}
+      {pays === 'ES' && <><rect width="24" height="16" fill="#AA151B" /><rect y="4" width="24" height="8" fill="#F1BF00" /></>}
       {pays === 'LU' && <><rect width="24" height="5.34" fill="#ED2939" /><rect y="5.33" width="24" height="5.34" fill="#FFFFFF" /><rect y="10.66" width="24" height="5.34" fill="#00A1DE" /></>}
       {/* Québec : le fleurdelisé, croix blanche sur fond bleu, une fleur de lys (stylisée) par quartier. */}
       {pays === 'QC' && <>

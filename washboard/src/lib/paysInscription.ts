@@ -17,7 +17,10 @@ export const PAYS_OUVERTS_PAR_DEFAUT: readonly PaysTelephone[] = ['FR', 'BE', 'C
 // Le Québec est codé (téléphone, facturation) mais PAS ouvrable, même par la variable d'environnement :
 // le fuseau de l'appli est celui de Paris dans une cinquantaine de fichiers (6 h de décalage au Québec :
 // créneaux, rappels et jours qui basculent faux). À ajouter ici quand le fuseau sera par laveur.
-const CONNUS: readonly PaysTelephone[] = ['FR', 'BE', 'CH', 'LU']
+// L'Allemagne et l'Espagne (2026-11-15) sont codées et ouvrables par la variable d'environnement, mais ne
+// sont PAS dans les pays ouverts par défaut : leurs profils de facturation attendent une relecture par un
+// comptable de chaque pays avant d'émettre de vraies factures.
+const CONNUS: readonly PaysTelephone[] = ['FR', 'BE', 'CH', 'LU', 'DE', 'ES']
 
 /** Les pays ouverts à l'inscription. La France y est toujours : on ne ferme pas le pays d'origine. */
 export function paysOuverts(valeur: string | undefined = process.env.NEXT_PUBLIC_PAYS_INSCRIPTION): PaysTelephone[] {

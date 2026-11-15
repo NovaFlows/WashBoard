@@ -37,9 +37,13 @@ export const TAUX_TVA_LU = [17, 14, 8, 3] as const
  *  connue, voir PROJECT_CONTEXT.md). */
 export const TAUX_TVA_QC = [14.975, 5, 9.975] as const
 /** Tous les taux acceptés par le serveur ; l'écran n'en propose que ceux du pays du laveur. */
-export const TAUX_TVA = [20, 10, 5.5, 21, 12, 6, 8.1, 2.6, 3.8, 17, 14, 8, 3, 14.975, 5, 9.975] as const
+/** Allemagne (2026-11-15) : 19 % (taux normal, le cas du lavage) et 7 % (taux réduit). */
+export const TAUX_TVA_DE = [19, 7] as const
+/** Espagne (2026-11-15) : IVA 21 % (taux général, le cas du lavage), 10 % (réduit) et 4 % (superréduit). */
+export const TAUX_TVA_ES = [21, 10, 4] as const
+export const TAUX_TVA = [20, 10, 5.5, 21, 12, 6, 8.1, 2.6, 3.8, 17, 14, 8, 3, 14.975, 5, 9.975, 19, 7, 4] as const
 
-export type PaysFacturation = 'FR' | 'BE' | 'CH' | 'LU' | 'QC'
+export type PaysFacturation = 'FR' | 'BE' | 'CH' | 'LU' | 'QC' | 'DE' | 'ES'
 
 /** Le pays de facturation d'un laveur, déduit de ce qu'il a saisi : un numéro de TVA en « BE » ou
  *  « CHE », un numéro d'entreprise à 10 chiffres (BCE) ou un numéro IDE suisse (CHE-123.456.789),
@@ -51,16 +55,22 @@ export function paysFacturation(w: { facture_numero_tva?: string | null; facture
   if (/^CHE/i.test(tva)) return 'CH'
   if (/^LU\d/i.test(tva)) return 'LU'
   if (/(RT\d{4}|TQ\d{4})$/i.test(tva)) return 'QC'
+  if (/^DE\d{9}$/i.test(tva)) return 'DE'
+  if (/^ES[0-9A-Z]\d{7}[0-9A-Z]$/i.test(tva)) return 'ES'
   const identifiant = normaliserSiret(w.facture_siret ?? '')
   if (/^0\d{9}$/.test(identifiant)) return 'BE'
   if (/^CHE\d{9}$/.test(identifiant)) return 'CH'
   if (/^B\d{1,6}$/.test(identifiant)) return 'LU'
   if (/^(11|22|33|88)\d{8}$/.test(identifiant) && !bceValide(identifiant)) return 'QC'
+  if (/^DE\d{9}$/.test(identifiant) || /^\d{2,3}\/\d{3}\/\d{4,5}$/.test(identifiant)) return 'DE'
+  if (nifEspagnolValide(identifiant)) return 'ES'
   const tel = (w.phone ?? '').replace(/[\s.()-]/g, '')
   if (/^(\+32|0032)/.test(tel)) return 'BE'
   if (/^(\+41|0041)/.test(tel)) return 'CH'
   if (/^(\+352|00352)/.test(tel)) return 'LU'
   if (/^(\+1|001)(263|354|367|418|438|450|468|514|579|581|819|873)/.test(tel)) return 'QC'
+  if (/^(\+49|0049)/.test(tel)) return 'DE'
+  if (/^(\+34|0034)/.test(tel)) return 'ES'
   return 'FR'
 }
 
@@ -74,6 +84,8 @@ export function paysDuTelephoneLaveur(phone: string | null | undefined): PaysFac
   if (/^(\+41|0041)/.test(tel)) return 'CH'
   if (/^(\+352|00352)/.test(tel)) return 'LU'
   if (/^(\+1|001)(263|354|367|418|438|450|468|514|579|581|819|873)/.test(tel)) return 'QC'
+  if (/^(\+49|0049)/.test(tel)) return 'DE'
+  if (/^(\+34|0034)/.test(tel)) return 'ES'
   return null
 }
 
@@ -167,6 +179,34 @@ const REGLES: Record<PaysFacturation, ReglesPays> = {
     numeroTvaErreur: 'Numéro invalide : TPS (9 chiffres, RT, 4 chiffres : 123456789RT0001) ou TVQ (10 chiffres, TQ, 4 chiffres : 1234567890TQ0001).',
     adresseExemple: '1000 rue Sherbrooke Ouest, Montréal QC H3A 3G4',
   },
+  DE: {
+    pays: 'DE',
+    identifiantTitre: 'Steuernummer ou USt-IdNr.',
+    identifiantExemple: '12/345/67890',
+    identifiantErreur: 'Numéro fiscal invalide : Steuernummer (10 à 13 chiffres, par exemple 12/345/67890) ou USt-IdNr. (DE suivi de 9 chiffres).',
+    statutEi: { libelle: 'Entreprise individuelle', aide: 'Vous exercez en nom propre.' },
+    statutSociete: { libelle: 'Société (GmbH, UG, GbR…)', aide: 'Vos factures portent votre forme juridique, votre capital et votre inscription au registre du commerce (HRB).' },
+    formes: ['GmbH', 'UG (haftungsbeschränkt)', 'GbR', 'OHG', 'KG', 'GmbH & Co. KG', 'e.K.'],
+    immatriculationExemple: 'Amtsgericht München HRB 123456',
+    immatriculationAide: '« HRB » (registre du commerce), le tribunal d’instance (Amtsgericht), puis votre numéro.',
+    numeroTvaExemple: 'DE123456789',
+    numeroTvaErreur: 'Numéro de TVA invalide : DE suivi de 9 chiffres, par exemple DE123456789.',
+    adresseExemple: 'Hauptstraße 12, 10115 Berlin',
+  },
+  ES: {
+    pays: 'ES',
+    identifiantTitre: 'NIF / CIF',
+    identifiantExemple: '12345678Z',
+    identifiantErreur: 'NIF invalide : DNI (8 chiffres et une lettre), NIE (X, Y ou Z, 7 chiffres et une lettre) ou CIF (une lettre, 7 chiffres et une clé).',
+    statutEi: { libelle: 'Autónomo (entreprise individuelle)', aide: 'Vous exercez en nom propre, avec votre NIF.' },
+    statutSociete: { libelle: 'Société (SL, SA, SLU…)', aide: 'Vos factures portent votre forme juridique, votre capital et votre inscription au registre du commerce.' },
+    formes: ['SL', 'SLU', 'SA', 'SLL', 'S. Coop.'],
+    immatriculationExemple: 'Registro Mercantil de Madrid, tomo 1234, folio 56, hoja M-123456',
+    immatriculationAide: '« Registro Mercantil », la province, puis le tome, le folio et la feuille.',
+    numeroTvaExemple: 'ES12345678Z',
+    numeroTvaErreur: 'Numéro de TVA invalide : ES suivi du NIF (9 caractères), par exemple ES12345678Z.',
+    adresseExemple: 'Calle Mayor 12, 28013 Madrid',
+  },
 }
 
 export const reglesPays = (pays: PaysFacturation): ReglesPays => REGLES[pays]
@@ -181,14 +221,18 @@ export function identifiantValidePour(pays: PaysFacturation, brut: string): bool
   if (pays === 'CH') return ideSuisseValide(s)
   if (pays === 'LU') return identifiantLuxembourgValide(s)
   if (pays === 'QC') return neqValide(s)
+  if (pays === 'DE') return steuernummerValide(s) || ustIdNrValide(s)
+  if (pays === 'ES') return nifEspagnolValide(s)
   return /^\d{14}$/.test(s) && siretValide(s)
 }
 
 export const tauxTvaPour = (pays: PaysFacturation): readonly number[] =>
-  pays === 'BE' ? TAUX_TVA_BE : pays === 'CH' ? TAUX_TVA_CH : pays === 'LU' ? TAUX_TVA_LU : pays === 'QC' ? TAUX_TVA_QC : TAUX_TVA_FR
+  pays === 'BE' ? TAUX_TVA_BE : pays === 'CH' ? TAUX_TVA_CH : pays === 'LU' ? TAUX_TVA_LU : pays === 'QC' ? TAUX_TVA_QC
+    : pays === 'DE' ? TAUX_TVA_DE : pays === 'ES' ? TAUX_TVA_ES : TAUX_TVA_FR
 export const libelleIdentifiant = (pays: PaysFacturation): string =>
   pays === 'BE' ? 'numéro d’entreprise (BCE)' : pays === 'CH' ? 'numéro IDE (CHE)'
-    : pays === 'LU' ? 'numéro RCS ou matricule' : pays === 'QC' ? 'NEQ' : 'SIRET'
+    : pays === 'LU' ? 'numéro RCS ou matricule' : pays === 'QC' ? 'NEQ'
+      : pays === 'DE' ? 'Steuernummer ou USt-IdNr.' : pays === 'ES' ? 'NIF / CIF' : 'SIRET'
 /** Le taux de TVA normal du pays : celui qu'on propose et qu'on applique par défaut. */
 export const tauxTvaNormal = (pays: PaysFacturation): number => tauxTvaPour(pays)[0]
 
@@ -201,6 +245,9 @@ export function libelleCourtIdentifiant(identifiant: string | null | undefined):
   if (/^[01]\d{9}$/.test(s) && bceValide(s)) return 'N° BCE'
   if (/^B\d{1,6}$/.test(s)) return 'N° RCS'
   if (/^(11|22|33|88)\d{8}$/.test(s)) return 'NEQ'
+  if (/^DE\d{9}$/.test(s)) return 'USt-IdNr.'
+  if (/^\d{2,3}\/\d{3}\/\d{4,5}$/.test(s)) return 'Steuernummer'
+  if (nifEspagnolValide(s)) return 'NIF'
   if (/^(\d{11}|\d{13})$/.test(s)) return 'Matricule'
   if (/^[01]\d{9}$/.test(s)) return 'N° BCE'
   return 'SIRET'
@@ -221,6 +268,8 @@ export function identifiantAffiche(identifiant: string | null | undefined): stri
 export function mentionFranchiseTva(pays: PaysFacturation, t: Traducteur = sansTraduction): string {
   if (pays === 'BE') return t('TVA non applicable — franchise des petites entreprises (art. 56bis du Code de la TVA).')
   if (pays === 'CH') return t('TVA non applicable — entreprise non assujettie, chiffre d’affaires inférieur à 100 000 CHF (art. 10 al. 2 LTVA).')
+  if (pays === 'DE') return t('TVA non applicable — régime de la petite entreprise (§ 19 UStG, Kleinunternehmerregelung).')
+  if (pays === 'ES') return t('TVA non applicable — opération exonérée (art. 20 de la loi 37/1992 sur la TVA).')
   if (pays === 'LU') return t('TVA non applicable — régime de franchise des petites entreprises (art. 57 de la loi modifiée du 12 février 1979 concernant la TVA).')
   if (pays === 'QC') return t('TPS et TVQ non perçues — petit fournisseur (revenus inférieurs à 30 000 $ sur quatre trimestres consécutifs).')
   return t('TVA non applicable, art. 293 B du CGI.')
@@ -237,6 +286,16 @@ export type InfosFacturation = {
   facture_regime_tva?: RegimeTva | null
   facture_taux_tva?: number | null
   facture_numero_tva?: string | null
+}
+
+/** Ce que dit une facture à un client professionnel en cas de retard de paiement. France : trois fois le
+ *  taux d'intérêt légal et 40 € (art. L441-10 du Code de commerce) ; Allemagne : 9 points au-dessus du taux
+ *  de base et 40 € (§ 288 BGB) ; Espagne : intérêts de la loi 3/2004 et 40 €. Belgique, Suisse, Luxembourg et
+ *  Québec gardent la mention française d'origine. */
+export function mentionRetardPaiement(pays: PaysFacturation, t: Traducteur = sansTraduction): string {
+  if (pays === 'DE') return t('En cas de retard de paiement : intérêts de retard de 9 points au-dessus du taux de base et forfait de 40 € pour frais de recouvrement (§ 288 BGB).')
+  if (pays === 'ES') return t('En cas de retard de paiement : intérêts de retard et indemnité de 40 € pour frais de recouvrement (loi 3/2004 de lutte contre le retard de paiement).')
+  return t('En cas de retard de paiement : pénalités au taux de trois fois le taux d’intérêt légal, et indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).')
 }
 
 export const arrondi = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
@@ -282,6 +341,38 @@ export function identifiantLuxembourgValide(brut: string): boolean {
   return /^B\d{1,6}$/.test(s) || /^(\d{11}|\d{13})$/.test(s)
 }
 
+/** Steuernummer allemande : 10 à 13 chiffres, le plus souvent écrits avec des barres (12/345/67890). Les
+ *  formats varient d'un Land à l'autre et aucune clé commune ne les contrôle : seul le gabarit se vérifie. */
+export function steuernummerValide(brut: string): boolean {
+  const s = normaliserSiret(brut)
+  return /^\d{2,3}\/\d{3}\/\d{4,5}$/.test(s) || /^\d{10,13}$/.test(s)
+}
+
+/** USt-IdNr. allemande : DE puis 9 chiffres. */
+export function ustIdNrValide(brut: string): boolean {
+  return /^DE\d{9}$/.test(normaliserSiret(brut))
+}
+
+const LETTRES_NIF = 'TRWAGMYFPDXBNJZSQVHLCKE'
+/** NIF espagnol : DNI (8 chiffres + lettre de contrôle : le nombre modulo 23), NIE (X, Y ou Z + 7 chiffres +
+ *  lettre : X, Y, Z valent 0, 1, 2) ou CIF de société (une lettre, 7 chiffres, une clé chiffre ou lettre). */
+export function nifEspagnolValide(brut: string): boolean {
+  const s = normaliserSiret(brut)
+  if (/^\d{8}[A-Z]$/.test(s)) return LETTRES_NIF[Number(s.slice(0, 8)) % 23] === s[8]
+  if (/^[XYZ]\d{7}[A-Z]$/.test(s)) return LETTRES_NIF[Number(String('XYZ'.indexOf(s[0])) + s.slice(1, 8)) % 23] === s[8]
+  const m = /^([ABCDEFGHJNPQRSUVW])(\d{7})([0-9A-J])$/.exec(s)
+  if (!m) return false
+  const chiffres = m[2]
+  let somme = 0
+  for (let i = 0; i < 7; i++) {
+    const n = Number(chiffres[i])
+    if (i % 2 === 0) { const d = n * 2; somme += Math.floor(d / 10) + (d % 10) } else somme += n
+  }
+  const cle = (10 - (somme % 10)) % 10
+  // Selon la forme de la société, la clé est un chiffre ou une lettre (A = 1 … J = 0).
+  return m[3] === String(cle) || m[3] === 'JABCDEFGHI'[cle]
+}
+
 /** 14 chiffres dont la clé de Luhn est juste. Seule exception connue : La
  *  Poste (SIREN 356 000 000), dont les établissements respectent une autre
  *  règle — la somme des chiffres est un multiple de 5. */
@@ -294,6 +385,8 @@ export function siretValide(brut: string): boolean {
   if (bceValide(s)) return true
   // Québec (NEQ) et Luxembourg (RCS, matricule) : un identifiant valide, sans être français.
   if (neqValide(s) || identifiantLuxembourgValide(s)) return true
+  // Allemagne (Steuernummer avec barres, USt-IdNr.) et Espagne (NIF/NIE/CIF).
+  if (ustIdNrValide(s) || /^\d{2,3}\/\d{3}\/\d{4,5}$/.test(s) || nifEspagnolValide(s)) return true
   if (/^[01]\d{9}$/.test(s)) return false
   if (!/^\d{14}$/.test(s)) return false
   if (s.startsWith('356000000')) {
@@ -328,6 +421,9 @@ export function numeroTvaValide(brut: string): boolean {
   if (/^LU\d{8}$/.test(n)) return Number(n.slice(2, 8)) % 89 === Number(n.slice(8))
   // Québec : numéro de TPS (9 chiffres, RT, 4 chiffres) ou de TVQ (10 chiffres, TQ, 4 chiffres).
   if (/^\d{9}RT\d{4}$/.test(n) || /^\d{10}TQ\d{4}$/.test(n)) return true
+  // Allemagne : DE puis 9 chiffres. Espagne : ES puis le NIF (9 caractères).
+  if (/^DE\d{9}$/.test(n)) return true
+  if (/^ES[0-9A-Z]\d{7}[0-9A-Z]$/.test(n)) return nifEspagnolValide(n.slice(2))
   return /^FR[0-9A-Z]{2}\d{9}$/.test(n)
 }
 
@@ -355,7 +451,8 @@ export function infosFacturationManquantes(w: InfosFacturation): string[] {
     if (!w.facture_immatriculation?.trim()) {
       const pays = paysFacturation(w)
       manques.push(pays === 'BE' ? 'votre immatriculation (RPM)' : pays === 'CH' ? 'votre inscription au registre du commerce (RC)'
-        : pays === 'QC' ? 'votre immatriculation (REQ)' : 'votre immatriculation (RCS)')
+        : pays === 'QC' ? 'votre immatriculation (REQ)' : pays === 'DE' ? 'votre inscription au registre du commerce (HRB)'
+          : pays === 'ES' ? 'votre inscription au Registro Mercantil' : 'votre immatriculation (RCS)')
     }
   }
   if (w.facture_regime_tva === 'assujetti'
