@@ -34,11 +34,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
   const langue = await getTAvec(new URL(req.url).searchParams.get('lang'))
   const buffer = await rendreDocumentPdf(rendable, langue)
+  const nomFichier = nomFichierDocument(rendable, langue.t)
 
   return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${nomFichierDocument(rendable)}"`,
+      'Content-Disposition': `attachment; filename="${nomFichier}"`,
       'Cache-Control': 'no-store',
       // Même raison que pour les factures de réservation : le lien est public, et un client
       // qui le colle quelque part rendrait sinon le document — SIRET, adresses, montants —

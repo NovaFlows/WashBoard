@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
-import { identifiantAffiche, libelleCourtIdentifiant, mentionFranchiseTva, paysFacturation, prixHt, type FactureContenu } from '@/lib/facture'
+import { identifiantAffiche, libelleCourtIdentifiant, mentionFranchiseTva, mentionRetardPaiement, paysFacturation, prixHt, type FactureContenu } from '@/lib/facture'
 import { FUSEAU } from '@/lib/dateUtils'
 import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 
@@ -135,7 +135,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo, t = sansTra
             {/* Un devis chiffre un travail qui n'a pas encore de date : le dire vaut mieux
                 que d'imprimer la date du jour, que le client lirait comme un rendez-vous. */}
             <Text>{prestation.date ? quandPrestation(prestation.date) : t('Date à convenir')}</Text>
-            {prestation.lieu ? <Text>{prestation.lieu}</Text> : null}
+            {prestation.lieu ? <Text>{prestation.lieu.startsWith('Centre auto · ') ? t('Centre auto · {adresse}', { adresse: prestation.lieu.slice('Centre auto · '.length) }) : prestation.lieu}</Text> : null}
           </View>
         </View>
 
@@ -159,7 +159,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo, t = sansTra
             {/* Sur une facture de réservation, la remise ne peut venir que du créneau
                 optimisé, et le client l'a vue nommée ainsi en réservant. Sur un document
                 écrit à la main, c'est une remise, point. */}
-            <Text style={s.cDesig}>{contenu.libelleRemise ?? (contenu.genre ? t('Remise') : t('Remise créneau optimisé'))}</Text>
+            <Text style={s.cDesig}>{contenu.libelleRemise ? t(contenu.libelleRemise) : (contenu.genre ? t('Remise') : t('Remise créneau optimisé'))}</Text>
             <Text style={s.cQte}>1</Text>
             <Text style={s.cPu}>{euros(-ht(remiseTtc))}</Text>
             <Text style={s.cTot}>{euros(-ht(remiseTtc))}</Text>
@@ -211,7 +211,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo, t = sansTra
           )}
           {client.professionnel && !devis ? (
             <Text>
-              {t('En cas de retard de paiement : pénalités au taux de trois fois le taux d’intérêt légal, et indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).')}
+              {mentionRetardPaiement(paysFacturation({ facture_numero_tva: vendeur.numeroTva, facture_siret: vendeur.siret, phone: vendeur.telephone }), t)}
             </Text>
           ) : null}
         </View>

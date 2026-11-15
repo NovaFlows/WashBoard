@@ -2,7 +2,7 @@ import { createHmac, randomInt, timingSafeEqual } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 import { sendSms, EXPEDITEUR_SMS_DEFAUT } from '@/lib/sms'
-import { normaliserMobile, paysDuTelephone } from '@/lib/phone'
+import { MOBILE_ALLEMAGNE, MOBILE_ESPAGNE, normaliserMobile, paysDuTelephone } from '@/lib/phone'
 import { paysOuverts } from '@/lib/paysInscription'
 
 // Confirmation de l'inscription par un code reçu par SMS (décision d'Alexandre, 2026-10-21) :
@@ -38,7 +38,8 @@ export function estMobileFrancais(telephone: string | null | undefined, env: Rec
   // quand le pays est ouvert à l'inscription (`lib/paysInscription`) — ou pour un numéro de test,
   // qui n'envoie aucun SMS. Tant que Brevo n'a pas prouvé qu'il y livre, le code ne partirait pas.
   const pays = paysDuTelephone(t)
-  const formatOk = pays === 'LU' ? /^\+3526\d{8}$/.test(t) : pays === 'QC' ? /^\+1\d{10}$/.test(t) : false
+  const formatOk = pays === 'LU' ? /^\+3526\d{8}$/.test(t) : pays === 'QC' ? /^\+1\d{10}$/.test(t)
+    : pays === 'DE' ? MOBILE_ALLEMAGNE.test(t) : pays === 'ES' ? MOBILE_ESPAGNE.test(t) : false
   if (!formatOk) return false
   return paysOuverts(env.NEXT_PUBLIC_PAYS_INSCRIPTION).includes(pays) || codeDuNumeroTest(t, env) !== null
 }
@@ -52,6 +53,8 @@ export function phraseMobileRequis(env: Record<string, string | undefined> = pro
   const en = ['06 ou 07 en France', '04 en Belgique', '+41 7x en Suisse']
   if (ouverts.includes('LU')) en.push('6x au Luxembourg')
   if (ouverts.includes('QC')) en.push('un numéro québécois')
+  if (ouverts.includes('DE')) en.push('+49 15x, 16x ou 17x en Allemagne')
+  if (ouverts.includes('ES')) en.push('6xx ou 7xx en Espagne')
   return `Il faut un numéro de mobile (${en.join(', ')}) : le code arrive par SMS.`
 }
 
