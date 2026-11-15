@@ -76,12 +76,10 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
               />
             </div>
             <p className="mt-2 text-[16px] leading-snug">{phraseCarte(etat, reglages)}</p>
-            <p className="mt-2 text-[13px] leading-snug text-[#6B6B76] dark:text-[#9A9AA4]">
-              {reglages.tampon_par_vehicule ? t('Un tampon par véhicule lavé') : t('Un tampon par prestation terminée')}{t('. Réservez avec le même numéro de téléphone et le même email pour qu’il compte. Touchez la carte pour la retourner.')}
-            </p>
+            <p className="mt-2 text-[13px] leading-snug text-[#6B6B76] dark:text-[#9A9AA4]">{t('{v0}. Réservez avec le même numéro de téléphone et le même email pour qu’il compte. Touchez la carte pour la retourner.', { v0: reglages.tampon_par_vehicule ? t('Un tampon par véhicule lavé') : t('Un tampon par prestation terminée') })}</p>
           </>
         ) : (
-          <p className="mt-6 text-[15px]">{laveur.name} {t('ne propose plus de carte de fidélité pour le moment.')}</p>
+          <p className="mt-6 text-[15px]">{t('{name} ne propose plus de carte de fidélité pour le moment.', { name: laveur.name })}</p>
         )}
 
         <Link href={`/book/${laveur.slug}`} className="mt-6 flex min-h-12 items-center justify-center rounded-2xl bg-[#16161A] px-4 text-[15px] font-semibold text-white active:scale-[.98] dark:bg-white dark:text-[#16161A]">

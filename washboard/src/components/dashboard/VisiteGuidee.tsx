@@ -597,9 +597,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
             aria-label={t('Reprendre la visite guidée — étape {v0} sur {length}', { v0: etape + 1, length: etapes.length })}
             className={`wb-visite-verre pointer-events-auto absolute right-3 h-11 px-3.5 rounded-full flex items-center gap-1.5 text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}
             style={styleCarte}
-          >
-            {t('Visite')} {etape + 1}/{etapes.length} ‹
-          </button>
+          >{t('Visite {v0}/{length} ‹', { v0: etape + 1, length: etapes.length })}</button>
         ) : (
           <div
             ref={carteRef}
@@ -615,9 +613,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
             )}
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
-                <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
-                  {t('Étape')} {etape + 1}/{etapes.length}
-                </p>
+                <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>{t('Étape {v0}/{length}', { v0: etape + 1, length: etapes.length })}</p>
                 {dejaFaitAffiche && <span className={`wb-visite-badge-fait text-[11px] ${corpsFort}`}>{t('✓ Déjà fait')}</span>}
               </div>
               <div className="flex items-center -my-2 -mr-2">
@@ -703,9 +699,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
           />
         )}
         <div className="flex items-center justify-between gap-3">
-          <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
-            {t('Étape')} {etape + 1}/{etapes.length}
-          </p>
+          <p className={`text-[12.5px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>{t('Étape {v0}/{length}', { v0: etape + 1, length: etapes.length })}</p>
           <button
             type="button"
             onClick={fermer}

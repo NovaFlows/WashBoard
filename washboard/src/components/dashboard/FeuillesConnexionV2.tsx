@@ -66,9 +66,7 @@ export function FeuilleEmailV2({ email, onClose }: { email: string; onClose: () 
     >
       {envoye ? (
         <div className="pb-1">
-          <Constat ton="ambre" role="status">
-            {t('Un message vient de partir à')} {nouvel.trim()}{t('. Votre adresse ne changera qu’une fois le lien de confirmation ouvert, depuis cette nouvelle boîte mail.')}
-          </Constat>
+          <Constat ton="ambre" role="status">{t('Un message vient de partir à {v0}. Votre adresse ne changera qu’une fois le lien de confirmation ouvert, depuis cette nouvelle boîte mail.', { v0: nouvel.trim() })}</Constat>
         </div>
       ) : (
         <form id="profil-email" onSubmit={soumettre} noValidate>
@@ -244,9 +242,7 @@ export function FeuilleTelephoneV2({ telephone, onChange, onClose }: { telephone
               className={CHAMP}
             />
             {erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}
-            <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              {t('Un code vient de partir au')} {envoyeA}{t('. Il est valable 10 minutes. Votre numéro ne change qu’une fois le code validé.')}
-            </p>
+            <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Un code vient de partir au {envoyeA}. Il est valable 10 minutes. Votre numéro ne change qu’une fois le code validé.', { envoyeA })}</p>
             <button
               type="button"
               onClick={() => { setEnvoyeA(null); setCode(''); setErreur(null) }}

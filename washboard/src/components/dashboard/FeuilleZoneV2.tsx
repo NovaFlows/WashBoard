@@ -152,9 +152,7 @@ function Departements({
       {cherche ? (
         <div className="mt-2">
           {resultats.length === 0 ? (
-            <p className={`py-3 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {t('Aucun département ne correspond à «')} {recherche.trim()} ».
-            </p>
+            <p className={`py-3 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Aucun département ne correspond à « {v0} ».', { v0: recherche.trim() })}</p>
           ) : liste}
         </div>
       ) : (

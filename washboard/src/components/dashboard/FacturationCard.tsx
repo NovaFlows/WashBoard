@@ -136,9 +136,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         {manques.length === 0 ? (
           <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{tr('✓ Vos factures sont prêtes à être émises.')}</p>
         ) : (
-          <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-            {phraseManques(manques)} {tr('En attendant, vos clients reçoivent un simple récapitulatif.')}
-          </p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">{tr('{phraseManques} En attendant, vos clients reçoivent un simple récapitulatif.', { phraseManques: phraseManques(manques) })}</p>
         )}
 
         <div>
@@ -228,9 +226,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
             onChange={e => setProchainNumero(e.target.value)}
             className={`${inputClass} w-40`}
           />
-          <p className={aideClass}>
-            {tr('Vous facturiez déjà avant WashBoard ? Indiquez le numéro qui suit votre dernière facture, pour que la suite reste continue (par exemple 46 si vous étiez à la n° 45). La prochaine facture sera la F-')}{String(Math.max(1, Number(prochainNumero) || numeroActuel)).padStart(5, '0')}{tr('. Ce numéro ne peut qu’augmenter.')}
-          </p>
+          <p className={aideClass}>{tr('Vous facturiez déjà avant WashBoard ? Indiquez le numéro qui suit votre dernière facture, pour que la suite reste continue (par exemple 46 si vous étiez à la n° 45). La prochaine facture sera la F-{v0}. Ce numéro ne peut qu’augmenter.', { v0: String(Math.max(1, Number(prochainNumero) || numeroActuel)).padStart(5, '0') })}</p>
         </div>
 
         {regime === 'assujetti' && (

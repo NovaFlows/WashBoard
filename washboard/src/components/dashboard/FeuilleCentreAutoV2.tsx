@@ -97,7 +97,7 @@ export default function FeuilleCentreAutoV2({
                   <div key={c.cle} className="flex flex-col gap-2">
                     {centres.length > 1 && (
                       <div className="flex items-center justify-between">
-                        <span className={`text-[13px] ${corpsFort}`}>{t('Centre')} {i + 1}</span>
+                        <span className={`text-[13px] ${corpsFort}`}>{t('Centre {v0}', { v0: i + 1 })}</span>
                         <button
                           type="button"
                           onClick={() => { setCentres(l => l.filter(x => x.cle !== c.cle)); setErreur(null) }}

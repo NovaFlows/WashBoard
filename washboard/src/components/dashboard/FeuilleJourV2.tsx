@@ -27,9 +27,7 @@ export default function FeuilleJourV2({ jour, plages, onAjouter, onRetirer, onCl
   return (
     <Feuille titre={nomJour} onClose={onClose}>
       {duJour.length === 0 ? (
-        <p className={`text-[15px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          {t('Fermé : aucun créneau réservable le')} {nomJour.toLowerCase()}.
-        </p>
+        <p className={`text-[15px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Fermé : aucun créneau réservable le {v0}.', { v0: nomJour.toLowerCase() })}</p>
       ) : (
         <ul className="divide-y divide-[color:var(--v2-filet)]">
           {duJour.map(p => (
@@ -54,9 +52,7 @@ export default function FeuilleJourV2({ jour, plages, onAjouter, onRetirer, onCl
         onClick={onAjouter}
         className={`${BOUTON} mt-4 w-full border border-[color:var(--v2-color-encre)] text-[color:var(--v2-color-encre)]`}
         style={PRESSION}
-      >
-        {t('+ Ajouter une plage le')} {nomJour.toLowerCase()}
-      </button>
+      >{t('+ Ajouter une plage le {v0}', { v0: nomJour.toLowerCase() })}</button>
     </Feuille>
   )
 }

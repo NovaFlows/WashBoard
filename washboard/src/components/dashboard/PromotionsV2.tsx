@@ -195,7 +195,7 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
                   <button type="button" onClick={() => { setErreur(null); setBrouillon(depuisPromotion(p)) }} className="flex min-h-[60px] w-full items-center gap-3 py-2.5 text-left">
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className={`truncate text-[15.5px] ${policeNom}`}>{p.nom} <span className={`text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>{libelleRemise({ ...p, valeur: Number(p.valeur) })}</span></span>
-                      <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Du')} {dateCourte(p.debut, loc)} {t('au')} {dateCourte(p.fin, loc)}</span>
+                      <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Du {dateCourte} au {v1}', { dateCourte: dateCourte(p.debut, loc), v1: dateCourte(p.fin, loc) })}</span>
                     </span>
                     <span className={`flex shrink-0 items-center gap-1.5 text-[13px] ${corpsFort}`} style={{ color: e.couleur }}>
                       <span className="h-[7px] w-[7px] rounded-full" style={{ background: e.couleur }} aria-hidden />{e.mot}

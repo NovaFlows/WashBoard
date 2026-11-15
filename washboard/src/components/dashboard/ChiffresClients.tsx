@@ -95,9 +95,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
     <div className="flex flex-col gap-[3px]">
       <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Valeur moyenne par client')}</span>
       <span className={`${grandEcran ? 'text-[50px]' : 'text-[44px] sm:text-[52px]'} leading-none ${hero}`}>{euros(stats.valeurMoyenne)}</span>
-      <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-        {t('sur')} {nombre.format(stats.actifs.length)} {t('client')}{stats.actifs.length > 1 ? 's' : ''} {t('actif')}{stats.actifs.length > 1 ? 's' : ''} {t('sur la période')}
-      </span>
+      <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('sur {v0} client{v1} actif{v2} sur la période', { v0: nombre.format(stats.actifs.length), v1: stats.actifs.length > 1 ? 's' : '', v2: stats.actifs.length > 1 ? 's' : '' })}</span>
     </div>
   )
 
@@ -105,9 +103,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
     <div>
       <div className="flex items-baseline justify-between px-0.5 pb-2">
         <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Vos meilleurs clients')}</span>
-        <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          {Math.round((stats.meilleurs.reduce((s, c) => s + c.totalRevenue, 0) / (stats.totalCA || 1)) * 100)} {t('% du chiffre d’affaires')}
-        </span>
+        <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{v0} % du chiffre d’affaires', { v0: Math.round((stats.meilleurs.reduce((s, c) => s + c.totalRevenue, 0) / (stats.totalCA || 1)) * 100) })}</span>
       </div>
       <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
         {stats.meilleurs.map((c, i) => {
@@ -136,9 +132,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
   )
 
   const blocProSplit = filtre === 'tous' && (
-    <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed px-1`}>
-      {t('Les clients professionnels font')} {stats.partCaPro} {t('% du chiffre d’affaires pour')} {stats.partRdvPro} {t('% des rendez-vous.')}
-    </p>
+    <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed px-1`}>{t('Les clients professionnels font {partCaPro} % du chiffre d’affaires pour {partRdvPro} % des rendez-vous.', { partCaPro: stats.partCaPro, partRdvPro: stats.partRdvPro })}</p>
   )
 
   const blocDefinitionCa = (
@@ -185,9 +179,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
         <div>
           <div className="flex items-baseline justify-between px-0.5 pb-2">
             <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('D’où viennent vos clients')}</span>
-            <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {nombre.format(sources.reponses)} {t('réponse')}{sources.reponses > 1 ? 's' : ''} {t('sur')} {nombre.format(sources.total)} rendez-vous
-            </span>
+            <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{v0} réponse{v1} sur {v2} rendez-vous', { v0: nombre.format(sources.reponses), v1: sources.reponses > 1 ? 's' : '', v2: nombre.format(sources.total) })}</span>
           </div>
           <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
             {sources.lignes.map(l => (

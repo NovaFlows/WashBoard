@@ -108,9 +108,7 @@ export function UpgradePrompt({ title, description, feature, apercu, rassurance 
         <Link
           href="/dashboard/abonnement"
           className="mt-6 flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
-        >
-          {t('Passer à l’offre')} {label} — {prix}{t('€/mois')}
-        </Link>
+        >{t('Passer à l’offre {label} — {prix}€/mois', { label, prix })}</Link>
       )}
       <Link
         href="/dashboard/abonnement"

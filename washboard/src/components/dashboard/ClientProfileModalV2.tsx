@@ -694,9 +694,7 @@ export default function ClientProfileModalV2({
               <p className={`mt-1 truncate text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{sousTitre}</p>
             )}
             {profile.isProfessional && profile.companyName && (
-              <p className={`mt-0.5 truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                {tr('Contact ·')} {profile.name}
-              </p>
+              <p className={`mt-0.5 truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Contact · {name}', { name: profile.name })}</p>
             )}
             {nePlusContacter && (
               <p className={`mt-1 text-[12px] ${corpsFort} text-[color:var(--v2-color-rouge)]`}>
@@ -741,9 +739,7 @@ export default function ClientProfileModalV2({
             ))}
           </dl>
           {profile.cancelledCount > 0 && (
-            <p className={`mt-2 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {tr('dont')} {profile.cancelledCount} {tr('annulé')}{profile.cancelledCount > 1 ? 's' : ''}
-            </p>
+            <p className={`mt-2 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('dont {cancelledCount} annulé{v1}', { cancelledCount: profile.cancelledCount, v1: profile.cancelledCount > 1 ? 's' : '' })}</p>
           )}
 
           {/* Coordonnées : l'email est garanti (seul champ obligatoire de la
@@ -789,9 +785,7 @@ export default function ClientProfileModalV2({
                 style={{ backgroundColor: 'var(--v2-color-ambre)' }}
                 aria-hidden
               />
-              <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-ambre)]`}>
-                {tr('Pas revenu depuis')} {profile.daysSinceLastVisit} {tr('jours — bon candidat à une relance.')}
-              </p>
+              <p className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-ambre)]`}>{tr('Pas revenu depuis {daysSinceLastVisit} jours — bon candidat à une relance.', { daysSinceLastVisit: profile.daysSinceLastVisit })}</p>
             </div>
           )}
 

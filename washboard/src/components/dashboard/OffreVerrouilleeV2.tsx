@@ -108,9 +108,7 @@ export function OffreVerrouilleeV2({ titre: intitule, description, feature, rass
           href="/dashboard/abonnement"
           className={`mt-5 flex h-11 w-full items-center justify-center rounded-[var(--v2-radius-bouton)] text-[15px] text-white ${corpsFort} transition-transform active:scale-[.98]`}
           style={{ background: 'var(--v2-color-accent)' }}
-        >
-          {t('Passer à')} {label} — {prix} {t('€/mois')}
-        </Link>
+        >{t('Passer à {label} — {prix} €/mois', { label, prix })}</Link>
       )}
 
       <Link

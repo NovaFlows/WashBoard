@@ -156,9 +156,7 @@ export default function FeuilleActionsDocumentV2({
             {/* Le geste qui fait entrer l'argent dans Chiffres — et le seul. */}
             {d.paye_le ? (
               <>
-                <p className={`mt-1 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>
-                  {t('Encaissée le')} {jourCourt(d.paye_le, loc)} {t('· comptée dans vos chiffres')}
-                </p>
+                <p className={`mt-1 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>{t('Encaissée le {jourCourt} · comptée dans vos chiffres', { jourCourt: jourCourt(d.paye_le, loc) })}</p>
                 <button
                   type="button"
                   onClick={() => onPayer(false)}

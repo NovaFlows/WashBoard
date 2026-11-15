@@ -47,7 +47,7 @@ export function DiagnosticPwa() {
     <p className="pb-2 text-center text-[11px] text-[color:var(--v2-color-gris)] tabular-nums opacity-70">
       v. {process.env.NEXT_PUBLIC_BUILD_SHA}
       {etat && <><br />{etat.hote}</>}
-      {etat && <> {t('· mode appli :')} {oui(etat.appli)} {t('· classe wb-pwa :')} {oui(etat.classe)}</>}
+      {etat && <>{t('· mode appli : {oui} · classe wb-pwa : {v1}', { oui: oui(etat.appli), v1: oui(etat.classe) })}</>}
       {equipe && <><br />{t('compte :')} {equipe.compte ?? '?'} {t('· équipe :')} {oui(equipe.membre)} {t('· liste du déploiement :')} {equipe.listeConfiguree ? t('définie') : 'ABSENTE'}</>}
     </p>
   )

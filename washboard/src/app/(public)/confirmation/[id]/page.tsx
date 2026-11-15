@@ -86,7 +86,7 @@ export default async function ConfirmationPage({ params }: Props) {
         <div className="wb-recu-doc">
           <div className="wb-recu-kicker">
             <span>{t('Reçu de prestation de service')}</span>
-            <b>{t('Réf.')} {ref}</b>
+            <b>{t('Réf. {ref}', { ref })}</b>
           </div>
 
           {/* En-tête */}
@@ -134,7 +134,7 @@ export default async function ConfirmationPage({ params }: Props) {
                 <p className="petit">{formattedDate} à {time}</p>
                 <p className="petit">{adresseAvecLieu(booking.address, booking.lieu)}</p>
                 {booking.is_smart_slot && discount > 0 && (
-                  <p className="promo">{t('★ Créneau optimisé (remise de')} {discount}€)</p>
+                  <p className="promo">{t('★ Créneau optimisé (remise de {discount}€)', { discount })}</p>
                 )}
               </div>
               <div className="prix">

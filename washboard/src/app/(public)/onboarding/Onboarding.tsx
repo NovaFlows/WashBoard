@@ -353,7 +353,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
           <Vignette logoUrl={logoUrl} nom={nom} />
           <div className="min-w-0">
             <p className="text-[15px] font-semibold">{nom || 'Ton entreprise'}</p>
-            <p className="break-all text-xs text-[color:var(--v2-color-accent)]">{DOMAINE}{t('/book/')}{candidat || '…'}</p>
+            <p className="break-all text-xs text-[color:var(--v2-color-accent)]">{t('{DOMAINE}/book/{v1}', { DOMAINE, v1: candidat || '…' })}</p>
           </div>
         </div>
         <p className="flex justify-between gap-3 border-t border-[color:var(--v2-filet)] pt-2.5 text-[13px]">
@@ -390,7 +390,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                       <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-current" />{t('Dernière étape')}
                     </p>
                   )}
-                  <p className="mb-2 hidden text-[13px] tabular-nums text-[color:var(--v2-color-gris)] lg:block">{t('Étape')} {etape} {t('sur')} {TOTAL_ETAPES_ONBOARDING}</p>
+                  <p className="mb-2 hidden text-[13px] tabular-nums text-[color:var(--v2-color-gris)] lg:block">{t('Étape {etape} sur {TOTAL_ETAPES_ONBOARDING}', { etape, TOTAL_ETAPES_ONBOARDING })}</p>
                 </>
               }
             />
@@ -402,7 +402,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
             <GroupeChamps>
               <Champ id="slug" label={t('Personnalise ton lien')}>
                 <div className="flex items-baseline text-base">
-                  <span className="whitespace-nowrap text-[color:var(--v2-color-gris)]">{DOMAINE}{t('/book/')}</span>
+                  <span className="whitespace-nowrap text-[color:var(--v2-color-gris)]">{t('{DOMAINE}/book/', { DOMAINE })}</span>
                   <input
                     id="slug"
                     type="text"

@@ -418,9 +418,7 @@ export default function FicheEntrepriseV2({
         </button>
         <div className="min-w-0 flex-1">
           <h1 className={`truncate text-[24px] leading-none ${titre}`}>{entreprise.nom}</h1>
-          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {sites.length} {t('site')}{sites.length > 1 ? 's' : ''} · {contacts.length} {t('contact')}{contacts.length > 1 ? 's' : ''}
-          </p>
+          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{length} site{v1} · {v2} contact{v3}', { length: sites.length, v1: sites.length > 1 ? 's' : '', v2: contacts.length, v3: contacts.length > 1 ? 's' : '' })}</p>
         </div>
         <button
           type="button" onClick={() => setFeuille({ quoi: 'options' })} aria-label={t('Options de l’entreprise')}
@@ -476,9 +474,7 @@ export default function FicheEntrepriseV2({
                 >
                   <span className="min-w-0 flex-1">
                     <span className={`block text-[13.5px] ${corpsFort}`}>{f.document.numero}</span>
-                    <span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                      {t('Émise il y a')} {f.jours} j · {euros.format(f.document.contenu.totaux.ttc)}
-                    </span>
+                    <span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Émise il y a {jours} j · {v1}', { jours: f.jours, v1: euros.format(f.document.contenu.totaux.ttc) })}</span>
                   </span>
                   {chargementFacture && factureOuverteId === f.document.id
                     ? <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>…</span>
@@ -495,9 +491,9 @@ export default function FicheEntrepriseV2({
           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: 'var(--v2-color-ambre)' }} aria-hidden />
           <p className={`text-[13px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>
             {devisEnAttente.length === 1 ? (
-              <>{t('Le devis envoyé il y a')} {devisEnAttente[0].jours} {t('j n’a pas eu de réponse.')}</>
+              <>{t('Le devis envoyé il y a {jours} j n’a pas eu de réponse.', { jours: devisEnAttente[0].jours })}</>
             ) : (
-              <>{devisEnAttente.length} {t('devis envoyés sont sans réponse, le plus ancien depuis')} {devisEnAttente[0].jours} j.</>
+              <>{t('{length} devis envoyés sont sans réponse, le plus ancien depuis {jours} j.', { length: devisEnAttente.length, jours: devisEnAttente[0].jours })}</>
             )}
           </p>
         </div>

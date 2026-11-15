@@ -146,7 +146,7 @@ export default function StepOptions({
                           +{addon.price}€
                         </span>
                         {addon.duration_minutes ? (
-                          <span className="text-xs text-slate-400 dark:text-slate-500">+{addon.duration_minutes} {t('min')}</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500">{t('+{duration_minutes} min', { duration_minutes: addon.duration_minutes })}</span>
                         ) : null}
                       </div>
                     </button>
@@ -180,7 +180,7 @@ export default function StepOptions({
         </div>
         <div className="flex justify-between text-xs text-slate-400 dark:text-slate-500">
           <span>{t('Durée estimée')}</span>
-          <span>{totalDuration} {t('min')}</span>
+          <span>{t('{totalDuration} min', { totalDuration })}</span>
         </div>
       </div>
 

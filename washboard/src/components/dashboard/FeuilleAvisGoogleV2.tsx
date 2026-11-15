@@ -123,9 +123,7 @@ export default function FeuilleAvisGoogleV2({ avisGoogle, onEnregistrer, onClose
             {apercu.aggregate ? (
               <p role="status" className="flex items-start gap-2">
                 <span className="mt-[7px] h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-vert)' }} aria-hidden />
-                <span className={`min-w-0 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>
-                  {t('Affiché sur votre page : ★')} {apercu.aggregate.value.toLocaleString(loc)} · {apercu.aggregate.count} {t('avis')}
-                </span>
+                <span className={`min-w-0 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-encre)]`}>{t('Affiché sur votre page : ★ {v0} · {count} avis', { v0: apercu.aggregate.value.toLocaleString(loc), count: apercu.aggregate.count })}</span>
               </p>
             ) : (
               <Constat ton="ambre" role="status">

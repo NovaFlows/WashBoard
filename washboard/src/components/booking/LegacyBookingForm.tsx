@@ -293,9 +293,7 @@ export default function LegacyBookingForm({ washer, services, categories, availa
       {estProposition && (
         <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 px-4 sm:px-6 py-3 text-sm">
           <p className="font-bold">{tr('Aperçu — cette page n’est pas encore active')}</p>
-          <p className="text-xs mt-0.5 leading-relaxed">
-            {tr('Elle montre à quoi ressemblerait la page de réservation de')} {washer.name}{tr('. Aucune réservation ne peut être enregistrée pour l’instant.')}
-          </p>
+          <p className="text-xs mt-0.5 leading-relaxed">{tr('Elle montre à quoi ressemblerait la page de réservation de {name}. Aucune réservation ne peut être enregistrée pour l’instant.', { name: washer.name })}</p>
         </div>
       )}
       {step < 5 && (

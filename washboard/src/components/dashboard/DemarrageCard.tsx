@@ -39,9 +39,7 @@ export function DemarrageCard({ progress }: { progress: SetupProgress }) {
       className={`mb-6 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-5 text-[color:var(--v2-color-encre)] ${POLICE}`}
     >
       <h2 id="demarrage-titre" className={`text-[17px] ${TITRE}`}>{t('Configurer mon compte et mes prestations')}</h2>
-      <p className={`mt-1 text-[13.5px] ${CORPS} text-[color:var(--v2-color-gris)]`}>
-        {t('Votre page de réservation ne peut pas encore prendre de rendez-vous. Il reste')} {restantes === 1 ? t('une étape') : t('{restantes} étapes', { restantes })}.
-      </p>
+      <p className={`mt-1 text-[13.5px] ${CORPS} text-[color:var(--v2-color-gris)]`}>{t('Votre page de réservation ne peut pas encore prendre de rendez-vous. Il reste {v0}.', { v0: restantes === 1 ? t('une étape') : t('{restantes} étapes', { restantes }) })}</p>
       <ol className="mt-4 space-y-2.5">
         {indispensables.map(item => (
           <li key={item.key} className={`flex items-center gap-2.5 text-[14px] ${CORPS}`}>

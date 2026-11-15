@@ -28,7 +28,7 @@ function InfoBulle({ active, payload, label, teinte }: {
   const precedent = valeur('precedent')
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-sm text-xs space-y-0.5">
-      <p className="text-slate-500 dark:text-slate-400">{t('Jour')} {label}</p>
+      <p className="text-slate-500 dark:text-slate-400">{t('Jour {label}', { label })}</p>
       {actuel != null && (
         <p className="flex items-center gap-2"><Cle couleur={teinte} /><span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">{euros(actuel, loc)}</span></p>
       )}

@@ -82,7 +82,7 @@ export default function HorairesEtatVideV2({ onModele, onAutre }: Props) {
             style={PRESSION}
           >
             <span className={`text-[20px] ${nom}`}>{enCours === i ? t('Création…') : libelle(m)}</span>
-            <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{m.jours.length} {t('jours par semaine')}</span>
+            <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{length} jours par semaine', { length: m.jours.length })}</span>
           </button>
         ))}
         <button

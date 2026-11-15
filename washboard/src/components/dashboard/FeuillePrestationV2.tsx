@@ -308,9 +308,7 @@ export default function FeuillePrestationV2({
 
           {orphelins.length > 0 && (
             <div className="space-y-1">
-              <Constat ton="ambre">
-                {orphelins.length === 1 ? tr('Un type coché n’existe plus') : tr('{length} types cochés n’existent plus', { length: orphelins.length })} {tr('dans «')} {categorie?.name} {tr('» : vos clients')} {orphelins.length === 1 ? 'le' : 'les'} {tr('voient sous un nom brut.')}
-              </Constat>
+              <Constat ton="ambre">{tr('{v0} dans « {name} » : vos clients {v2} voient sous un nom brut.', { v0: orphelins.length === 1 ? tr('Un type coché n’existe plus') : tr('{length} types cochés n’existent plus', { length: orphelins.length }), name: categorie?.name, v2: orphelins.length === 1 ? 'le' : 'les' })}</Constat>
               <button
                 type="button"
                 onClick={() => setForm(f => retirerOrphelins(f, categorie))}
@@ -371,7 +369,7 @@ export default function FeuillePrestationV2({
                     <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{a.category}</span>
                   </span>
                   <span className={`shrink-0 text-right text-[13.5px] ${corps} tabular-nums`}>
-                    +{a.price} €{a.duration_minutes ? <span className="text-[color:var(--v2-color-gris)]"> · +{a.duration_minutes} {tr('min')}</span> : null}
+                    +{a.price} €{a.duration_minutes ? <span className="text-[color:var(--v2-color-gris)]">{tr('· +{duration_minutes} min', { duration_minutes: a.duration_minutes })}</span> : null}
                   </span>
                   <button
                     type="button"

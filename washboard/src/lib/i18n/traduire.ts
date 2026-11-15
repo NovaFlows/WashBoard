@@ -1,5 +1,5 @@
 export type Dictionnaire = Readonly<Record<string, string>>
-export type Variables = Readonly<Record<string, string | number>>
+export type Variables = Readonly<Record<string, string | number | boolean | null | undefined>>
 
 /**
  * Traduit une phrase française. `{nom}` est remplacé par la valeur de `variables`.
@@ -11,7 +11,7 @@ export function traduire(dictionnaire: Dictionnaire | null, phrase: string, vari
   // passées à t() qui n'ont pas de traduction, pour les compléter page par page.
   if (dictionnaire && !dictionnaire[phrase] && process.env.I18N_LOG === '1' && /[A-Za-zÀ-ÿ]{3}/.test(phrase)) console.warn('[i18n-manquant]', JSON.stringify(phrase))
   if (!variables) return base
-  return base.replace(/\{(\w+)\}/g, (m, nom: string) => (nom in variables ? String(variables[nom]) : m))
+  return base.replace(/\{(\w+)\}/g, (m, nom: string) => (nom in variables ? (variables[nom] == null || variables[nom] === false ? '' : String(variables[nom])) : m))
 }
 
 export type Traducteur = (phrase: string, variables?: Variables) => string

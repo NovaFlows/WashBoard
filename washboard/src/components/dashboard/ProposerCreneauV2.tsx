@@ -238,9 +238,7 @@ export default function ProposerCreneauV2({
                 {t('Tous')}
               </button>
               {DISTANCES_KM.map(km => (
-                <button key={km} type="button" aria-pressed={distance === km} onClick={() => choisirDistance(km)} className={puce(distance === km)} style={PRESSION}>
-                  {km} {t('km')}
-                </button>
+                <button key={km} type="button" aria-pressed={distance === km} onClick={() => choisirDistance(km)} className={puce(distance === km)} style={PRESSION}>{t('{km} km', { km })}</button>
               ))}
             </div>
             <p aria-live="polite" className={`mt-1.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
@@ -320,11 +318,7 @@ export default function ProposerCreneauV2({
       )}
 
       {filtre && filtre.sansPosition > 0 && (
-        <p className={`mt-3 border-t border-[color:var(--v2-filet)] pt-3 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          {filtre.sansPosition} {t('client')}{filtre.sansPosition > 1 ? 's' : ''} {t('sans adresse localisée')}
-          {filtre.sansPosition > 1 ? t(' ne sont pas montrés') : t(' n’est pas montré')}{t('. Choisissez « Tous » pour')}
-          {filtre.sansPosition > 1 ? t(' les') : ' le'} {t('voir.')}
-        </p>
+        <p className={`mt-3 border-t border-[color:var(--v2-filet)] pt-3 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('{sansPosition} client{v1} sans adresse localisée{v2}. Choisissez « Tous » pour{v3} voir.', { sansPosition: filtre.sansPosition, v1: filtre.sansPosition > 1 ? 's' : '', v2: filtre.sansPosition > 1 ? t(' ne sont pas montrés') : t(' n’est pas montré'), v3: filtre.sansPosition > 1 ? t(' les') : ' le' })}</p>
       )}
     </Feuille>
   )

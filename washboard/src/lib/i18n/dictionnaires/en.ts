@@ -20,6 +20,8 @@ import { tb5 } from './en/tb5'
 import { tc0 } from './en/tc0'
 import { td0 } from './en/td0'
 import { te0 } from './en/te0'
+import { tf0 } from './en/tf0'
+import { tg0 } from './en/tg0'
 
 // Une partie par fichier : pour traduire un nouvel écran, ajouter `./en/<partie>.ts` ici.
-export const en: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3, ...demo, ...demo2, ...demo3, ...tb0, ...tb1, ...tb2, ...tb3, ...tb4, ...tb5, ...tc0, ...td0, ...te0 }
+export const en: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3, ...demo, ...demo2, ...demo3, ...tb0, ...tb1, ...tb2, ...tb3, ...tb4, ...tb5, ...tc0, ...td0, ...te0, ...tf0, ...tg0 }

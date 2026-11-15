@@ -31,10 +31,8 @@ function InfoBulle({ active, payload }: { active?: boolean; payload?: { payload:
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-sm text-xs">
       <p className="font-semibold text-slate-900 dark:text-slate-100">{p.label}</p>
-      <p className="text-slate-600 dark:text-slate-300 tabular-nums">
-        {nombre.format(p.visiteurs)} {t('visiteurs ·')} {nombre.format(p.conversions)} {t('réservation')}{p.conversions > 1 ? 's' : ''}
-      </p>
-      <p className="text-slate-500 dark:text-slate-400 tabular-nums">{t('Conversion :')} {pct.format(p.taux)} %</p>
+      <p className="text-slate-600 dark:text-slate-300 tabular-nums">{t('{v0} visiteurs · {v1} réservation{v2}', { v0: nombre.format(p.visiteurs), v1: nombre.format(p.conversions), v2: p.conversions > 1 ? 's' : '' })}</p>
+      <p className="text-slate-500 dark:text-slate-400 tabular-nums">{t('Conversion : {v0} %', { v0: pct.format(p.taux) })}</p>
     </div>
   )
 }
@@ -130,9 +128,7 @@ export default function SourcesNuage({ sources, visiteurs, conversions, accent =
             <span className="inline-block w-4 border-t border-dashed border-slate-500" aria-hidden />
             {t('Conversion moyenne :')} {pct.format(moyenne)} %
           </p>
-          <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-            {t('Visiteurs en échelle logarithmique · sources de moins de')} {SEUIL_VISITEURS} {t('visiteurs non affichées')}
-          </p>
+          <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{t('Visiteurs en échelle logarithmique · sources de moins de {SEUIL_VISITEURS} visiteurs non affichées', { SEUIL_VISITEURS })}</p>
         </>
       )}
     </div>

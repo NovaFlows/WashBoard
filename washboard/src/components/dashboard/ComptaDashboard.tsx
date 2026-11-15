@@ -329,7 +329,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{tr('Frais de la période')}</h2>
-              <span className="text-xs text-slate-400">{expenses.length} {tr('entrée')}{expenses.length > 1 ? 's' : ''}</span>
+              <span className="text-xs text-slate-400">{tr('{length} entrée{v1}', { length: expenses.length, v1: expenses.length > 1 ? 's' : '' })}</span>
             </div>
             {loadingEx ? (
               <div className="p-8 text-center text-sm text-slate-400">{tr('Chargement...')}</div>
@@ -430,8 +430,8 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                   {CATEGORIES.find(c => c.value === r.category)?.label ?? r.category}
                 </span>
                 <span className="flex-1 text-sm text-slate-700 dark:text-slate-300 truncate">{r.label}</span>
-                <span className="shrink-0 text-xs text-slate-400">{tr('le')} {r.day_of_month}</span>
-                <span className="shrink-0 font-semibold text-sm text-red-600 dark:text-red-400">−{formatPrice(Number(r.amount))}{tr('/mois')}</span>
+                <span className="shrink-0 text-xs text-slate-400">{tr('le {day_of_month}', { day_of_month: r.day_of_month })}</span>
+                <span className="shrink-0 font-semibold text-sm text-red-600 dark:text-red-400">{tr('−{formatPrice}/mois', { formatPrice: formatPrice(Number(r.amount)) })}</span>
                 <button
                   onClick={() => toggleRecurring(r.id, !r.active)}
                   disabled={togglingRec === r.id}

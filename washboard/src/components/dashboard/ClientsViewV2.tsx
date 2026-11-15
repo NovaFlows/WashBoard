@@ -522,22 +522,19 @@ export default function ClientsViewV2({
         <h1 className={`text-[21px] ${titre}`}>{t('Clients')}</h1>
         <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-1`}>
           {filtre === 'relancer' ? (
-            <span className="tabular-nums">{aRelancer.length} {t('client')}{aRelancer.length > 1 ? 's' : ''} {t('pas revenu')}{aRelancer.length > 1 ? 's' : ''}</span>
+            <span className="tabular-nums">{t('{length} client{v1} pas revenu{v2}', { length: aRelancer.length, v1: aRelancer.length > 1 ? 's' : '', v2: aRelancer.length > 1 ? 's' : '' })}</span>
           ) : filtre === 'entreprises' ? (
-            <span className="tabular-nums">{entreprisesAffichees.length} {t('entreprise')}{entreprisesAffichees.length > 1 ? 's' : ''}</span>
+            <span className="tabular-nums">{t('{length} entreprise{v1}', { length: entreprisesAffichees.length, v1: entreprisesAffichees.length > 1 ? 's' : '' })}</span>
           ) : clients.length === 0 ? (
             t('Vos clients apparaîtront ici dès leur première réservation.')
           ) : pros > 0 ? (
-            <span className="tabular-nums">{clients.length} {t('client')}{clients.length > 1 ? 's' : ''} · {pros} {t('pro')}{pros > 1 ? 's' : ''}</span>
+            <span className="tabular-nums">{t('{length} client{v1} · {pros} pro{v3}', { length: clients.length, v1: clients.length > 1 ? 's' : '', pros, v3: pros > 1 ? 's' : '' })}</span>
           ) : (
-            <span className="tabular-nums">{clients.length} {t('client')}{clients.length > 1 ? 's' : ''}</span>
+            <span className="tabular-nums">{t('{length} client{v1}', { length: clients.length, v1: clients.length > 1 ? 's' : '' })}</span>
           )}
         </p>
         {filtre !== 'relancer' && filtre !== 'entreprises' && bloques.length > 0 && (
-          <p className={`text-[13px] mt-0.5 ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
-            {bloques.length} {t('masqué')}{bloques.length > 1 ? 's' : ''}
-            {montantBloque > 0 && t(' · {formatEuros} € de lavages', { formatEuros: formatEuros(montantBloque) })}
-          </p>
+          <p className={`text-[13px] mt-0.5 ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>{t('{length} masqué{v1}{v2}', { length: bloques.length, v1: bloques.length > 1 ? 's' : '', v2: montantBloque > 0 && t(' · {formatEuros} € de lavages', { formatEuros: formatEuros(montantBloque) }) })}</p>
         )}
       </div>
 
@@ -936,10 +933,7 @@ function LigneEntreprise({ entreprise: e, onOuvrir, ouverte, onOuvrirLigne, onFe
           </span>
           <span className="min-w-0 flex-1">
             <span className={`block text-[15px] ${nom} truncate`}>{e.nom}</span>
-            <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>
-              {e.contacts.length} {t('contact')}{e.contacts.length > 1 ? 's' : ''}
-              {e.sites.length > 0 && ` · ${e.sites.length} site${e.sites.length > 1 ? 's' : ''}`}
-            </span>
+            <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>{t('{length} contact{v1}{v2}', { length: e.contacts.length, v1: e.contacts.length > 1 ? 's' : '', v2: e.sites.length > 0 && ` · ${e.sites.length} site${e.sites.length > 1 ? 's' : ''}` })}</span>
           </span>
         </button>
         <BoutonSupprimerSurvol libelle={`Supprimer ${e.nom}`} onClick={onSupprimer} />

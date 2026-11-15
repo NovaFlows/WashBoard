@@ -205,7 +205,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
 
           {/* ── Bandeau : offre + avancement ─────────────────────────────── */}
           <div className="flex items-center justify-between gap-3 mb-5">
-            <span className={V.surtitre} style={{ color: V.accent }}>{t('Offre')} {PLAN_LABELS[offre]}</span>
+            <span className={V.surtitre} style={{ color: V.accent }}>{t('Offre {v0}', { v0: PLAN_LABELS[offre] })}</span>
             <span className="flex items-center gap-1.5" aria-label={t('Étape {etape} sur 2', { etape })}>
               <span
                 className="w-6 h-[3px] rounded-full transition-colors duration-200 ease-out"
@@ -221,9 +221,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
           {/* ── Écran 1 : ce qui se passe, et pourquoi ───────────────────── */}
           {etape === 1 && (
             <>
-              <h2 className={V.titre}>
-                {plafond} {t('prestation')}{plafond > 1 ? 's' : ''} {t('sur')} {actives.length} {t('seulement sont en ligne')}
-              </h2>
+              <h2 className={V.titre}>{t('{plafond} prestation{v1} sur {length} seulement sont en ligne', { plafond, v1: plafond > 1 ? 's' : '', length: actives.length })}</h2>
 
               <p className={`${V.texte} mt-3`}>
                 {t('L’offre')} <strong>{PLAN_LABELS[offre]}</strong> {t('en affiche')} {plafond} {t('au maximum. Faute de décision de votre part,')}{' '}
@@ -274,9 +272,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                   href="/dashboard/abonnement"
                   className="block text-sm font-bold hover:underline mt-0.5"
                   style={{ color: V.accent }}
-                >
-                  {t('Offre')} {PLAN_LABELS[OFFRE_SANS_PLAFOND]} — {PLAN_PRICES[OFFRE_SANS_PLAFOND]}{t('€/mois')}{' '}→
-                </Link>
+                >{t('Offre {v0} — {v1}€/mois{v2}→', { v0: PLAN_LABELS[OFFRE_SANS_PLAFOND], v1: PLAN_PRICES[OFFRE_SANS_PLAFOND], v2: ' ' })}</Link>
               </div>
             </>
           )}
@@ -284,12 +280,8 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
           {/* ── Écran 2 : le choix ───────────────────────────────────────── */}
           {etape === 2 && (
             <>
-              <h2 className={V.titre}>
-                {pluriel ? 'Lesquelles retirer' : 'Laquelle retirer'} {t('de votre page ?')}
-              </h2>
-              <p className={`${V.texte} mt-2`}>
-                {pluriel ? t('Les prestations déjà masquées sont sélectionnées') : t('La prestation déjà masquée est sélectionnée')}{t('. Touchez une autre carte pour changer.')}
-              </p>
+              <h2 className={V.titre}>{t('{v0} de votre page ?', { v0: pluriel ? 'Lesquelles retirer' : 'Laquelle retirer' })}</h2>
+              <p className={`${V.texte} mt-2`}>{t('{v0}. Touchez une autre carte pour changer.', { v0: pluriel ? t('Les prestations déjà masquées sont sélectionnées') : t('La prestation déjà masquée est sélectionnée') })}</p>
 
               <div className="space-y-2 mt-5">
                 {actives.map(svc => {
@@ -323,9 +315,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                         <span className={`block truncate ${retiree ? `${V.nom} ${V.nomEteint}` : V.nom}`}>
                           {svc.name}
                         </span>
-                        <span className={`block mt-0.5 ${V.petit}`}>
-                          {svc.price}€ · {svc.duration_minutes} {t('min')}
-                        </span>
+                        <span className={`block mt-0.5 ${V.petit}`}>{t('{price}€ · {duration_minutes} min', { price: svc.price, duration_minutes: svc.duration_minutes })}</span>
                       </span>
                       <span className={`shrink-0 ${V.surtitre} ${V.petit}`}>
                         {retiree ? t('retirée') : ''}

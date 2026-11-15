@@ -317,9 +317,7 @@ export default function DepensesV2() {
             <span className={`text-[50px] leading-none ${hero}`}>{depenses ? euros.format(total) : '—'}</span>
           </div>
           {depenses && (
-            <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {nombre.format(depenses.length)} {t('frais enregistré')}{depenses.length > 1 ? 's' : ''} {t('sur la période')}
-            </span>
+            <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{v0} frais enregistré{v1} sur la période', { v0: nombre.format(depenses.length), v1: depenses.length > 1 ? 's' : '' })}</span>
           )}
         </div>
       ) : (

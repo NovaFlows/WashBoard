@@ -87,7 +87,7 @@ export function ReservationClient() {
           <div><small>{t('Adresse du lavage')}</small><b>{t('14 rue Notre-Dame, Bordeaux')}</b></div>
         </div>
         {reg.acompteOn ? (
-          <div className="acompte"><b>{t('Acompte de')} {Math.round((tot * reg.acompte) / 100)} {t('€ pour bloquer le créneau')}</b>{t('Payé')} {lienPaiement} {t('d’Éclat Mobile')} {delai}{t(', le reste sur place. Remboursé si vous annulez au moins 48 h avant.')}</div>
+          <div className="acompte"><b>{t('Acompte de {v0} € pour bloquer le créneau', { v0: Math.round((tot * reg.acompte) / 100) })}</b>{t('Payé')} {lienPaiement} {t('d’Éclat Mobile')} {delai}{t(', le reste sur place. Remboursé si vous annulez au moins 48 h avant.')}</div>
         ) : null}
       </>
     )
@@ -96,7 +96,7 @@ export function ReservationClient() {
       <>
         <div className="ok-rond">{I.ok}</div>
         <p className="r-titre" style={{ textAlign: 'center', fontSize: 19 }}>{t('Réservation envoyée')}</p>
-        <p style={{ textAlign: 'center', color: 'var(--gris)', fontSize: 13 }}>{JOURS[r.jour][0]} {JOURS[r.jour][1]} {t('oct. à')} {r.h} · {PRESTA.find(p => p[0] === r.presta)![1]} · {tot} €</p>
+        <p style={{ textAlign: 'center', color: 'var(--gris)', fontSize: 13 }}>{t('{v0} {v1} oct. à {h} · {v3} · {tot} €', { v0: JOURS[r.jour][0], v1: JOURS[r.jour][1], h: r.h, v3: PRESTA.find(p => p[0] === r.presta)![1], tot })}</p>
         <div style={{ marginTop: 4 }}>
           {/* key : la carte rejoue son animation quand un réglage change */}
           <CarteFidelite3D key={`${reg.couleur}|${reg.fidReq}|${reg.fidRec}`} couleur={reg.couleur} finition="holo" nom="Éclat Mobile" numero="4F2A"

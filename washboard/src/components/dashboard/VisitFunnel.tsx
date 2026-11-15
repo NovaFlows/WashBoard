@@ -48,9 +48,7 @@ export default function VisitFunnel({ stats, accent = '#2563eb', periodLabel }: 
                 />
               </div>
               {i > 0 && s.pctDropFromPrevious > 0 && (
-                <p className="text-[11px] text-rose-500 dark:text-rose-400 mt-1">
-                  −{s.pctDropFromPrevious}{t('% par rapport à l’étape précédente')}
-                </p>
+                <p className="text-[11px] text-rose-500 dark:text-rose-400 mt-1">{t('−{pctDropFromPrevious}% par rapport à l’étape précédente', { pctDropFromPrevious: s.pctDropFromPrevious })}</p>
               )}
             </div>
           ))}

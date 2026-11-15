@@ -72,9 +72,7 @@ export default function FeuilleMessageV2({ message, onEnregistrer, onClose, pann
           />
           <div id="apparence-message-aide" className="mt-2 space-y-2">
             {messageTropLong(texte) && (
-              <Constat ton="ambre" role="status">
-                {t('Au-delà de')} {MESSAGE_LONGUEUR_CONSEILLEE} {t('caractères, le message s’étale sur plusieurs lignes dans l’en-tête de votre page. Un message court se lit mieux.')}
-              </Constat>
+              <Constat ton="ambre" role="status">{t('Au-delà de {MESSAGE_LONGUEUR_CONSEILLEE} caractères, le message s’étale sur plusieurs lignes dans l’en-tête de votre page. Un message court se lit mieux.', { MESSAGE_LONGUEUR_CONSEILLEE })}</Constat>
             )}
             <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
               {vide

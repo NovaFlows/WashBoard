@@ -321,7 +321,7 @@ export default function StepService({ services, categories, selected, factureApr
                   </div>
                   <div className="flex items-center gap-1 mt-0.5">
                     <Clock size={11} className="text-slate-400 shrink-0" />
-                    <span className="text-xs text-slate-400">{service.duration_minutes} {tr('min')}</span>
+                    <span className="text-xs text-slate-400">{tr('{duration_minutes} min', { duration_minutes: service.duration_minutes })}</span>
                   </div>
                   {service.description && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">{service.description}</p>
@@ -389,7 +389,7 @@ export default function StepService({ services, categories, selected, factureApr
                   )}
                   <div className="flex-1">
                     <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{info.name}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">{price}{tr('€/unité')}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{tr('{price}€/unité', { price })}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -433,7 +433,7 @@ export default function StepService({ services, categories, selected, factureApr
                 )
               })}
               <div className="border-t border-slate-200 dark:border-slate-700 pt-1.5 mt-0.5 flex justify-between text-sm font-bold text-slate-900 dark:text-slate-100">
-                <span>{tr('Total (')}{basketCount} {tr('élément')}{basketCount > 1 ? 's' : ''})</span>
+                <span>{tr('Total ({basketCount} élément{v1})', { basketCount, v1: basketCount > 1 ? 's' : '' })}</span>
                 <span>{basketTotal}€</span>
               </div>
             </div>

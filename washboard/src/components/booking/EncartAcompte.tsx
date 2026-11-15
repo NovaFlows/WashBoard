@@ -59,7 +59,7 @@ function PanneauWero({ wero, montant, accent }: { wero: WeroPaiement; montant: n
   const t = useT()
   return (
     <div className="rounded-xl border border-zinc-200 p-3 text-[13px] dark:border-zinc-700">
-      <p className="text-zinc-500 dark:text-zinc-400">{t('Envoyez')} {formatPrice(montant)} {t('avec Wero, depuis l’application de votre banque.')}</p>
+      <p className="text-zinc-500 dark:text-zinc-400">{t('Envoyez {formatPrice} avec Wero, depuis l’application de votre banque.', { formatPrice: formatPrice(montant) })}</p>
       {wero.lien && (
         <a href={wero.lien} target="_blank" rel="noopener noreferrer"
           className="mt-2.5 flex min-h-10 w-full items-center justify-center rounded-lg border px-3 text-[14px] font-semibold"
@@ -122,15 +122,13 @@ export default function EncartAcompte({ montant, conditions, liens, virement = n
       </p>
       <ul className="mt-1.5 space-y-0.5 text-zinc-500 dark:text-zinc-400">
         {conditions.map(c => <li key={c}>{c}</li>)}
-        {!apres && moyens && moyens.length > 0 && <li>{t('Paiement par')} {moyens.join(', ')}.</li>}
+        {!apres && moyens && moyens.length > 0 && <li>{t('Paiement par {v0}.', { v0: moyens.join(', ') })}</li>}
       </ul>
 
       {apres && (liens.length > 0 || wero || virement) && (
         <div className="mt-3 flex flex-col gap-2">
           {liens.map(l => (
-            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className={bouton} style={{ background: accent }}>
-              {t('Payer avec')} {l.libelle}
-            </a>
+            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className={bouton} style={{ background: accent }}>{t('Payer avec {libelle}', { libelle: l.libelle })}</a>
           ))}
           {wero && (
             <>
@@ -149,7 +147,7 @@ export default function EncartAcompte({ montant, conditions, liens, virement = n
             </>
           )}
           {(liens.some(l => !l.montantExact) || wero) && (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('Si on vous demande le montant, indiquez')} {formatPrice(montant)}.</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('Si on vous demande le montant, indiquez {formatPrice}.', { formatPrice: formatPrice(montant) })}</p>
           )}
         </div>
       )}

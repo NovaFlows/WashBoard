@@ -45,9 +45,7 @@ function ChangeBadge({ change }: { change: PeriodChange }) {
   }
   const positive = change.pct > 0
   return (
-    <p className={`text-[11px] font-medium mt-1 ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
-      {positive ? '+' : ''}{change.pct}{t('% par rapport à la période précédente')}
-    </p>
+    <p className={`text-[11px] font-medium mt-1 ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>{t('{v0}{pct}% par rapport à la période précédente', { v0: positive ? '+' : '', pct: change.pct })}</p>
   )
 }
 
@@ -119,7 +117,7 @@ function ConversionBreakdownList({ title, items, accent, icon: Icon }: {
             <div key={item.key}>
               <div className="flex items-center justify-between mb-1 text-xs">
                 <span className="font-medium text-slate-700 dark:text-slate-300">{item.label}</span>
-                <span className="text-slate-500 dark:text-slate-400 tabular-nums">{formatConversionRate(item.conversions, item.sessions)} {t('sur')} {item.sessions}</span>
+                <span className="text-slate-500 dark:text-slate-400 tabular-nums">{t('{formatConversionRate} sur {sessions}', { formatConversionRate: formatConversionRate(item.conversions, item.sessions), sessions: item.sessions })}</span>
               </div>
               <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${Math.max(item.conversionRate, 2)}%`, backgroundColor: accent }} />
@@ -218,9 +216,7 @@ export default function FunnelInsights({
               c'est lui qui parle au laveur, pas la décimale. */}
           {formatConversionRate(conversionCount, visitorCount)}
           {conversionCount > 0 && (
-            <span className="block text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
-              {conversionCount} {t('réservation')}{conversionCount > 1 ? 's' : ''} {t('sur')} {visitorCount} {t('visiteurs')}
-            </span>
+            <span className="block text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">{t('{conversionCount} réservation{v1} sur {visitorCount} visiteurs', { conversionCount, v1: conversionCount > 1 ? 's' : '', visitorCount })}</span>
           )}
         </KpiTile>
       </div>

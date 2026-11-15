@@ -124,10 +124,8 @@ function BandeauPlafondV2({ enLigne, plafond, offre, aRanger, complet }: {
   return (
     <div className="mt-3 rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] px-4 py-3.5">
       <div className="flex items-baseline justify-between gap-3">
-        <p className={`text-[14px] ${corpsFort}`}>
-          {enLigne} / {plafond} {t('en ligne')}
-        </p>
-        <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Offre')} {PLAN_LABELS[offre]}</p>
+        <p className={`text-[14px] ${corpsFort}`}>{t('{enLigne} / {plafond} en ligne', { enLigne, plafond })}</p>
+        <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Offre {v0}', { v0: PLAN_LABELS[offre] })}</p>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[color:var(--v2-filet)]" aria-hidden>
         <div
@@ -139,13 +137,9 @@ function BandeauPlafondV2({ enLigne, plafond, offre, aRanger, complet }: {
         />
       </div>
       {aRanger > 0 ? (
-        <p className={`mt-3 text-[13.5px] leading-snug ${corps}`}>
-          {t('Votre offre en affiche')} {plafond} {t('au maximum, vous en avez')} {enLigne}{t('. Ouvrez une prestation pour la mettre en veille : vos clients ne la voient plus, rien n’est effacé.')}
-        </p>
+        <p className={`mt-3 text-[13.5px] leading-snug ${corps}`}>{t('Votre offre en affiche {plafond} au maximum, vous en avez {enLigne}. Ouvrez une prestation pour la mettre en veille : vos clients ne la voient plus, rien n’est effacé.', { plafond, enLigne })}</p>
       ) : complet ? (
-        <p className={`mt-3 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-          {t('Catalogue complet. Mettez une prestation en veille ou modifiez-en une, ou passez à l’offre')} {PLAN_LABELS[suivante]} {t('pour un catalogue illimité.')}
-        </p>
+        <p className={`mt-3 text-[13.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Catalogue complet. Mettez une prestation en veille ou modifiez-en une, ou passez à l’offre {v0} pour un catalogue illimité.', { v0: PLAN_LABELS[suivante] })}</p>
       ) : null}
       {(aRanger > 0 || complet) && (
         <Link

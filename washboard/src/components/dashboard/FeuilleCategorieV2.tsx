@@ -196,11 +196,7 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
 
           {concernees.length > 0 && (
             <div className="mt-4">
-              <Constat ton="ambre" role="status">
-                {tr('Vous retirez')} {utilises.length > 1 ? tr('des types encore proposés') : tr('un type encore proposé')}
-                {' '}{tr('dans')} {concernees.length} {tr('prestation')}{concernees.length > 1 ? 's' : ''}
-                {' '}({concernees.slice(0, 2).map(s => s.name).join(', ')}{concernees.length > 2 ? '…' : ''}{tr('). Ouvrez-')}{concernees.length > 1 ? 'les' : 'la'} {tr('ensuite pour')} {utilises.length > 1 ? 'les' : 'le'} {tr('retirer, sinon vos clients')} {utilises.length > 1 ? tr('les verront') : tr('le verront')} {tr('sous un nom brut.')}
-              </Constat>
+              <Constat ton="ambre" role="status">{tr('Vous retirez {v0}{v1}dans {length} prestation{v3}{v4}({v5}{v6}). Ouvrez-{v7} ensuite pour {v8} retirer, sinon vos clients {v9} sous un nom brut.', { v0: utilises.length > 1 ? tr('des types encore proposés') : tr('un type encore proposé'), v1: ' ', length: concernees.length, v3: concernees.length > 1 ? 's' : '', v4: ' ', v5: concernees.slice(0, 2).map(s => s.name).join(', '), v6: concernees.length > 2 ? '…' : '', v7: concernees.length > 1 ? 'les' : 'la', v8: utilises.length > 1 ? 'les' : 'le', v9: utilises.length > 1 ? tr('les verront') : tr('le verront') })}</Constat>
             </div>
           )}
         </section>

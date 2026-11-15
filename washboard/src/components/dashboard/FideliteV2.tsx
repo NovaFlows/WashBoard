@@ -196,9 +196,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                   <input aria-label={b.recompense === 'pourcentage' ? 'Remise en pourcentage' : 'Remise en euros'} className={`${CHAMP} mt-2.5`} inputMode="decimal"
                     value={b.valeur} onChange={e => maj({ valeur: e.target.value.replace(/[^\d.,]/g, '') })} />
                 )}
-                <p className={`mt-2.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                  {t('Appliquée automatiquement à la réservation suivante')}{b.recompense === 'offerte' ? '' : t(', sur la prestation et ses options (pas sur le déplacement)')}{t('. Vous pouvez ajouter ou retirer un tampon depuis la fiche d’un client.')}
-                </p>
+                <p className={`mt-2.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Appliquée automatiquement à la réservation suivante{v0}. Vous pouvez ajouter ou retirer un tampon depuis la fiche d’un client.', { v0: b.recompense === 'offerte' ? '' : t(', sur la prestation et ses options (pas sur le déplacement)') })}</p>
               </section>
 
               <section className="rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)] p-4">
@@ -228,9 +226,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                 <div className="-mt-4 flex items-center justify-center gap-3">
                   <button type="button" onClick={retirerTampon} disabled={exempleAffiche <= 0} aria-label={t('Retirer un tampon de l’exemple')}
                     className="flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--v2-filet-fort)] text-[22px] leading-none transition-transform active:scale-90 disabled:opacity-35">−</button>
-                  <p className={`min-w-[150px] text-center text-[14px] ${corpsFort} tabular-nums`} aria-live="polite">
-                    {exempleAffiche} {t('tampon')}{exempleAffiche > 1 ? 's' : ''} {t('sur')} {requis}
-                  </p>
+                  <p className={`min-w-[150px] text-center text-[14px] ${corpsFort} tabular-nums`} aria-live="polite">{t('{exempleAffiche} tampon{v1} sur {requis}', { exempleAffiche, v1: exempleAffiche > 1 ? 's' : '', requis })}</p>
                   <button type="button" onClick={ajouterTampon} disabled={exempleAffiche >= requis} aria-label={t('Ajouter un tampon à l’exemple')}
                     className="flex h-11 w-11 items-center justify-center rounded-full text-[22px] leading-none transition-transform active:scale-90 disabled:opacity-35"
                     style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-fond)' }}>+</button>

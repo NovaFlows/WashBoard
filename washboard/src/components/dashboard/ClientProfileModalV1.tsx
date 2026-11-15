@@ -102,9 +102,7 @@ export default function ClientProfileModalV1({
           </div>
 
           {profile.daysSinceLastVisit !== null && profile.daysSinceLastVisit >= 90 && (
-            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl px-3 py-2">
-              {t('Pas revenu depuis')} {profile.daysSinceLastVisit} {t('jours — bon candidat à une relance.')}
-            </p>
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl px-3 py-2">{t('Pas revenu depuis {daysSinceLastVisit} jours — bon candidat à une relance.', { daysSinceLastVisit: profile.daysSinceLastVisit })}</p>
           )}
 
           <div className="space-y-2 text-sm">
@@ -127,9 +125,7 @@ export default function ClientProfileModalV1({
           </div>
 
           <div>
-            <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500 font-semibold mb-2">
-              {t('Historique (')}{profile.bookings.length})
-            </p>
+            <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500 font-semibold mb-2">{t('Historique ({length})', { length: profile.bookings.length })}</p>
             <div className="space-y-0">
               {profile.bookings.map(b => {
                 const s = STATUS[b.closed_late ? 'closed_late' : b.status]

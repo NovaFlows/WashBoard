@@ -123,8 +123,8 @@ export default function StepPrestation({ services, categories, category, onCateg
       <h3 className="font-semibold">{plusieurs ? 'Les prestations' : 'La prestation'}</h3>
       <span className="text-xs text-zinc-500">{sansVehicule
         ? tr('Prix selon votre véhicule')
-        : sansChoixDeType(types) ? <>{tr('Prix pour')} {nombreDeVehicules(vehicles.length)}</>
-        : <>{tr('Prix pour')} {vehicles.length} {activeTypes.length === 1 ? label(activeTypes[0]).toLowerCase() : tr('véhicules')}</>}</span>
+        : sansChoixDeType(types) ? <>{tr('Prix pour {nombreDeVehicules}', { nombreDeVehicules: nombreDeVehicules(vehicles.length) })}</>
+        : <>{tr('Prix pour {length} {v1}', { length: vehicles.length, v1: activeTypes.length === 1 ? label(activeTypes[0]).toLowerCase() : tr('véhicules') })}</>}</span>
     </div>
     <div className="divide-y divide-zinc-200/70 dark:divide-zinc-700">
       {visible.map(s => <div key={s.id} className="py-4">
@@ -142,11 +142,11 @@ export default function StepPrestation({ services, categories, category, onCateg
               onChange={() => change(vehicles, [s])} />}
           <span className="flex-1 min-w-0">
             <span className="flex justify-between gap-3 font-semibold text-sm"><span>{s.name}</span>{sansVehicule
-              ? <span className="whitespace-nowrap font-normal text-zinc-500">{tr('dès')} {formatPrice(prixDepart(s))}</span>
+              ? <span className="whitespace-nowrap font-normal text-zinc-500">{tr('dès {formatPrice}', { formatPrice: formatPrice(prixDepart(s)) })}</span>
               : <PrixPrestation prix={vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0)} remise={remisePromotion(promotion, s.id, vehicles.reduce((sum, v) => sum + vehiclePrice(s, v.type), 0))} />}</span>
             {s.description && <span className="block text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">{s.description}</span>}
             <MentionLieuAdapte service={s} auCentre={auCentre} className="mt-1.5" />
-            <span className="block text-xs text-zinc-500 mt-2">{tr('Environ')} {formatDureeFr(s.duration_minutes * Math.max(1, vehicles.length))} {tr('sur place')}</span>
+            <span className="block text-xs text-zinc-500 mt-2">{tr('Environ {formatDureeFr} sur place', { formatDureeFr: formatDureeFr(s.duration_minutes * Math.max(1, vehicles.length)) })}</span>
             {incompatible && <span className="block text-xs text-zinc-500 mt-1">{tr('Ne se fait pas avec les prestations déjà choisies.')}</span>}
           </span>
         </label>

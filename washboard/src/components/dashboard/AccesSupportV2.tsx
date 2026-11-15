@@ -65,9 +65,7 @@ export default function AccesSupportV2() {
       )}
 
       {dernierAcces && (
-        <p className={`mt-3 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          {t('Dernier accès de notre équipe :')} {dernierAcces}
-        </p>
+        <p className={`mt-3 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Dernier accès de notre équipe : {dernierAcces}', { dernierAcces })}</p>
       )}
 
       {erreur && <div className="mt-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}

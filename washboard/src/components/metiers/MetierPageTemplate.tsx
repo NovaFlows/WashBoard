@@ -179,9 +179,7 @@ export default function MetierPageTemplate({
       <section className="section">
         <div className="w">
           <p className="sur-titre"><span className="pt" />{t('Ce que ça coûte')}</p>
-          <h2 className="pg-h2">
-            {prix[0].price === 0 ? 'Gratuit' : `${prix[0].price}€/mois`} {t('pour démarrer, sans engagement en mensuel.')}
-          </h2>
+          <h2 className="pg-h2">{t('{v0} pour démarrer, sans engagement en mensuel.', { v0: prix[0].price === 0 ? 'Gratuit' : `${prix[0].price}€/mois` })}</h2>
           <div className="pg-texte">
             {prix.map(c => (
               <p key={c.key}>

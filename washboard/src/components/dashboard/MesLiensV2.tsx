@@ -180,7 +180,7 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
                           </span>
                         )}
                       </span>
-                      <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{affiche(base).split('/')[0]}{t('/…?utm_source=')}{source.key}</span>
+                      <span className={`truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{v0}/…?utm_source={key}', { v0: affiche(base).split('/')[0], key: source.key })}</span>
                     </span>
                     <span
                       className={`flex shrink-0 items-center gap-1 text-[14.5px] ${corpsFort}`}

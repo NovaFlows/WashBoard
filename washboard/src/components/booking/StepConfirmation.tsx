@@ -117,9 +117,7 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
         )}
         {form.vehicles_detail && form.vehicles_detail.length > 0 && (
           <div className="flex justify-between text-sm gap-3">
-            <span className="text-slate-500 dark:text-slate-400 shrink-0">
-              {t('Véhicule')}{form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}
-            </span>
+            <span className="text-slate-500 dark:text-slate-400 shrink-0">{t('Véhicule{v0}', { v0: form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : '' })}</span>
             <div className="font-medium text-slate-900 dark:text-slate-100 text-right space-y-0.5">
               {form.vehicles_detail.flatMap(v => {
                 const label = v.label ?? VEHICLE_LABELS[v.type] ?? v.type
@@ -212,9 +210,7 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
           réservation elle-même pour une question statistique. Liste fermée
           (voir lib/sourceDecouverte) — jamais un champ de texte libre. */}
       <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-left">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-          {t('Comment avez-vous connu')} {washerName} ?
-        </h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('Comment avez-vous connu {washerName} ?', { washerName })}</h3>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 mb-3">{t('Facultatif, un seul geste.')}</p>
         <div className="flex flex-wrap gap-2">
           {SOURCES_DECOUVERTE.map(s => {

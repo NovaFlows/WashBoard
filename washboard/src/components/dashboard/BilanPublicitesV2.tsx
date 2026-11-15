@@ -197,9 +197,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
         ))}
       </ul>
       {videos.length > 10 && (
-        <p className={`mt-3 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          {t('Les 10 premières sur')} {videos.length}.
-        </p>
+        <p className={`mt-3 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Les 10 premières sur {length}.', { length: videos.length })}</p>
       )}
     </Carte>
   ) : null
@@ -265,9 +263,7 @@ export default function BilanPublicitesV2({ campagnes }: BilanPublicitesProps) {
         </Link>
         <div className="min-w-0">
           <h1 className={`text-[21px] leading-none ${titre}`}>{t('Bilan')}</h1>
-          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {campagnes.length} {t('campagne')}{campagnes.length > 1 ? 's' : ''} {t('depuis le début')}
-          </p>
+          <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{length} campagne{v1} depuis le début', { length: campagnes.length, v1: campagnes.length > 1 ? 's' : '' })}</p>
         </div>
       </div>
 

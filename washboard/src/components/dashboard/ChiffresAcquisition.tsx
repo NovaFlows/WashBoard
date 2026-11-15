@@ -143,9 +143,7 @@ export default function ChiffresAcquisition({
       <span className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Visiteurs sur votre page')}</span>
       <span className={`${grandEcran ? 'text-[50px]' : 'text-[44px] sm:text-[52px]'} leading-none ${hero}`}>{aucune ? '—' : nombre.format(stats.visitorCount)}</span>
       {aucune ? (
-        <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          {t('Pas de données avant le')} {formaterJour(couverture.depuisJour!)}.
-        </span>
+        <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Pas de données avant le {formaterJour}.', { formaterJour: formaterJour(couverture.depuisJour!) })}</span>
       ) : stats.visitorCount === 0 ? (
         <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Aucune visite sur cette période')}</span>
       ) : (
@@ -155,15 +153,11 @@ export default function ChiffresAcquisition({
               {pct >= 0 ? '+' : ''}{pct} % {libelleComparaison(periode.type)}
             </span>
           )}
-          <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {nombre.format(stats.conversionCount)} {t('réservation')}{stats.conversionCount > 1 ? 's' : ''}{t(', soit')} {formatConversionRate(stats.conversionCount, stats.visitorCount)} {t('des visiteurs')}
-          </span>
+          <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{v0} réservation{v1}, soit {formatConversionRate} des visiteurs', { v0: nombre.format(stats.conversionCount), v1: stats.conversionCount > 1 ? 's' : '', formatConversionRate: formatConversionRate(stats.conversionCount, stats.visitorCount) })}</span>
         </>
       )}
       {couverture.etat === 'partielle' && (
-        <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)] mt-1`}>
-          {t('Les visites avant le')} {formaterJour(couverture.depuisJour!)} {t('ne sont pas comptées.')}
-        </span>
+        <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-ambre)] mt-1`}>{t('Les visites avant le {formaterJour} ne sont pas comptées.', { formaterJour: formaterJour(couverture.depuisJour!) })}</span>
       )}
     </div>
   )
@@ -207,10 +201,7 @@ export default function ChiffresAcquisition({
           </div>
         ))}
         {stats.pire && stats.pireAvant && stats.pire.pctDropFromPrevious > 0 && (
-          <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed pt-1.5`}>
-            {t('Le plus gros décrochage est entre')} {ETAPE_COURTE[stats.pireAvant.step].toLowerCase()} {t('et')} {ETAPE_COURTE[stats.pire.step].toLowerCase()} :{' '}
-            {stats.pire.pctDropFromPrevious} {t('% des visiteurs abandonnent là.')}
-          </p>
+          <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed pt-1.5`}>{t('Le plus gros décrochage est entre {v0} et {v1} :{v2}{pctDropFromPrevious} % des visiteurs abandonnent là.', { v0: ETAPE_COURTE[stats.pireAvant.step].toLowerCase(), v1: ETAPE_COURTE[stats.pire.step].toLowerCase(), v2: ' ', pctDropFromPrevious: stats.pire.pctDropFromPrevious })}</p>
         )}
       </div>
     </div>

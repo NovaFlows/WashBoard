@@ -339,7 +339,7 @@ export default function StepSlot({
     {addressReady && <>
       {!auCentre && (fetchingZone ? <p role="status" className="text-sm text-zinc-500 mt-3">{tr('Vérification de votre adresse…')}</p>
         : zoneMessage ? <p role="alert" className="text-sm text-red-600 mt-3">{zoneMessage} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>{tr('Réessayer')}</button></p>
-        : zoneAllowed && <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-3">{tr('● Dans le secteur du laveur')}{fee === 0 ? tr(' : déplacement compris') : fee !== undefined ? tr(' · déplacement ') + fee + ' €' : ''}</p>)}
+        : zoneAllowed && <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-3">{tr('● Dans le secteur du laveur{v0}', { v0: fee === 0 ? tr(' : déplacement compris') : fee !== undefined ? tr(' · déplacement ') + fee + ' €' : '' })}</p>)}
       {zoneOk && <>
         <div className="flex items-center justify-between mt-6 mb-2"><h3 className="text-sm font-medium">{tr('Jour')}</h3><button type="button" className="text-xs underline min-h-8" onClick={() => setChoixDateOuvert(v => !v)}>{choixDateOuvert ? tr('Fermer le calendrier') : 'Calendrier'}</button></div>
         <div className="flex gap-2 overflow-x-auto pb-2 snap-x" aria-label={tr('Jours disponibles')}>

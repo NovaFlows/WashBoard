@@ -66,9 +66,7 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
         )}
         {form.vehicles_detail && form.vehicles_detail.length > 0 && (
           <div className="flex justify-between text-sm gap-3">
-            <span className="text-slate-500 dark:text-slate-400 shrink-0">
-              {t('Véhicule')}{form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : ''}
-            </span>
+            <span className="text-slate-500 dark:text-slate-400 shrink-0">{t('Véhicule{v0}', { v0: form.vehicles_detail.reduce((s, v) => s + v.count, 0) > 1 ? 's' : '' })}</span>
             <div className="font-medium text-slate-900 dark:text-slate-100 text-right space-y-0.5">
               {form.vehicles_detail.flatMap(v => {
                 const label = v.label ?? VEHICLE_LABELS[v.type] ?? v.type

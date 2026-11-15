@@ -99,9 +99,7 @@ function JaugeV2({ titre: intitule, utilise, plafond, unite }: {
         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${part}%`, backgroundColor: couleur }} />
       </div>
       {chaud && (
-        <p className={`mt-1.5 text-[12.5px] leading-snug ${corps}`} style={{ color: couleur }}>
-          {t('Plafond atteint :')} {unite}
-        </p>
+        <p className={`mt-1.5 text-[12.5px] leading-snug ${corps}`} style={{ color: couleur }}>{t('Plafond atteint : {unite}', { unite })}</p>
       )}
     </div>
   )
@@ -186,9 +184,7 @@ export default function AbonnementV2({
 
         <div className="mt-4 space-y-2.5">
           {doitChoisir && (
-            <Constat ton="accent">
-              {t('Votre mois d’essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à')} {plafondReservations ?? 5} {t('réservations par mois.')}
-            </Constat>
+            <Constat ton="accent">{t('Votre mois d’essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à {v0} réservations par mois.', { v0: plafondReservations ?? 5 })}</Constat>
           )}
           {subscriptionStatus === 'trial' && joursRestants !== null && (
             <Constat ton={joursRestants <= 7 ? 'ambre' : 'accent'}>
@@ -206,9 +202,7 @@ export default function AbonnementV2({
             </Constat>
           )}
           {dus > 1 && (
-            <Constat ton="ambre">
-              {dus} {t('mois de paiement en retard. Régularisez pour éviter la suspension de votre page de réservation.')}
-            </Constat>
+            <Constat ton="ambre">{t('{dus} mois de paiement en retard. Régularisez pour éviter la suspension de votre page de réservation.', { dus })}</Constat>
           )}
         </div>
       </section>
@@ -235,9 +229,7 @@ export default function AbonnementV2({
               />
             )}
           </div>
-          <p className={`mt-3 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-            {t('Les réservations se remettent à zéro le')} {remiseAZero}{t(', puis tous les mois à cette date. Les rendez-vous annulés ne comptent pas.')}
-          </p>
+          <p className={`mt-3 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Les réservations se remettent à zéro le {remiseAZero}, puis tous les mois à cette date. Les rendez-vous annulés ne comptent pas.', { remiseAZero })}</p>
         </section>
       )}
 
@@ -268,12 +260,9 @@ export default function AbonnementV2({
         </div>
 
         {grandfathered && (
-          <p className={`mt-2 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>
-            {t('Client historique : toutes les fonctionnalités sont incluses, sans changer d’offre —')}{' '}
-            {facturation === 'yearly'
+          <p className={`mt-2 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>{t('Client historique : toutes les fonctionnalités sont incluses, sans changer d’offre —{v0}{v1}.', { v0: ' ', v1: facturation === 'yearly'
               ? `${formatEuros(yearlyMonthlyEquivalent(PLAN_PRICES[PLAN_HISTORIQUE]))} €/mois, soit ${formatEuros(yearlyPrice(PLAN_PRICES[PLAN_HISTORIQUE]))} €/an`
-              : `${formatEuros(PLAN_PRICES[PLAN_HISTORIQUE])} €/mois`}.
-          </p>
+              : `${formatEuros(PLAN_PRICES[PLAN_HISTORIQUE])} €/mois` })}</p>
         )}
 
         <div className="mt-3 space-y-3">
@@ -319,9 +308,7 @@ export default function AbonnementV2({
                 </p>
 
                 {facturation === 'yearly' && carte.price > 0 && !carte.surDevis && (
-                  <p className={`mt-1 text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-vert)' }}>
-                    {t('Soit')} {formatEuros(yearlyPrice(carte.price))} {t('€/an —')} {freeMonthsLabel()}
-                  </p>
+                  <p className={`mt-1 text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-vert)' }}>{t('Soit {formatEuros} €/an — {freeMonthsLabel}', { formatEuros: formatEuros(yearlyPrice(carte.price)), freeMonthsLabel: freeMonthsLabel() })}</p>
                 )}
 
                 <p className={`mt-1.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
@@ -362,9 +349,7 @@ export default function AbonnementV2({
                   ) : (
                     <div className="space-y-2">
                       {facturation === 'monthly' && moisDus > 1 && (
-                        <p className={`text-center text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-ambre)' }}>
-                          {moisDus} {t('mois dus — total')} {carte.price * moisDus} €
-                        </p>
+                        <p className={`text-center text-[12px] ${corpsFort}`} style={{ color: 'var(--v2-color-ambre)' }}>{t('{moisDus} mois dus — total {v1} €', { moisDus, v1: carte.price * moisDus })}</p>
                       )}
                       {facturation === 'yearly' && (
                         <p className={`text-center text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
@@ -377,9 +362,7 @@ export default function AbonnementV2({
                         rel="noopener noreferrer"
                         className={`flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] text-[14px] text-white ${corpsFort} transition-transform active:scale-[.98]`}
                         style={{ background: '#003087' }}
-                      >
-                        {t('PayPal —')} {formatEuros(montantPour(carte.price))} €
-                      </a>
+                      >{t('PayPal — {formatEuros} €', { formatEuros: formatEuros(montantPour(carte.price)) })}</a>
                     </div>
                   )}
                 </div>

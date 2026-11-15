@@ -25,8 +25,8 @@ function InfoBulle({ active, payload }: { active?: boolean; payload?: { payload:
   const p = payload[0].payload
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-sm text-xs">
-      <p className="font-semibold text-slate-900 dark:text-slate-100">{avance(p.delai)} {tr('d’avance')}</p>
-      <p className="text-slate-500 dark:text-slate-400">{tr('Réservé le')} {dateCourte(p.creeLe)} {tr('pour le')} {dateCourte(p.planifieLe)}</p>
+      <p className="font-semibold text-slate-900 dark:text-slate-100">{tr('{avance} d’avance', { avance: avance(p.delai) })}</p>
+      <p className="text-slate-500 dark:text-slate-400">{tr('Réservé le {dateCourte} pour le {v1}', { dateCourte: dateCourte(p.creeLe), v1: dateCourte(p.planifieLe) })}</p>
     </div>
   )
 }

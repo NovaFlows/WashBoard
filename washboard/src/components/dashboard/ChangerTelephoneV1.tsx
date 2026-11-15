@@ -85,9 +85,7 @@ export default function ChangerTelephoneV1({ telephone }: { telephone: string | 
                   value={code} onChange={e => { setCode(e.target.value.replace(/\D/g, '')); setMessage(null) }}
                   placeholder={t('6 chiffres')} className={inputClass}
                 />
-                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  {t('Un code vient de partir au')} {envoyeA}{t('. Il est valable 10 minutes. Votre numéro ne change qu’une fois le code validé.')}
-                </p>
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{t('Un code vient de partir au {envoyeA}. Il est valable 10 minutes. Votre numéro ne change qu’une fois le code validé.', { envoyeA })}</p>
               </div>
               {message && <p className="text-sm text-red-600" role="alert">{message.texte}</p>}
               <div className="flex items-center gap-4">

@@ -98,9 +98,7 @@ export function LigneClientVerrouilleeV2({ reservation: r, offre }: { reservatio
         <span className="min-w-0 flex-1">
           <NomMasque className={`block truncate text-[15px] ${corpsFort}`} />
           <BarreLigne className="mt-1.5 h-3 w-32 max-w-full" />
-          <span className={`mt-1.5 block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {t('Réservation le')} {jourSeul(r.scheduled_at) ?? '—'}
-          </span>
+          <span className={`mt-1.5 block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Réservation le {v0}', { v0: jourSeul(r.scheduled_at) ?? '—' })}</span>
         </span>
         <BarreLigne className="mt-1.5 h-3 w-10 shrink-0" />
       </button>
@@ -169,9 +167,7 @@ function FicheVerrouilleeV2({ reservation: r, offre, onClose }: { reservation: R
           href="/dashboard/abonnement"
           className={`${BOUTON} w-full text-white`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
-        >
-          {t('Débloquer avec le plan')} {offre}
-        </Link>
+        >{t('Débloquer avec le plan {offre}', { offre })}</Link>
       }
     >
       <div className="relative">
@@ -234,9 +230,7 @@ export function JoursMasquesV2({ dates }: { dates: string[] }) {
           <Lock size={15} strokeWidth={2.2} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <span className={`block text-[14.5px] leading-tight ${corpsFort}`}>
-            {total} {t('client')}{total > 1 ? 's' : ''} {t('absent')}{total > 1 ? 's' : ''} {t('de cet agenda')}
-          </span>
+          <span className={`block text-[14.5px] leading-tight ${corpsFort}`}>{t('{total} client{v1} absent{v2} de cet agenda', { total, v1: total > 1 ? 's' : '', v2: total > 1 ? 's' : '' })}</span>
           <span className={`mt-0.5 block text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
             {t('Heure masquée par votre offre')}
           </span>
@@ -250,7 +244,7 @@ export function JoursMasquesV2({ dates }: { dates: string[] }) {
           </span>
         ))}
         {reste > 0 && (
-          <span className={`px-1 py-1 text-[12px] leading-none ${corps} text-[color:var(--v2-color-gris)]`}>+ {reste} {t('autre')}{reste > 1 ? 's' : ''}</span>
+          <span className={`px-1 py-1 text-[12px] leading-none ${corps} text-[color:var(--v2-color-gris)]`}>{t('+ {reste} autre{v1}', { reste, v1: reste > 1 ? 's' : '' })}</span>
         )}
       </span>
     </Link>

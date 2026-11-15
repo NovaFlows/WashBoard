@@ -35,9 +35,7 @@ export default function GlobalError({
               {t('L’incident a été enregistré. Réessayez, et si le problème persiste, contactez le support en indiquant le code ci-dessous.')}
             </p>
             {error.digest && (
-              <p style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#64748b', marginTop: 12 }}>
-                {t('Code :')} {error.digest}
-              </p>
+              <p style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#64748b', marginTop: 12 }}>{t('Code : {digest}', { digest: error.digest })}</p>
             )}
             <button
               onClick={reset}

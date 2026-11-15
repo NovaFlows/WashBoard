@@ -486,9 +486,7 @@ export default function LegacyStepSlot({
               onClick={() => setChoixDateOuvert(false)}
               className="mt-3 text-xs font-bold hover:opacity-70 transition-opacity"
               style={{ color: accent }}
-            >
-              {tr('← Revenir aux horaires du')} {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
-            </button>
+            >{tr('← Revenir aux horaires du {v0} {v1}', { v0: selectedDate.getDate(), v1: MONTH_NAMES[selectedDate.getMonth()] })}</button>
           )}
         </div>
       ) : selectedDate && (
@@ -627,9 +625,7 @@ export default function LegacyStepSlot({
                         <button
                           onClick={onMore}
                           className="mt-2.5 w-full py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          {tr('Voir plus (')}{slots.length - visible} {tr('créneaux)')}
-                        </button>
+                        >{tr('Voir plus ({v0} créneaux)', { v0: slots.length - visible })}</button>
                       )}
                     </div>
                   )

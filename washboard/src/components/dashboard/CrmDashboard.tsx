@@ -447,9 +447,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">CRM</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {t('Tableau de bord de vos réservations ·')} {crmPeriodLabel(period).toLowerCase()}{enCours ? ', en cours' : ''} · {nombre.format(resume.total)} {t('résultat')}{resume.total !== 1 ? 's' : ''}
-          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t('Tableau de bord de vos réservations · {v0}{v1} · {v2} résultat{v3}', { v0: crmPeriodLabel(period).toLowerCase(), v1: enCours ? ', en cours' : '', v2: nombre.format(resume.total), v3: resume.total !== 1 ? 's' : '' })}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800" role="group" aria-label={t('Type de client')}>
@@ -569,9 +567,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
       {sourcesClients.reponses > 0 && (
         <div className={`${carte} p-4 sm:p-5`}>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('D’où viennent vos clients')}</h2>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
-            {nombre.format(sourcesClients.reponses)} {t('réponse')}{sourcesClients.reponses > 1 ? 's' : ''} {t('sur')} {nombre.format(displayBookings.length)} {t('rendez-vous de la période')}
-          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{t('{v0} réponse{v1} sur {v2} rendez-vous de la période', { v0: nombre.format(sourcesClients.reponses), v1: sourcesClients.reponses > 1 ? 's' : '', v2: nombre.format(displayBookings.length) })}</p>
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {sourcesClients.lignes.map(l => (
               <li key={l.valeur} className="flex items-baseline justify-between gap-3 py-2.5 text-sm">
@@ -662,7 +658,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
             {isFiltered ? t('Réservations filtrées') : t('Dernières réservations')}
           </h2>
           {isFiltered && (
-            <span className="text-xs text-slate-400 dark:text-slate-500">{nombre.format(resume.total)} {t('résultat')}{resume.total !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{t('{v0} résultat{v1}', { v0: nombre.format(resume.total), v1: resume.total !== 1 ? 's' : '' })}</span>
           )}
         </div>
 

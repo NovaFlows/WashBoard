@@ -32,8 +32,8 @@ export default function CarteApresReservation({ fidelite }: { fidelite: Fidelite
   if (!carte) {
     return (
       <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left text-sm leading-relaxed text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
-        {fidelite.remise > 0 && <p className="font-semibold">{t('Récompense fidélité appliquée : −')}{formatPrice(fidelite.remise)}</p>}
-        <p className={fidelite.remise > 0 ? 'mt-1' : 'font-semibold'}>{t('Carte de fidélité :')} {etat.progression} / {etat.requis}</p>
+        {fidelite.remise > 0 && <p className="font-semibold">{t('Récompense fidélité appliquée : −{formatPrice}', { formatPrice: formatPrice(fidelite.remise) })}</p>}
+        <p className={fidelite.remise > 0 ? 'mt-1' : 'font-semibold'}>{t('Carte de fidélité : {progression} / {requis}', { progression: etat.progression, requis: etat.requis })}</p>
         <p className="mt-0.5 opacity-90">{fidelite.phrase}</p>
         <a href={lien} className="mt-2 inline-block font-semibold underline underline-offset-2">{t('Voir ma carte')}</a>
       </div>
@@ -43,9 +43,7 @@ export default function CarteApresReservation({ fidelite }: { fidelite: Fidelite
   return (
     <div className="mb-5">
       {fidelite.remise > 0 && (
-        <p className="mx-auto w-fit rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
-          {t('Récompense fidélité appliquée : −')}{formatPrice(fidelite.remise)}
-        </p>
+        <p className="mx-auto w-fit rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">{t('Récompense fidélité appliquée : −{formatPrice}', { formatPrice: formatPrice(fidelite.remise) })}</p>
       )}
       <div className="-mx-2">
         <CarteFidelite3D

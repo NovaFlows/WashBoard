@@ -140,7 +140,7 @@ export default async function LegacyBookingPage({washer, services, categories, a
         )}
         {themed && (
           <>
-            <h1 className="sr-only">{t('Réservez votre lavage avec')} {washer.name}</h1>
+            <h1 className="sr-only">{t('Réservez votre lavage avec {name}', { name: washer.name })}</h1>
             <div className="mb-6" />
           </>
         )}

@@ -32,7 +32,7 @@ export default function DashboardError({
           {t('L’incident a été enregistré. Réessayez, ou revenez au tableau de bord.')}
         </p>
         {error.digest && (
-          <p className="font-mono text-xs text-slate-400 dark:text-slate-500 mb-6">{t('Code :')} {error.digest}</p>
+          <p className="font-mono text-xs text-slate-400 dark:text-slate-500 mb-6">{t('Code : {digest}', { digest: error.digest })}</p>
         )}
         <div className="flex items-center justify-center gap-3">
           <button

@@ -83,7 +83,7 @@ export default function MeteoAccueilV2({ verre }: { verre: boolean }) {
           {meteo.vent !== null && (
             <span className="ml-auto flex shrink-0 flex-col items-center gap-0.5" title={t('Vent')}>
               <Wind size={26} strokeWidth={1.6} aria-hidden style={{ color: '#8A93A6' }} />
-              <span className={`text-[13px] ${corpsFort} tabular-nums`}>{meteo.vent} {t('km/h')}</span>
+              <span className={`text-[13px] ${corpsFort} tabular-nums`}>{t('{vent} km/h', { vent: meteo.vent })}</span>
             </span>
           )}
         </>

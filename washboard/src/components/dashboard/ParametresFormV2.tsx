@@ -313,7 +313,7 @@ export default function ParametresFormV2({ washer, servicesCount, resumeHoraires
                 <CarteListe>
                   <div className="flex items-center justify-between gap-3 py-3">
                     <span className={`text-[13px] ${corps}`}>{t('Lien')}</span>
-                    <span className={`truncate text-[12px] ${corpsFort} tabular-nums`}>{t('/book/')}{washer.slug}</span>
+                    <span className={`truncate text-[12px] ${corpsFort} tabular-nums`}>{t('/book/{slug}', { slug: washer.slug })}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3 py-3">
                     <span className={`text-[13px] ${corps}`}>{t('Offre actuelle')}</span>

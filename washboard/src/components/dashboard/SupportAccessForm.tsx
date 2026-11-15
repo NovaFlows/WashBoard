@@ -58,9 +58,7 @@ export function ResultatAcces({ erreur, resultat }: { erreur: string | null; res
 
       {resultat && (
         <div className="mt-4 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60">
-          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-1">
-            {resultat.washerName} {t('a bien ouvert l’accès')}
-          </p>
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-1">{t('{washerName} a bien ouvert l’accès', { washerName: resultat.washerName })}</p>
           <ul className="text-xs text-emerald-700/90 dark:text-emerald-500/90 mb-3 space-y-1">
             <li>
               <strong>{t('À usage unique et valable peu de temps')}</strong> {t(': ouvrez-le maintenant. Demander un nouvel accès annule celui-ci.')}

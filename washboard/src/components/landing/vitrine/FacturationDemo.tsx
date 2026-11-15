@@ -60,7 +60,7 @@ export default function FacturationDemo() {
               <tbody><tr><td>{t(c.ligne)}</td><td className="num">{c.q}</td><td className="num">{eur(c.pu)}</td><td className="num">{eur(total)}</td></tr></tbody>
             </table>
             <div className="tot-f"><span>{t('Total')}</span><b>{eur(total)}</b></div>
-            <p className="ment">{t('TVA non applicable, art. 293 B du CGI. Paiement à réception.')}{pro ? ' En cas de retard : pénalités au taux d’intérêt légal majoré, et indemnité forfaitaire de 40 € pour frais de recouvrement.' : ''}</p>
+            <p className="ment">{t('TVA non applicable, art. 293 B du CGI. Paiement à réception.{v0}', { v0: pro ? ' En cas de retard : pénalités au taux d’intérêt légal majoré, et indemnité forfaitaire de 40 € pour frais de recouvrement.' : '' })}</p>
           </div>
           {payee
             ? <div className="fac-statut ok"><IcOk />{t('Payée : elle entre dans ton encaissé du mois.')}</div>

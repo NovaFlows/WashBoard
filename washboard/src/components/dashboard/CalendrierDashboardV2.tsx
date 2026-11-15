@@ -668,9 +668,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                             />
                             {gapMin !== null && gapMin >= SEUIL_LIBRE_MIN && suivant && (
                               <div className="flex items-center justify-between gap-2 border-t border-dashed border-[color:var(--v2-filet-fort)] px-3.5 py-2">
-                                <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-                                  {dureeLisible(gapMin)} {tr('de libre')}{villeTrou ? ` à ${villeTrou}` : ''}
-                                </span>
+                                <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{tr('{dureeLisible} de libre{v1}', { dureeLisible: dureeLisible(gapMin), v1: villeTrou ? ` à ${villeTrou}` : '' })}</span>
                                 <button
                                   type="button"
                                   onClick={() => setCreneauPropose({ debut: finRendezVous(b), fin: new Date(suivant.scheduled_at), ville: villeTrou, origine: origineDuTrou(b, suivant) })}
@@ -1046,9 +1044,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                       {formatHeure(finRendezVous(b))}
                     </span>
                     <span className="flex flex-1 items-center justify-between gap-2 rounded-[var(--v2-radius-carte)] border border-dashed border-[color:var(--v2-filet-fort)] px-3.5 py-2.5">
-                      <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>
-                        {dureeLisible(gapMin)} {tr('de libre')}{villeTrou ? ` à ${villeTrou}` : ''}
-                      </span>
+                      <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{tr('{dureeLisible} de libre{v1}', { dureeLisible: dureeLisible(gapMin), v1: villeTrou ? ` à ${villeTrou}` : '' })}</span>
                       <button
                         type="button"
                         onClick={() => setCreneauPropose({ debut: finRendezVous(b), fin: new Date(suivant.scheduled_at), ville: villeTrou, origine: origineDuTrou(b, suivant) })}
@@ -1618,9 +1614,7 @@ function DetailRendezVous({
                   href={`/api/bookings/${b.id}/pdf`}
                   className={`flex h-11 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                   style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
-                >
-                  {tr('Télécharger la facture')} {b.facture_numero}
-                </a>
+                >{tr('Télécharger la facture {facture_numero}', { facture_numero: b.facture_numero })}</a>
               ) : (
                 <button
                   type="button"
@@ -2057,9 +2051,7 @@ function FicheRdvBureauV2({
                 href={`/api/bookings/${b.id}/pdf`}
                 className={`flex h-10 items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
-              >
-                {tr('Télécharger la facture')} {b.facture_numero}
-              </a>
+              >{tr('Télécharger la facture {facture_numero}', { facture_numero: b.facture_numero })}</a>
             ) : (
               <button
                 type="button"
@@ -2236,9 +2228,7 @@ function GrilleSemaineV2({
                           <span
                             aria-hidden
                             className={`absolute left-1 top-full z-10 mt-0.5 whitespace-nowrap rounded-[4px] bg-[color:var(--v2-color-surface)] px-1 text-[9.5px] ${corpsFort} text-[color:var(--v2-color-gris)] shadow-sm`}
-                          >
-                            {trajet.minutes} {tr('min')}
-                          </span>
+                          >{tr('{minutes} min', { minutes: trajet.minutes })}</span>
                         )}
                       </span>
                     )

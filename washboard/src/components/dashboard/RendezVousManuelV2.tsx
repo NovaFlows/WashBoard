@@ -284,7 +284,7 @@ export default function RendezVousManuelV2({
                 })}
               </div>
             ) : (
-              <p className={`text-[14px] ${corps} text-[color:var(--v2-color-encre)]`}>{tr('Au centre auto ·')} {centreAuto.adresse}</p>
+              <p className={`text-[14px] ${corps} text-[color:var(--v2-color-encre)]`}>{tr('Au centre auto · {adresse}', { adresse: centreAuto.adresse })}</p>
             )
           ) : (
             <div role="group" aria-labelledby="rdvm-adresse-label">

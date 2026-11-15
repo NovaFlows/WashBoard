@@ -54,9 +54,7 @@ export default function TraficTemps({ points, granularite, visiteurs, reservatio
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('Visiteurs et réservations dans le temps')}</h3>
         <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">{periodLabel}</span>
       </div>
-      <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-3">
-        {t('Par')} {granularite}{t(', sur votre page de réservation')}
-      </p>
+      <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-3">{t('Par {granularite}, sur votre page de réservation', { granularite })}</p>
 
       {/* Deux séries : une légende, qui donne aussi les totaux. */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 text-xs text-slate-600 dark:text-slate-300">

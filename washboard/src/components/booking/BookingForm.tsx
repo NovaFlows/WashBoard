@@ -331,9 +331,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
           {estProposition && (
             <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3 text-sm">
               <p className="font-bold">{t('Aperçu — cette page n’est pas encore active')}</p>
-              <p className="text-xs mt-0.5 leading-relaxed">
-                {t('Elle montre à quoi ressemblerait la page de réservation de')} {washer.name}{t('. Aucune réservation ne peut être enregistrée pour l’instant.')}
-              </p>
+              <p className="text-xs mt-0.5 leading-relaxed">{t('Elle montre à quoi ressemblerait la page de réservation de {name}. Aucune réservation ne peut être enregistrée pour l’instant.', { name: washer.name })}</p>
             </div>
           )}
 
@@ -538,7 +536,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 ? <div className="flex justify-between gap-3"><span>{t('En centre auto')}</span><span>{t('Pas de déplacement')}</span></div>
                 : <div className="flex justify-between gap-3"><span>{t('Déplacement')}</span><span>{form.travel_fee !== undefined ? formatPrice(form.travel_fee) : t('À confirmer avec l’adresse')}</span></div>}
               {!!form.smart_discount && <div className="flex justify-between text-emerald-700"><span>{t('Créneau avantageux')}</span><span>−{formatPrice(form.smart_discount)}</span></div>}
-              {remise > 0 && promotion && <div className="flex justify-between text-emerald-700"><span>{t('Promotion')} {promotion.nom}</span><span>−{formatPrice(remise)}</span></div>}
+              {remise > 0 && promotion && <div className="flex justify-between text-emerald-700"><span>{t('Promotion {nom}', { nom: promotion.nom })}</span><span>−{formatPrice(remise)}</span></div>}
               {remiseFidelite > 0 && <div className="flex justify-between text-emerald-700"><span>{t('Récompense fidélité')}</span><span>−{formatPrice(remiseFidelite)}</span></div>}
               <div className="flex justify-between border-t border-zinc-200 pt-4 text-base font-bold"><span>{t('Total estimé')}</span><span>{formatPrice(barAmount ?? 0)}</span></div>
               <p className="text-xs text-zinc-500">{t('À régler sur place, après la prestation.')}</p>

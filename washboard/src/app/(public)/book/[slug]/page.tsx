@@ -143,9 +143,7 @@ export default async function BookingPage({ params }: Props) {
             {t('La page de réservation de')} <strong>{washer.name}</strong> {t('est momentanément suspendue. Contactez directement votre prestataire pour prendre rendez-vous.')}
           </p>
           {washer.phone && (
-            <a href={`tel:${washer.phone}`} style={{ display: 'inline-block', background: '#2563eb', color: '#fff', textDecoration: 'none', fontWeight: '700', fontSize: '14px', padding: '12px 24px', borderRadius: '10px' }}>
-              {t('Appeler')} {washer.name}
-            </a>
+            <a href={`tel:${washer.phone}`} style={{ display: 'inline-block', background: '#2563eb', color: '#fff', textDecoration: 'none', fontWeight: '700', fontSize: '14px', padding: '12px 24px', borderRadius: '10px' }}>{t('Appeler {name}', { name: washer.name })}</a>
           )}
         </div>
       </div>
@@ -398,5 +396,5 @@ async function ReviewSummary({ websiteUrl, googlePlaceId }: { websiteUrl: string
   const loc = LOCALES_INTL[await getLangue()]
   const { aggregate } = await reviewsForWasher({ website_url: websiteUrl, google_place_id: googlePlaceId })
   if (!aggregate || aggregate.count <= 0) return null
-  return <span>★ {aggregate.value.toLocaleString(loc)} · {aggregate.count} {t('avis')}</span>
+  return <span>{t('★ {v0} · {count} avis', { v0: aggregate.value.toLocaleString(loc), count: aggregate.count })}</span>
 }

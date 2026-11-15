@@ -420,9 +420,7 @@ export default function AccueilV2({
               {t('La journée')}
             </Link>
             {routeDuJour !== null && (
-              <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
-                ~{routeDuJour} {t('min de route')}
-              </span>
+              <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{t('~{routeDuJour} min de route', { routeDuJour })}</span>
             )}
           </div>
           <CarteListe>
@@ -590,7 +588,7 @@ function DemainV2({ rdv, demainStr }: { rdv: RdvAccueil[]; demainStr: string }) 
   const loc = useLocale()
   return (
     <div>
-      <TitreSection>{t('Demain,')} {jourLong(demainStr, loc)}</TitreSection>
+      <TitreSection>{t('Demain, {jourLong}', { jourLong: jourLong(demainStr, loc) })}</TitreSection>
       <CarteListe>
         {rdv.map(b => {
           const enAttente = b.status === 'pending'

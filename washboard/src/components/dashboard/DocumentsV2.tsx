@@ -266,9 +266,7 @@ function FicheDocumentBureauV2({
           <span className={`text-[20px] ${titre} tabular-nums`}>{euros.format(d.contenu.totaux.ttc)}</span>
         </div>
         {devis && d.contenu.valableJusquau && (
-          <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-            {tr('Valable jusqu’au')} {dateLongue(d.contenu.valableJusquau, loc)}
-          </p>
+          <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Valable jusqu’au {dateLongue}', { dateLongue: dateLongue(d.contenu.valableJusquau, loc) })}</p>
         )}
 
         {(d.contenu.client.telephone || d.contenu.client.adresseFacturation) && (
@@ -380,9 +378,7 @@ function FicheDocumentBureauV2({
             <>
               {d.paye_le ? (
                 <>
-                  <p className={`mt-1 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>
-                    {tr('Encaissée le')} {jourCourt(d.paye_le, loc)} {tr('· comptée dans vos chiffres')}
-                  </p>
+                  <p className={`mt-1 text-[13px] leading-snug ${corps}`} style={{ color: 'var(--v2-color-vert)' }}>{tr('Encaissée le {jourCourt} · comptée dans vos chiffres', { jourCourt: jourCourt(d.paye_le, loc) })}</p>
                   <button
                     type="button"
                     onClick={() => onPayer(false)}
@@ -1008,9 +1004,7 @@ function DocumentsOuvertsV2({ prestations, nomLaveur }: {
               ))}
             </div>
             {rechercheMobileActive && (
-              <p className={`px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`} role="status">
-                {documentsMobile.length} {tr('document')}{documentsMobile.length > 1 ? 's' : ''} · {euros.format(documentsMobile.reduce((t, d) => t + d.contenu.totaux.ttc, 0))}
-              </p>
+              <p className={`px-0.5 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`} role="status">{tr('{length} document{v1} · {v2}', { length: documentsMobile.length, v1: documentsMobile.length > 1 ? 's' : '', v2: euros.format(documentsMobile.reduce((t, d) => t + d.contenu.totaux.ttc, 0)) })}</p>
             )}
           </div>
 

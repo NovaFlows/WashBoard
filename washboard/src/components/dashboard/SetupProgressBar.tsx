@@ -136,9 +136,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
       )}
 
       {reste > 0 && (
-        <p className={`${c.discret} mt-2.5`}>
-          {t('et')} {reste} {t('autre')}{reste > 1 ? 's' : ''} {t('réglage')}{reste > 1 ? 's' : ''} {t('facultatif')}{reste > 1 ? 's' : ''}
-        </p>
+        <p className={`${c.discret} mt-2.5`}>{t('et {reste} autre{v1} réglage{v2} facultatif{v3}', { reste, v1: reste > 1 ? 's' : '', v2: reste > 1 ? 's' : '', v3: reste > 1 ? 's' : '' })}</p>
       )}
 
       {/* Ce qui explique l'écart à 100 % quand la liste est vide : sans cette ligne, le
@@ -148,9 +146,7 @@ export function SetupProgressBar({ progress }: { progress: SetupProgress }) {
           type="button"
           onClick={() => setMasques(null)}
           className={`mt-2.5 underline underline-offset-2 ${c.discret}`}
-        >
-          {phraseMasques(ecartes)} {t('· revoir')}
-        </button>
+        >{t('{phraseMasques} · revoir', { phraseMasques: phraseMasques(ecartes) })}</button>
       )}
 
       <div className="mt-3 flex justify-end">

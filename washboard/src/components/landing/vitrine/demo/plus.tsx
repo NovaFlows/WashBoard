@@ -168,7 +168,7 @@ function SousLiens({ c }: { c: Ctrl }) {
       <div className="surf">
         {l.map(([n, k]) => (
           <div className="reglage" key={k}>
-            <div>{n}<small className="num">{tr('washboard.fr/book/eclat-mobile?src=')}{k}</small></div>
+            <div>{n}<small className="num">{tr('washboard.fr/book/eclat-mobile?src={k}', { k })}</small></div>
             <button className="btn btn-ligne btn-mini" onClick={() => copier(c, `https://washboard.fr/book/eclat-mobile?src=${k}`)}>{tr('Copier')}</button>
           </div>
         ))}

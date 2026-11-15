@@ -65,6 +65,7 @@ function Question({ entree, ouverte, onBasculer }: {
   ouverte: boolean
   onBasculer: () => void
 }) {
+  const tr = useT()
   return (
     <li id={entree.id}>
       <button
@@ -73,7 +74,7 @@ function Question({ entree, ouverte, onBasculer }: {
         aria-expanded={ouverte}
         className="flex w-full items-center gap-3 py-3.5 text-left"
       >
-        <span className={`min-w-0 flex-1 text-[15px] leading-snug ${corpsFort}`}>{entree.question}</span>
+        <span className={`min-w-0 flex-1 text-[15px] leading-snug ${corpsFort}`}>{tr(entree.question)}</span>
         <svg
           width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden
@@ -83,7 +84,7 @@ function Question({ entree, ouverte, onBasculer }: {
           <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
         </svg>
       </button>
-      {ouverte && <Reponse texte={entree.answer} />}
+      {ouverte && <Reponse texte={tr(entree.answer)} />}
     </li>
   )
 }
@@ -234,10 +235,10 @@ export default function GuideV2({ liste }: Props) {
         sections.map(section => (
           <section key={section.id} aria-labelledby={`guide-${section.id}`} className="mt-[26px]">
             <h2 id={`guide-${section.id}`} className={`px-0.5 text-[19px] leading-tight ${titre}`}>
-              {section.title}
+              {tr(section.title)}
             </h2>
             <p className={`mb-1.5 px-0.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-              {section.summary}
+              {tr(section.summary)}
             </p>
             <div className="overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">
               <ul className="divide-y divide-[color:var(--v2-filet)] px-4">

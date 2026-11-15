@@ -71,8 +71,8 @@ export default function CarteCreneaux({ avec }: { avec: boolean }) {
           <text x="0" y="28" textAnchor="middle" fontSize="11" fontWeight="650" style={{ fill: 'var(--encre)' }} fontFamily="var(--font-archivo), sans-serif">{tr('Toi')}</text>
         </g>
       </svg>
-      <div className="cg-km"><small>{tr('Route dans la journée')}</small><b className="num">{km} {tr('km')}</b></div>
-      <div className={`cg-gain${avec ? ' vu' : ''}`} aria-hidden>−{KM_SANS - KM_AVEC} {tr('km')}</div>
+      <div className="cg-km"><small>{tr('Route dans la journée')}</small><b className="num">{tr('{km} km', { km })}</b></div>
+      <div className={`cg-gain${avec ? ' vu' : ''}`} aria-hidden>{tr('−{v0} km', { v0: KM_SANS - KM_AVEC })}</div>
     </div>
   )
 }

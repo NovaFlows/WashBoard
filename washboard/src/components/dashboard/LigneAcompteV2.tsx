@@ -53,7 +53,7 @@ export default function LigneAcompteV2({ rdv, modifiable }: { rdv: AcompteRdv; m
     <div className="mt-3 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] px-3.5 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className={`text-[14px] ${corps}`}>{t('Acompte ·')} {formatPrice(Number(rdv.acompte_montant))}</p>
+          <p className={`text-[14px] ${corps}`}>{t('Acompte · {formatPrice}', { formatPrice: formatPrice(Number(rdv.acompte_montant)) })}</p>
           <p className={`mt-0.5 flex items-center gap-1.5 text-[12.5px] ${corpsFort}`} style={{ color: couleur }}>
             <span className="h-[7px] w-[7px] rounded-full" style={{ background: couleur }} aria-hidden />
             {recu ? t('Reçu') : echeance ? `En attente · avant ${echeance}` : 'En attente'}

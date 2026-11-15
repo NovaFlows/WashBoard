@@ -143,7 +143,7 @@ export function FeuilleDeplacementV2({
         <Bloc titre={t('Ajouter un palier')}>
           <div className="flex items-end gap-2">
             <label className="min-w-0 flex-1">
-              <span className="mb-1.5 block text-[12.5px] text-[color:var(--v2-color-gris)]">{t('Trajet jusqu’à (')}{abrege})</span>
+              <span className="mb-1.5 block text-[12.5px] text-[color:var(--v2-color-gris)]">{t('Trajet jusqu’à ({abrege})', { abrege })}</span>
               <input
                 type="number" inputMode="numeric" min={1} placeholder={unite === 'km' ? '20' : '30'} value={seuil}
                 onChange={e => { setSeuil(e.target.value); setErreurPalier(null) }} onKeyDown={entree}
@@ -442,7 +442,7 @@ export function CarteEtatCompte({
       <h2 className={`text-[16px] ${corpsFort}`}>{supprime ? t('Suppression programmée') : 'Compte en pause'}</h2>
       <p className={`mt-1.5 text-[14px] leading-[1.55] ${corps}`}>
         {supprime
-          ? <>{t('Votre compte sera')} <strong className={corpsFort}>{t('définitivement supprimé dans')} {jours} {t('jour')}{jours > 1 ? 's' : ''}</strong>{t(', avec toutes vos données. Votre page de réservation est déjà masquée.')}</>
+          ? <>{t('Votre compte sera')} <strong className={corpsFort}>{t('définitivement supprimé dans {jours} jour{v1}', { jours, v1: jours > 1 ? 's' : '' })}</strong>{t(', avec toutes vos données. Votre page de réservation est déjà masquée.')}</>
           : t('Votre page de réservation est masquée et vous ne recevez plus de nouveaux rendez-vous. Vos données sont conservées.')}
       </p>
       {erreur && <div className="mt-3"><Constat ton="rouge" role="alert">{erreur}</Constat></div>}

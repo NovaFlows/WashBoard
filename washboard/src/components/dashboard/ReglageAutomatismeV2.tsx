@@ -260,12 +260,9 @@ export function ReglageAvisV2({
             </div>
           )}
           {erreurDelai && <p role="alert" className={`mt-1.5 text-[12.5px] ${corps}`} style={{ color: 'var(--v2-color-rouge)' }}>{erreurDelai}</p>}
-          <p className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>
-            {Number.isFinite(heuresEcrites) && heuresEcrites > 0
+          <p className={`mt-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-[1.55]`}>{t('{v0}{v1}Le client doit avoir une adresse email enregistrée.', { v0: Number.isFinite(heuresEcrites) && heuresEcrites > 0
               ? t('Compté à partir du moment où vous touchez « Terminé » sur le rendez-vous — une seule demande par rendez-vous, {h} h plus tard.', { h: heuresEcrites })
-              : t('Compté à partir du moment où vous touchez « Terminé » sur le rendez-vous — une seule demande par rendez-vous, tout de suite.')}
-            {' '}{t('Le client doit avoir une adresse email enregistrée.')}
-          </p>
+              : t('Compté à partir du moment où vous touchez « Terminé » sur le rendez-vous — une seule demande par rendez-vous, tout de suite.'), v1: ' ' })}</p>
         </Bloc>
 
         <Bloc titre={t('Canal')}>

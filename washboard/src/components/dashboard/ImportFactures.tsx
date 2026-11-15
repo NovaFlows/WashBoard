@@ -226,7 +226,7 @@ export function ImportFactures() {
         }`}
       >
         <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{tr('Glissez vos fichiers ici, ou cliquez pour les choisir')}</span>
-        <span className="text-xs text-slate-500 dark:text-slate-400">{tr('10 Mo par fichier · ZIP jusqu’à 100 Mo ·')} {LIMITES.nombreFichiers} {tr('factures maximum')}</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{tr('10 Mo par fichier · ZIP jusqu’à 100 Mo · {nombreFichiers} factures maximum', { nombreFichiers: LIMITES.nombreFichiers })}</span>
         <input
           type="file"
           multiple
@@ -238,7 +238,7 @@ export function ImportFactures() {
 
       {ignores.length > 0 && (
         <ul className="mt-3 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 space-y-0.5">
-          {ignores.map((t, i) => <li key={i}>{tr('Ignoré —')} {t}</li>)}
+          {ignores.map((t, i) => <li key={i}>{tr('Ignoré — {t}', { t })}</li>)}
         </ul>
       )}
 
@@ -260,18 +260,18 @@ export function ImportFactures() {
                 {l.etat === 'pret' && (
                   <>
                     <label className="w-32">
-                      <span className="sr-only">{tr('Numéro d’origine de la facture')} {l.nom} {tr('(facultatif)')}</span>
+                      <span className="sr-only">{tr('Numéro d’origine de la facture {nom} (facultatif)', { nom: l.nom })}</span>
                       <input
                         type="text" placeholder={tr('N° facture')} maxLength={40}
                         value={l.numero} onChange={e => maj(l.id, { numero: e.target.value })} className={saisie}
                       />
                     </label>
                     <label className="w-36">
-                      <span className="sr-only">{tr('Date de la facture')} {l.nom}</span>
+                      <span className="sr-only">{tr('Date de la facture {nom}', { nom: l.nom })}</span>
                       <input type="date" required value={l.date} onChange={e => maj(l.id, { date: e.target.value })} className={saisie} />
                     </label>
                     <label className="w-28">
-                      <span className="sr-only">{tr('Montant TTC de la facture')} {l.nom} {tr('(facultatif)')}</span>
+                      <span className="sr-only">{tr('Montant TTC de la facture {nom} (facultatif)', { nom: l.nom })}</span>
                       <input
                         type="text" inputMode="decimal" placeholder={tr('Montant €')}
                         value={l.montant} onChange={e => maj(l.id, { montant: e.target.value })} className={saisie}
@@ -312,7 +312,7 @@ export function ImportFactures() {
           {tr('Annuler')}
         </button>
         {enCours && <span className="text-xs text-slate-500 dark:text-slate-400">{tr('Envoi en cours…')}</span>}
-        {!enCours && sansDate > 0 && <span className="text-xs text-amber-600 dark:text-amber-400">{tr('Il manque la date de')} {sansDate} {tr('facture')}{sansDate > 1 ? 's' : ''}.</span>}
+        {!enCours && sansDate > 0 && <span className="text-xs text-amber-600 dark:text-amber-400">{tr('Il manque la date de {sansDate} facture{v1}.', { sansDate, v1: sansDate > 1 ? 's' : '' })}</span>}
       </div>
     </section>
   )

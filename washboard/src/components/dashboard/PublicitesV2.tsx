@@ -185,9 +185,7 @@ function Video({ b, rang, lien }: { b: BilanCreation; rang: number; lien: string
                 }}
               />
             </div>
-            <p className={`mt-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {pourcent(b.partReservations)} {t('des clients de la campagne')}
-            </p>
+            <p className={`mt-1 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{pourcent} des clients de la campagne', { pourcent: pourcent(b.partReservations) })}</p>
           </div>
         )}
 
@@ -420,11 +418,7 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
             <p className={`truncate text-[17px] ${nom}`}>{c.nom}</p>
-            <p className={`mt-0.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {labelPlateforme(c.plateforme)} {t('· du')} {jourCourt(c.debut, loc)}
-              {c.fin ? ` au ${jourCourt(c.fin, loc)}` : t(', sans fin prévue')}
-              {c.creations.length > 0 && ` · ${inventaireFormats(c.creations.map(x => x.creation))}`}
-            </p>
+            <p className={`mt-0.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{labelPlateforme} · du {jourCourt}{v2}{v3}', { labelPlateforme: labelPlateforme(c.plateforme), jourCourt: jourCourt(c.debut, loc), v2: c.fin ? ` au ${jourCourt(c.fin, loc)}` : t(', sans fin prévue'), v3: c.creations.length > 0 && ` · ${inventaireFormats(c.creations.map(x => x.creation))}` })}</p>
           </div>
           <span
             className={`shrink-0 rounded-[var(--v2-radius-pilule)] px-2 py-1 text-[11px] ${corpsFort}`}
@@ -472,7 +466,7 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
 
         {b.reservations > 0 && (
           <p className={`mt-2 text-[14px] leading-relaxed ${corps}`}>
-            {formatEuros(c.budget)} {t('€ dépensés,')} <span className={corpsFort}>{formatEuros(b.chiffreAffaires)} {t('€ de lavages')}</span> {t('réservés.')}
+            {formatEuros(c.budget)} {t('€ dépensés,')} <span className={corpsFort}>{t('{formatEuros} € de lavages', { formatEuros: formatEuros(b.chiffreAffaires) })}</span> {t('réservés.')}
           </p>
         )}
       </div>
@@ -506,11 +500,7 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
               une somme qui ne fait pas le total détruit la confiance dans
               tout l'écran. */}
           {c.creations.length > 0 && c.reste.visites > 0 && (
-            <p className={`mt-3 text-[12px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>
-              {c.reste.visites} {t('visite')}{c.reste.visites > 1 ? 's' : ''}
-              {c.reste.reservations > 0 && t(' et {reservations} client{v1}', { reservations: c.reste.reservations, v1: c.reste.reservations > 1 ? 's' : '' })}
-              {' '}{t('sans vidéo identifiée — arrivées par le lien de la campagne.')}
-            </p>
+            <p className={`mt-3 text-[12px] leading-relaxed ${corps} text-[color:var(--v2-color-gris)]`}>{t('{visites} visite{v1}{v2}{v3}sans vidéo identifiée — arrivées par le lien de la campagne.', { visites: c.reste.visites, v1: c.reste.visites > 1 ? 's' : '', v2: c.reste.reservations > 0 && t(' et {reservations} client{v1}', { reservations: c.reste.reservations, v1: c.reste.reservations > 1 ? 's' : '' }), v3: ' ' })}</p>
           )}
 
           <button

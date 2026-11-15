@@ -180,9 +180,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                     </span>
                   </p>
                 ) : (
-                  <p className={`mt-2.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
-                    {t('Créez dans chaque application un lien du même montant (')}{b.valeur || '…'} €).
-                  </p>
+                  <p className={`mt-2.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Créez dans chaque application un lien du même montant ({v0} €).', { v0: b.valeur || '…' })}</p>
                 )}
               </section>
 
@@ -296,7 +294,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                     <p className={`${ETIQUETTE} mt-3`}>{t('S’il annule au moins')}</p>
                     <div className="flex gap-2">
                       {DELAIS_REMBOURSEMENT.map(h => (
-                        <button key={h} type="button" onClick={() => maj({ remboursement_heures: h })} className={puce(b.remboursement_heures === h)}>{libelleHeures(h)} {t('avant')}</button>
+                        <button key={h} type="button" onClick={() => maj({ remboursement_heures: h })} className={puce(b.remboursement_heures === h)}>{t('{libelleHeures} avant', { libelleHeures: libelleHeures(h) })}</button>
                       ))}
                     </div>
                   </>
@@ -304,7 +302,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
               </section>
 
               <section>
-                <p className={`${ETIQUETTE} px-0.5`}>{t('Ce que voit le client avant de réserver (pour un total de')} {exempleTotal} €)</p>
+                <p className={`${ETIQUETTE} px-0.5`}>{t('Ce que voit le client avant de réserver (pour un total de {exempleTotal} €)', { exempleTotal })}</p>
                 <EncartAcompte
                   montant={montantAcompte({ type: b.type, valeur: valeurNum }, exempleTotal)}
                   conditions={conditionsAcompte(b)}

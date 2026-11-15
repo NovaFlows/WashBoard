@@ -63,9 +63,7 @@ export default function ReviewsCarousel({ reviews, aggregate, themed }: Props) {
               {aggregate.value.toFixed(1)}
             </span>
             {aggregate.count > 0 && (
-              <span className={`text-xs ${themed ? 'text-white/50' : 'text-slate-400 dark:text-slate-500'}`}>
-                · {aggregate.count} {t('avis')}
-              </span>
+              <span className={`text-xs ${themed ? 'text-white/50' : 'text-slate-400 dark:text-slate-500'}`}>{t('· {count} avis', { count: aggregate.count })}</span>
             )}
           </div>
         )}

@@ -82,10 +82,10 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
     <div className="space-y-5">
       <div><label className={label} htmlFor="booking-name">{t('Nom et prénom')}</label><input id="booking-name" autoComplete="name" required minLength={2} value={name} onChange={e => setName(e.target.value)} className={input} /></div>
       <div><label className={label} htmlFor="booking-phone">{t('Téléphone')}</label><input id="booking-phone" autoComplete="tel" type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder={exemplePhone} className={input} />
-        {!!phone && !phoneNormalise && <p className="text-xs text-zinc-500 mt-1">{t('Indiquez un numéro valide (ex.')} {exemplePhone}{t(') ou au format international (+33…).')}</p>}</div>
+        {!!phone && !phoneNormalise && <p className="text-xs text-zinc-500 mt-1">{t('Indiquez un numéro valide (ex. {exemplePhone}) ou au format international (+33…).', { exemplePhone })}</p>}</div>
       <div><label className={label} htmlFor="booking-email">{t('Email')} <span className="font-normal text-zinc-500">{t('pour recevoir le récapitulatif')}</span></label><input id="booking-email" autoComplete="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={input} /></div>
       {vehicles.map((v, i) => isVehicle(v.type) && <div key={`${v.type}-${i}`}>
-        <label className={label} htmlFor={`booking-model-${i}`}>{t('Modèle')} {vehicles.length > 1 ? `· ${v.label ?? v.type} ${i + 1}` : t('du véhicule')}</label>
+        <label className={label} htmlFor={`booking-model-${i}`}>{t('Modèle {v0}', { v0: vehicles.length > 1 ? `· ${v.label ?? v.type} ${i + 1}` : t('du véhicule') })}</label>
         <input id={`booking-model-${i}`} required value={v.models?.[0] ?? ''} placeholder={t('Ex. Peugeot 208 grise')} className={input}
           onChange={e => onChange({ vehicles_detail: vehicles.map((item, index) => index === i ? { ...item, models: [e.target.value] } : item) })} />
       </div>)}
@@ -109,7 +109,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
             <span>{t('J’ai lu et j’accepte les conditions de l’acompte.')}</span>
           </label>
         </>
-        : <><p className="font-semibold">{t('Rien à payer maintenant')}</p><p className="text-zinc-500 dark:text-zinc-400 mt-1">{t('Vous réglez')} {formatPrice(total)} {t('sur place, une fois le lavage terminé.')}</p></>}
+        : <><p className="font-semibold">{t('Rien à payer maintenant')}</p><p className="text-zinc-500 dark:text-zinc-400 mt-1">{t('Vous réglez {formatPrice} sur place, une fois le lavage terminé.', { formatPrice: formatPrice(total) })}</p></>}
       {whatsappHref && <><p className="font-semibold mt-3">{t('Un empêchement ?')}</p><p className="text-zinc-500 dark:text-zinc-400">{t('Écrivez au laveur sur WhatsApp pour décaler ou annuler.')}</p></>}
     </div>
     {error && <p role="alert" className="mt-4 p-3 rounded-xl bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 text-sm">{error}</p>}

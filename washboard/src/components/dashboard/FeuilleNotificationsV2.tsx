@@ -49,9 +49,7 @@ export default function FeuilleNotificationsV2({ onClose }: { onClose: () => voi
       )}
 
       {etat === 'refuse' && (
-        <Constat ton="ambre" role="status">
-          {t('Les notifications ont été refusées pour WashBoard. Pour les rétablir, autorisez-les dans les réglages de votre')} {mobile ? t('téléphone') : 'navigateur'}{t(', puis revenez ici.')}
-        </Constat>
+        <Constat ton="ambre" role="status">{t('Les notifications ont été refusées pour WashBoard. Pour les rétablir, autorisez-les dans les réglages de votre {v0}, puis revenez ici.', { v0: mobile ? t('téléphone') : 'navigateur' })}</Constat>
       )}
 
       {(etat === 'actif' || etat === 'inactif') && (
