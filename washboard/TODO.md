@@ -3318,6 +3318,26 @@ rien à faire, mais que le projet reste globalement sain.
 > Deployments gratuits (URL auto par branche) = recette à la demande. PAS besoin
 > d'environnement de recette/staging dédié à ce stade.
 
+- [ ] **Pages publiques statiques (landing, blog, pages métiers) — Ryan, à caler avec Alexandre (2026-11-15).**
+      Constat : Vercel Hobby à 3 h 25 / 4 h de Fluid Active CPU et 9,73 / 10 Go de Functions Storage
+      sur 30 jours glissants. Un dépassement durable de CPU peut mettre le site en pause (503).
+      Toutes les pages publiques sont recalculées à chaque visite (`X-Vercel-Cache: MISS`,
+      `Cache-Control: private, no-store` vérifiés sur `/`, `/blog`, un article, `/logiciel-lavage-auto`,
+      `/book/…`) : `app/layout.tsx` lit des cookies (`theme` depuis juin, langue via `getLangue()`
+      depuis d505a3c du 2026-11-14), ce qui rend tout le site dynamique.
+      Les e2e de la CI tournent sur GitHub (`npm run start`), pas sur Vercel : ils ne comptent pas.
+      - Gains : CPU Vercel des pages publiques quasi nul, pages plus rapides, une adresse par langue
+        (`/en`, `/es`, `/de`) mieux référencée.
+      - À faire : layout séparé pour les pages publiques sans lecture de cookies ; thème appliqué
+        côté navigateur par un script en tête de page (pas de flash clair → sombre) ; langue par
+        adresse avec redirection à la première visite ; état « connecté » de la navigation côté
+        navigateur ; vérifier qu'aucune de ces pages ne lit la base (sinon revalidation).
+        Le tableau de bord garde sa lecture des cookies (`generateViewport`, couleur de barre iPhone).
+      - Hors périmètre : `/book/[slug]` (données par laveur), tableau de bord.
+      - Avant de lancer : capture Vercel > Usage > Fluid Active CPU par route pour confirmer.
+      - Estimation 1 à 2 jours, en PR, vérifié ordinateur + mobile, deux thèmes, quatre langues.
+      - Sécurité immédiate en parallèle : passage en Vercel Pro (déjà prévu plus haut).
+
 - [ ] **PRIORITÉ — Séparer la base de données dev / prod.** Aujourd'hui le local et
       la prod partagent le **même projet Supabase** → tester en local mute les vraies
       données, et une manip SQL touche directement la prod. À faire dès qu'il y a des
