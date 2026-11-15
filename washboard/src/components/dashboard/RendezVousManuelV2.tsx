@@ -5,6 +5,7 @@ import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import type { ServiceFull } from '@/components/dashboard/calendrierTypes'
 import { VEHICLE_TYPES, type ManualBooking } from '@/hooks/useRendezVousManuel'
 import { centreParAdresse, centresDe, type CentreAutoPublic } from '@/lib/centreAuto'
+import { formatPrice } from '@/lib/pricing'
 import { Feuille, BOUTON, CHAMP, ETIQUETTE, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
 import { useT } from '@/components/i18n/I18nProvider'
 
@@ -36,6 +37,21 @@ function Champ({ id, label, children }: { id: string; label: string; children: R
       {children}
     </div>
   )
+}
+
+/** Prix calculé au catalogue pour la prestation et les véhicules choisis (même calcul que le hook). */
+function prixCatalogue(services: ServiceFull[], form: { service_id: string; vehicle_type: string; vehicle_count: number }): number | null {
+  const svc = services.find(s => s.id === form.service_id)
+  if (!svc) return null
+  return (svc.vehicle_price_overrides?.[form.vehicle_type] ?? svc.price) * form.vehicle_count
+}
+
+/** Le prix tapé ne peut que baisser : plus bas, c'est une remise gardée en mémoire ; plus haut, le prix calculé s'applique. */
+function phrasePrixSaisi(services: ServiceFull[], form: { service_id: string; vehicle_type: string; vehicle_count: number; booked_price: number }): string {
+  const catalogue = prixCatalogue(services, form)
+  if (catalogue === null || form.booked_price === catalogue) return 'Calculé automatiquement. Vous pouvez le baisser pour faire une remise.'
+  if (form.booked_price < catalogue) return `Remise de ${formatPrice(Math.round((catalogue - form.booked_price) * 100) / 100)} sur le prix normal (${formatPrice(catalogue)}), gardée en mémoire.`
+  return `Le prix ne peut que baisser : c'est le prix normal (${formatPrice(catalogue)}) qui sera enregistré.`
 }
 
 export default function RendezVousManuelV2({
@@ -192,7 +208,7 @@ export default function RendezVousManuelV2({
               onChange={e => updateManual('booked_price', parseFloat(e.target.value) || 0)}
               className={CHAMP}
             />
-            <p className={`mt-1.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr('Calculé automatiquement, modifiable.')}</p>
+            <p className={`mt-1.5 text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{tr(phrasePrixSaisi(services, form))}</p>
           </Champ>
         </section>
 

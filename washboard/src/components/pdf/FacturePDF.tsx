@@ -159,7 +159,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
             {/* Sur une facture de réservation, la remise ne peut venir que du créneau
                 optimisé, et le client l'a vue nommée ainsi en réservant. Sur un document
                 écrit à la main, c'est une remise, point. */}
-            <Text style={s.cDesig}>{contenu.genre ? 'Remise' : 'Remise créneau optimisé'}</Text>
+            <Text style={s.cDesig}>{contenu.libelleRemise ?? (contenu.genre ? 'Remise' : 'Remise créneau optimisé')}</Text>
             <Text style={s.cQte}>1</Text>
             <Text style={s.cPu}>{euros(-ht(remiseTtc))}</Text>
             <Text style={s.cTot}>{euros(-ht(remiseTtc))}</Text>

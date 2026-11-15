@@ -20,6 +20,7 @@ import { useConges, rendezVousTouches, avisRendezVousTouches } from '@/hooks/use
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
 import LigneAcompteV2 from '@/components/dashboard/LigneAcompteV2'
+import LigneRemiseV2 from '@/components/dashboard/LigneRemiseV2'
 import { Feuille } from '@/components/dashboard/FeuilleV2'
 import RendezVousManuelV2 from '@/components/dashboard/RendezVousManuelV2'
 import ProposerCreneauV2, { type OrigineCreneau } from '@/components/dashboard/ProposerCreneauV2'
@@ -345,7 +346,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   // commentaire en tête de fichier et `useRendezVousFiche`.
   const {
     selected, setSelected, openBooking,
-    updating,
+    updating, majPrix,
     editNotes, setEditNotes, notesSaving, saveNotes,
     rescheduling, setRescheduling, startReschedule,
     editDate, setEditDate, editTime, setEditTime, rescheduleSaving, rescheduleErr, saveReschedule,
@@ -721,6 +722,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                     factureEnCours={factureEnCours}
                     factureMsg={factureMsg}
                     emettreFactureManuelle={emettreFactureManuelle}
+                    majPrix={majPrix}
                   />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2.5 px-6 text-center">
@@ -1235,6 +1237,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           factureEnCours={factureEnCours}
           factureMsg={factureMsg}
           emettreFactureManuelle={emettreFactureManuelle}
+          majPrix={majPrix}
         />
       )}
     </div>
@@ -1331,6 +1334,7 @@ function DetailRendezVous({
   clotureDemandee, setClotureDemandee,
   facturationPrete,
   factureEnCours, factureMsg, emettreFactureManuelle,
+  majPrix,
 }: {
   booking: Booking
   onClose: () => void
@@ -1356,6 +1360,7 @@ function DetailRendezVous({
   factureEnCours: boolean
   factureMsg: { id: string; texte: string; completer: boolean } | null
   emettreFactureManuelle: (id: string) => void
+  majPrix: (id: string, champs: { booked_price: number; remise_laveur: number }) => void
 }) {
   const loc = useLocale()
   const tr = useT()
@@ -1513,6 +1518,8 @@ function DetailRendezVous({
           </div>
 
           <DetailPrixV2 b={b} className="mt-3 space-y-1.5 px-1" />
+
+          <LigneRemiseV2 rdv={b} onMaj={champs => majPrix(b.id, champs)} />
 
           <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
 
@@ -1809,6 +1816,7 @@ function FicheRdvBureauV2({
   clotureDemandee, setClotureDemandee,
   facturationPrete,
   factureEnCours, factureMsg, emettreFactureManuelle,
+  majPrix,
 }: {
   booking: Booking
   updating: boolean
@@ -1833,6 +1841,7 @@ function FicheRdvBureauV2({
   factureEnCours: boolean
   factureMsg: { id: string; texte: string; completer: boolean } | null
   emettreFactureManuelle: (id: string) => void
+  majPrix: (id: string, champs: { booked_price: number; remise_laveur: number }) => void
 }) {
   const loc = useLocale()
   const tr = useT()
@@ -2000,7 +2009,9 @@ function FicheRdvBureauV2({
             un total sans savoir d'où venaient les options et les frais de déplacement. */}
         <DetailPrixV2 b={b} className="mt-4 space-y-1.5" />
 
-        <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
+        <LigneRemiseV2 rdv={b} onMaj={champs => majPrix(b.id, champs)} />
+
+          <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
 
         <div className="mt-4">
           <label htmlFor="rdv-notes-bureau" className={`mb-1.5 block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>

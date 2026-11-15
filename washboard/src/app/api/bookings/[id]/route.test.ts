@@ -314,6 +314,18 @@ describe('PATCH /api/bookings/[id] — montant encaissé à la clôture', () => 
     expect(ecritureBookings()).toEqual({ status: 'done', booked_price: 65.5, smart_discount: 0 })
   })
 
+  it('un montant encaissé différent remplace aussi la remise du laveur posée avant', async () => {
+    plan.booking = { ...plan.booking, booked_price: 49, remise_laveur: 10 }
+    await PATCH(requete({ status: 'done', montant_encaisse: 40 }), { params })
+    expect(ecritureBookings()).toEqual({ status: 'done', booked_price: 40, smart_discount: 0, remise_laveur: 0 })
+  })
+
+  it('le montant prévu après remise du laveur ne touche à rien', async () => {
+    plan.booking = { ...plan.booking, booked_price: 49, remise_laveur: 10 }
+    await PATCH(requete({ status: 'done', montant_encaisse: 44 }), { params })
+    expect(ecritureBookings()).toEqual({ status: 'done' })
+  })
+
   it('ne touche pas au prix quand le montant est celui prévu (remise déduite)', async () => {
     await PATCH(requete({ status: 'done', montant_encaisse: 54 }), { params })
     expect(ecritureBookings()).toEqual({ status: 'done' })
