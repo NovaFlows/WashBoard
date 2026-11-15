@@ -207,9 +207,15 @@ export function useRendezVousFiche({
     }
   }
 
+  /** Prix changé par une remise du laveur (LigneRemiseV2) : la liste et la fiche suivent. */
+  function majPrix(id: string, champs: { booked_price: number; remise_laveur: number }) {
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, ...champs } : b))
+    setSelected(prev => prev?.id === id ? { ...prev, ...champs } : prev)
+  }
+
   return {
     selected, setSelected, openBooking,
-    updating,
+    updating, majPrix,
     editNotes, setEditNotes, notesSaving, saveNotes,
     rescheduling, setRescheduling, startReschedule,
     editDate, setEditDate, editTime, setEditTime, rescheduleSaving, rescheduleErr, saveReschedule,

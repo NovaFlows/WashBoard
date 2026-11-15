@@ -162,6 +162,10 @@ export type Booking = {
   smart_discount: number
   closed_late: boolean
   booked_price: number | null
+  /** Remise accordée par le laveur, déjà retranchée de `booked_price` (lib/remiseLaveur.ts). */
+  remise_laveur?: number | null
+  /** Rendez-vous saisi par le laveur dans son agenda (pas de mail au client pour une remise). */
+  saisie_par_laveur?: boolean | null
   vehicle_count: number
   is_professional: boolean
   company_name: string | null

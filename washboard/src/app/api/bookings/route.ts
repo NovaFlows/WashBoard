@@ -28,6 +28,7 @@ import { graceEnded, quotaReservations, quotaDepasse, debutPeriodeQuota, debutSo
 import { withErrorHandling, errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
 import { genererJetonReservation } from '@/lib/bookingToken'
+import { remiseALaSaisie } from '@/lib/remiseLaveur'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
 
@@ -165,10 +166,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     vehicle_type, vehicle_count, is_smart_slot: smartDemande, smart_discount: remiseSmartDemandee,
     // Vérifié contre les réglages du laveur plus bas, jamais recopié tel quel.
     lieu,
-    // Le prix envoyé par le client est extrait puis délibérément IGNORÉ : il
-    // reste accepté pour ne pas casser les clients existants, mais le montant
-    // enregistré est recalculé plus bas depuis le catalogue.
-    booked_price: _prixClientIgnore, is_professional, company_name, siret, billing_address,
+    // Le prix envoyé par le client ne fixe JAMAIS le montant : il est recalculé plus bas depuis
+    // le catalogue. Seul le laveur qui saisit son propre rendez-vous peut s'en servir, et
+    // seulement pour baisser ce prix calculé (remise, lib/remiseLaveur.ts).
+    booked_price: prixSaisi, is_professional, company_name, siret, billing_address,
     vehicles_detail: vehiculesRecus, selected_addons: optionsRecues, travel_fee,
     // Écrite APRÈS la création, pas dans la RPC : la définition de
     // `create_booking_atomic` ne vit qu'en base, pas dans ce dépôt. Lui passer
@@ -719,7 +720,11 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     }
   }
 
-  const base_price = prix_vehicules + prix_options - (promotion?.remise ?? 0) - (fidelite?.remise ?? 0)
+  const prix_calcule = prix_vehicules + prix_options - (promotion?.remise ?? 0) - (fidelite?.remise ?? 0)
+  // Le prix tapé par le laveur se compare au prix de la prestation, hors frais de déplacement :
+  // c'est ce que montre son formulaire.
+  const remise_laveur = isOwner ? remiseALaSaisie(prix_calcule, prixSaisi) : 0
+  const base_price = prix_calcule - remise_laveur
   const booked_price = base_price + computed_travel_fee
 
   // ── Acompte (lib/acompte.ts) ───────────────────────────────────────────
@@ -788,6 +793,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       // Même prudence : les colonnes d'acompte ne partent que s'il y a un acompte à demander.
       ...(acompte ? { acompte_montant: acompte.montant, acompte_statut: 'en_attente', acompte_echeance: acompte.echeance, acompte_accepte: true } : {}),
       ...(fidelite && fidelite.remise > 0 ? { fidelite_remise: fidelite.remise } : {}),
+      ...(remise_laveur > 0 ? { remise_laveur } : {}),
     },
     p_capacity: isOwner ? null : capacite,
   })
@@ -976,6 +982,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
   return Response.json({
     data: {
       id, booked_price, jeton,
+      ...(remise_laveur > 0 ? { remise_laveur } : {}),
       // La carte APRÈS cette réservation : la récompense utilisée n'est plus disponible.
       ...(fidelite && etatApres ? { fidelite: { jeton: fidelite.carte.jeton, remise: fidelite.remise, etat: etatApres, phrase: phraseCarte(etatApres, fidelite.reglages), carte: fidelite.apparence, gain: tamponsPour({ vehicle_count: count }, fidelite.reglages.tampon_par_vehicule) } } : {}),
       ...(acompte ? { acompte: { montant: acompte.montant, liens: liensDePaiement(acompte.reglages.liens, acompte.montant), virement: virementPour(acompte.reglages, id), wero: weroPour(acompte.reglages), echeance: acompte.echeance, conditions: conditionsAcompte(acompte.reglages) } } : {}),
