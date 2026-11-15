@@ -68,7 +68,7 @@ function hrefMetier(theme: Theme): string | undefined {
 
 const title = 'Logiciel pour prestataires de services à domicile | WashBoard'
 const description =
-  "Le logiciel pour les prestataires de services à domicile qui interviennent chez leurs clients (lavage auto, ménage, vitres, canapés, piscines) : réservation en ligne, agenda, créneaux qui limitent les trajets, frais de déplacement automatiques et facturation conforme. Un mois offert, sans carte bancaire."
+  "Le logiciel pour les prestataires de services à domicile qui interviennent chez leurs clients (lavage auto, ménage, vitres, canapés, piscines) : réservation en ligne, agenda, créneaux qui limitent les trajets, frais de déplacement automatiques et facturation conforme. 14 jours offerts, sans carte bancaire."
 const url = `${SITE_URL}/logiciel-services-a-domicile`
 
 export const metadata: Metadata = {
@@ -249,7 +249,7 @@ export default function Page() {
         metiers={metiers}
         faq={faqItems}
         ctaTitre="Tu interviens, WashBoard gère le reste."
-        ctaTexte="Ta page de réservation en ligne en 10 minutes, et ton premier mois offert."
+        ctaTexte="Ta page de réservation en ligne en 10 minutes, et 14 jours d’essai offerts."
       />
     </>
   )

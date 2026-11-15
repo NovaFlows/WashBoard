@@ -99,7 +99,7 @@ export default async function MetierPageTemplate({
           <h1 className="pg-h1">{h1}</h1>
           <p className="chapo">{intro}</p>
           <div className="heros-cta">
-            <Link href="/signup" className="btn btn-accent">{t('Lancer mon mois gratuit')}</Link>
+            <Link href="/signup" className="btn btn-accent">{t('Lancer mon essai gratuit')}</Link>
             <Link href="/booking" className="pg-lien-doux">{t('ou prendre un appel')}</Link>
           </div>
           <p className="rassure">{t('Sans engagement · Sans carte bancaire')}</p>
@@ -251,7 +251,7 @@ export default async function MetierPageTemplate({
           <h2 className="h2">{ctaTitre}</h2>
           <p className="chapo" style={{ marginInline: 'auto' }}>{ctaTexte}</p>
           <div className="heros-cta">
-            <Link href="/signup" className="btn btn-accent">{t('Lancer mon mois gratuit')}</Link>
+            <Link href="/signup" className="btn btn-accent">{t('Lancer mon essai gratuit')}</Link>
           </div>
           <p className="rassure">{t('Sans engagement · Sans carte bancaire')}</p>
         </div>

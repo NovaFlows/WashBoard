@@ -42,7 +42,7 @@ export const tf0: Dictionnaire = {
   'Total ({basketCount} élément{v1})': 'Total ({basketCount} item{v1})',
   '● Dans le secteur du laveur{v0}': '● In the washer\'s area{v0}',
   'Plafond atteint : {unite}': 'Limit reached: {unite}',
-  'Votre mois d’essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à {v0} réservations par mois.': 'Your trial month is over, and nothing is lost: booking page, calendar and clients are all still there. While you decide, the account runs on Découverte, limited to {v0} bookings per month.',
+  'Votre essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à {v0} réservations par mois.': 'Your trial is over, and nothing is lost: booking page, calendar and clients are all still there. While you decide, the account runs on Découverte, limited to {v0} bookings per month.',
   '{dus} mois de paiement en retard. Régularisez pour éviter la suspension de votre page de réservation.': '{dus} months of late payment. Settle it to avoid your booking page being suspended.',
   'Les réservations se remettent à zéro le {remiseAZero}, puis tous les mois à cette date. Les rendez-vous annulés ne comptent pas.': 'Bookings reset to zero on {remiseAZero}, then every month on that date. Cancelled appointments don\'t count.',
   'Client historique : toutes les fonctionnalités sont incluses, sans changer d’offre —{v0}{v1}.': 'Long-standing client: all features are included, without changing plan —{v0}{v1}.',

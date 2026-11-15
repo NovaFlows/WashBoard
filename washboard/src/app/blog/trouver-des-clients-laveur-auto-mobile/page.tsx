@@ -144,7 +144,7 @@ export default async function Page() {
           <p>
             {t('C’est exactement ce que fait WashBoard : un lien personnalisé à mettre dans votre fiche Google, votre bio Instagram et vos messages. Le client réserve seul, sans créer de compte, et vous recevez la demande.')}{' '}
             <Link href="/signup">
-              {t('Essai gratuit d’un mois')}
+              {t('Essai gratuit de 14 jours')}
             </Link>
             {t(', sans carte bancaire.')}
           </p>

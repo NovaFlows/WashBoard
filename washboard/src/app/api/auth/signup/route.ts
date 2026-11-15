@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger'
 import { normalizePhone, normaliserMobile, isPhoneExemptFromUniqueness } from '@/lib/phone'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { envoyerCodeSms, estMobileFrancais, phraseMobileRequis } from '@/lib/codeSms'
-import { PLAN_ESSAI } from '@/lib/plan'
+import { PLAN_ESSAI, finEssaiInscription } from '@/lib/plan'
 import { generateSlug } from '@/lib/slug'
 
 // Route publique qui crée des comptes et des lignes en base. Sans plafond, une
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
   }
 
   const baseSlug = generateSlug(name.trim())
-  const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  const trialEndsAt = finEssaiInscription()
   // Date ET adresse IP de l'acceptation des CGV, posées au moment précis de
   // l'inscription — pas recalculées plus tard, qui prouverait seulement que
   // la case EST cochée aujourd'hui, pas qu'elle l'était à l'inscription.

@@ -64,7 +64,7 @@ export const landing2: Dictionnaire = {
   'Sans carte bancaire, sans limite de durée': 'Sin tarjeta, sin límite de tiempo',
   'Soit {prix} € par an, {offre}': 'Es decir, {prix} € al año, {offre}',
   'Commencer gratuitement': 'Empezar gratis',
-  'Un mois d’essai avec tout débloqué, sans carte bancaire. Sans choix de formule, ton compte passe tout seul sur Découverte : on ne coupe rien.': 'Un mes de prueba con todo desbloqueado, sin tarjeta. Si no eliges plan, tu cuenta pasa sola a Découverte: no se corta nada.',
+  '14 jours d’essai avec tout débloqué, sans carte bancaire. Sans choix de formule, ton compte passe tout seul sur Découverte : on ne coupe rien.': '14 días de prueba con todo desbloqueado, sin tarjeta. Si no eliges plan, tu cuenta pasa sola a Découverte: no se corta nada.',
   'Tout-en-un': 'Todo en uno',
   'Le logiciel des pros du lavage auto et du detailing.': 'El software de los profesionales del lavado de coches y el detailing.',
   'Et aussi :': 'Y además:',

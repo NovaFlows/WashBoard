@@ -137,6 +137,17 @@ describe('POST /api/auth/signup — unicité du téléphone', () => {
     expect(inserts).toHaveLength(1)
   })
 
+  it('ouvre un essai Pro de 14 jours', async () => {
+    const avant = Date.now()
+    const { res } = await inscrire({ phone: NUMERO_EXEMPTE })
+    expect(res.status).toBe(200)
+    const fin = new Date(inserts[0].trial_ends_at as string).getTime()
+    const quatorzeJours = 14 * 24 * 60 * 60 * 1000
+    expect(fin - avant).toBeGreaterThanOrEqual(quatorzeJours - 1000)
+    expect(fin - avant).toBeLessThan(quatorzeJours + 60_000)
+    expect(inserts[0]).toMatchObject({ subscription_status: 'trial', plan: 'pro' })
+  })
+
   it('n\'interroge même pas la base pour un numéro exempté', async () => {
     // La requête ne doit pas être atteinte : c'est ce qui garantit qu'aucun
     // état de la base ne peut bloquer ce numéro.

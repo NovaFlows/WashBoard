@@ -81,7 +81,7 @@ export default function SignupPage() {
       <form onSubmit={handleSignup} noValidate className="flex flex-col gap-5">
         <div>
           <Guide gens={['ryan']} texte={t('Bienvenue ! On s’occupe de l’organisation, toi des voitures.')} />
-          <TitreEntree titre={t('Crée ton espace laveur')} sousTitre={t('1 mois gratuit, sans carte bancaire.')} />
+          <TitreEntree titre={t('Crée ton espace laveur')} sousTitre={t('14 jours gratuits, sans carte bancaire.')} />
         </div>
 
         <GroupeChamps>
@@ -125,7 +125,7 @@ export default function SignupPage() {
         {error && <Erreur texte={error} />}
 
         <BarreActions>
-          <BoutonPrincipal type="submit" chargement={loading} libelleChargement={t('Création du compte…')}>{t('Lancer mon mois gratuit')}</BoutonPrincipal>
+          <BoutonPrincipal type="submit" chargement={loading} libelleChargement={t('Création du compte…')}>{t('Lancer mon essai gratuit')}</BoutonPrincipal>
           <Link href="/login" className={`${LIEN_DISCRET} flex items-center justify-center`}>
             {t('Déjà un compte ?')}{t(' ')}<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('Se connecter')}</b>
           </Link>

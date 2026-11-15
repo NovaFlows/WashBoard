@@ -124,7 +124,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     une: true,
-    q: 'Que se passe-t-il après le mois gratuit ?',
+    q: 'Que se passe-t-il après l’essai gratuit ?',
     a: `Tu choisis une formule : ${starter.name} à ${tarifOffre(starter)} ou ${pro.name} à ${tarifOffre(pro)} — ou ${business.name}, ${tarifOffre(business)}, si tu travailles en équipe. Si tu ne choisis pas, ton compte passe tout seul sur l'offre ${decouverte.name} : ${tarifOffre(decouverte)}, limitée à ${BOOKING_QUOTA.decouverte} réservations par mois. On ne coupe rien. Aucune carte n'est demandée pendant l'essai.`,
   },
   {

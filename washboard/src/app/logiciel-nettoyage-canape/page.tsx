@@ -54,7 +54,7 @@ import type { FaqItem } from '@/components/blog/Prose'
 
 const title = 'Logiciel de nettoyage de canapés à domicile | WashBoard'
 const description =
-  'Le logiciel pour le nettoyage de canapés et textiles à domicile : prix par matière et par pièce, plusieurs pièces en une réservation, frais de déplacement automatiques, agenda, facturation et relances clients. Un mois offert, sans carte bancaire.'
+  'Le logiciel pour le nettoyage de canapés et textiles à domicile : prix par matière et par pièce, plusieurs pièces en une réservation, frais de déplacement automatiques, agenda, facturation et relances clients. 14 jours offerts, sans carte bancaire.'
 const url = `${SITE_URL}/logiciel-nettoyage-canape`
 
 export const metadata: Metadata = {
@@ -208,7 +208,7 @@ export default function Page() {
         fonctionnalites={fonctionnalites}
         faq={faqItems}
         ctaTitre="Tu nettoies, WashBoard gère le reste."
-        ctaTexte="Ta page de réservation en ligne en 10 minutes, et ton premier mois offert."
+        ctaTexte="Ta page de réservation en ligne en 10 minutes, et 14 jours d’essai offerts."
       />
     </>
   )

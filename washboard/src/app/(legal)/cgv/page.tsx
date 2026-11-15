@@ -10,7 +10,7 @@ export default function CGV() {
   return (
     <article className="lg">
       <h1>Conditions Générales de Vente</h1>
-      <p className="lg-maj">Dernière mise à jour : octobre 2026</p>
+      <p className="lg-maj">Dernière mise à jour : novembre 2026</p>
 
       <Section title="1. Objet">
         <p>
@@ -81,12 +81,14 @@ export default function CGV() {
 
       <Section title="4. Période d'essai">
         <p>
-          Tout nouveau Client bénéficie d&apos;une période d&apos;essai gratuite d&apos;<strong>un (1) mois</strong> à compter de la création
-          de son compte, sans engagement et sans carte bancaire requise.
+          Tout nouveau Client bénéficie d&apos;une période d&apos;essai gratuite de <strong>quatorze (14) jours</strong> à compter de la
+          création de son compte, sans engagement et sans carte bancaire requise. Les comptes créés avant la présente version
+          conservent la durée d&apos;essai et la date de fin qui leur avaient été indiquées.
         </p>
         <p>
-          À l&apos;issue de la période d&apos;essai, le compte est suspendu automatiquement si aucun abonnement payant n&apos;est souscrit.
-          Les données sont conservées pendant 30 jours supplémentaires, puis supprimées définitivement.
+          À l&apos;issue de la période d&apos;essai, si aucun abonnement payant n&apos;a été souscrit, le compte passe automatiquement
+          sur l&apos;offre gratuite Découverte, avec les fonctionnalités et limites propres à cette offre. Aucune somme n&apos;est due
+          et le Client peut souscrire une offre payante à tout moment.
         </p>
       </Section>
 

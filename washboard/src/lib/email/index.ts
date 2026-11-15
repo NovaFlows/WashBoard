@@ -573,14 +573,14 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
     return resend.emails.send({
       from: 'WashBoard <noreply@washboard.fr>',
       to,
-      subject: `Votre mois d'essai est terminé — quelle formule vous va ?`,
+      subject: `Votre essai est terminé — quelle formule vous va ?`,
       html: page({
-        titre: 'Votre mois d&apos;essai est terminé',
+        titre: 'Votre essai gratuit est terminé',
         entete: enteteWashBoard(url),
         contenu: `
-${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre mois d&apos;essai est terminé', sousTitre: 'Rien ne s&apos;arrête — à vous de choisir la suite' })}
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre essai gratuit est terminé', sousTitre: 'Rien ne s&apos;arrête — à vous de choisir la suite' })}
 ${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
-${paragraphe(`Vous avez essayé WashBoard pendant un mois, avec tout le produit. Votre page de
+${paragraphe(`Vous avez essayé WashBoard avec tout le produit. Votre page de
 réservation, votre agenda et vos clients sont toujours là — nous ne coupons rien.`, { marge: '0 0 20px' })}
 ${encadre(`En attendant votre choix, votre compte est passé sur l&apos;offre Découverte :
 gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.`, 'neutre', '0 0 20px')}

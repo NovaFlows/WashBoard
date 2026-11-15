@@ -187,6 +187,15 @@ export const PRIX_LAVEUR_SUPPLEMENTAIRE = 19
  *  paiement, le compte retombe sur la grille normale. */
 export const PLAN_ESSAI: Plan = 'pro'
 
+/** Durée de l'essai d'un compte créé aujourd'hui (30 jours jusqu'au 2026-11-15).
+ *  Les essais déjà en cours gardent leur `trial_ends_at`. */
+export const JOURS_ESSAI = 14
+
+/** `trial_ends_at` d'un compte qui s'inscrit maintenant. */
+export function finEssaiInscription(now: Date = new Date()): string {
+  return new Date(now.getTime() + JOURS_ESSAI * 24 * 60 * 60 * 1000).toISOString()
+}
+
 /** Offre à laquelle correspond le tarif des clients historiques
  *  (`grandfathered`). Ils payaient 49 € pour l'ancien Essentiel : c'est
  *  exactement le tarif du Pro dans la grille 2026, et ils ont tout débloqué.

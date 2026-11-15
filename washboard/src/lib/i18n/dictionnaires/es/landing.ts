@@ -22,7 +22,7 @@ export const landing: Dictionnaire = {
   'Ton agenda se remplit.': 'Tu agenda se llena.',
   'Toi, tu laves.': 'Tú lavas.',
   'Le logiciel des laveurs auto et du detailing à domicile. Tes clients réservent en ligne, ton agenda se remplit tout seul, tes factures partent dès que tu termines, et ta carte de fidélité les fait revenir.': 'El software para lavadores de coches y detailing a domicilio. Tus clientes reservan en línea, tu agenda se llena sola, tus facturas salen en cuanto terminas y tu tarjeta de fidelidad los hace volver.',
-  'Essayer 1 mois gratuit': 'Probar 1 mes gratis',
+  'Essayer 14 jours gratuits': 'Probar 14 días gratis',
   'Manipuler la démo': 'Probar la demo',
   'Sans carte bancaire. Ensuite, une offre gratuite sans limite de durée.': 'Sin tarjeta bancaria. Después, un plan gratuito sin límite de tiempo.',
   'Pensé pour le téléphone': 'Pensado para el móvil',
@@ -98,7 +98,7 @@ export const landing: Dictionnaire = {
 
   'Tu fais le service.': 'Tú haces el servicio.',
   'On gère le reste.': 'Nosotros nos ocupamos del resto.',
-  'Ta page de réservation en ligne en 10 minutes. Un mois offert, sans carte bancaire.': 'Tu página de reservas en línea en 10 minutos. Un mes gratis, sin tarjeta bancaria.',
+  'Ta page de réservation en ligne en 10 minutes. 14 jours offerts, sans carte bancaire.': 'Tu página de reservas en línea en 10 minutos. 14 días gratis, sin tarjeta bancaria.',
   'Créer mon compte': 'Crear mi cuenta',
   'Revoir la démo': 'Volver a ver la demo',
 

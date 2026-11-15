@@ -13,7 +13,7 @@ export default async function Heros() {
           <TitreRotatif />
           <p className="chapo">{t('Le logiciel des laveurs auto et du detailing à domicile. Tes clients réservent en ligne, ton agenda se remplit tout seul, tes factures partent dès que tu termines, et ta carte de fidélité les fait revenir.')}</p>
           <div className="heros-cta">
-            <Link className="btn btn-accent" href="/signup">{t('Essayer 1 mois gratuit')}</Link>
+            <Link className="btn btn-accent" href="/signup">{t('Essayer 14 jours gratuits')}</Link>
             <a className="btn btn-ligne" href="#demo">{t('Manipuler la démo')}</a>
           </div>
           <p className="rassure">{t('Sans carte bancaire. Ensuite, une offre gratuite sans limite de durée.')}</p>

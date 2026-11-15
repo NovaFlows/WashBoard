@@ -81,7 +81,7 @@ export default function LoginPage() {
         <BarreActions>
           <BoutonPrincipal type="submit" chargement={loading} libelleChargement="Connexion…">{t('Se connecter')}</BoutonPrincipal>
           <Link href="/signup" className={`${LIEN_DISCRET} flex items-center justify-center`}>
-            {t('Pas encore de compte ?')}{t(' ')}<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('1 mois d’essai gratuit')}</b>
+            {t('Pas encore de compte ?')}{t(' ')}<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('14 jours d’essai gratuit')}</b>
           </Link>
         </BarreActions>
       </form>

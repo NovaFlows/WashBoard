@@ -66,14 +66,14 @@ export default function Tarifs() {
                   >{t(LIBELLE_RDV_BUSINESS)}</a>
                 ) : (
                   <Link className={`btn ${card.highlight || card.price === 0 ? 'btn-ligne' : 'btn-encre'}`} href="/signup">
-                    {card.price === 0 ? t('Commencer gratuitement') : t('Essayer 1 mois gratuit')}
+                    {card.price === 0 ? t('Commencer gratuitement') : t('Essayer 14 jours gratuits')}
                   </Link>
                 )}
               </div>
             )
           })}
         </div>
-        <p className="rassure">{t('Un mois d’essai avec tout débloqué, sans carte bancaire. Sans choix de formule, ton compte passe tout seul sur Découverte : on ne coupe rien.')}</p>
+        <p className="rassure">{t('14 jours d’essai avec tout débloqué, sans carte bancaire. Sans choix de formule, ton compte passe tout seul sur Découverte : on ne coupe rien.')}</p>
       </div>
     </section>
   )

@@ -184,7 +184,7 @@ export default function AbonnementV2({
 
         <div className="mt-4 space-y-2.5">
           {doitChoisir && (
-            <Constat ton="accent">{t('Votre mois d’essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à {v0} réservations par mois.', { v0: plafondReservations ?? 5 })}</Constat>
+            <Constat ton="accent">{t('Votre essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à {v0} réservations par mois.', { v0: plafondReservations ?? 5 })}</Constat>
           )}
           {subscriptionStatus === 'trial' && joursRestants !== null && (
             <Constat ton={joursRestants <= 7 ? 'ambre' : 'accent'}>
