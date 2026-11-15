@@ -97,6 +97,15 @@ html:has(.wb-vitrine) { scroll-behavior: smooth; scroll-padding-top: 84px; }
 @media (max-width: 420px) {
   .wb-vitrine .nav .theme-btn { display: none; }
 }
+/* Téléphone : le globe ne montre plus le code de langue et le logo ne se laisse plus écraser
+   (sans ça, « WashBoard » passait sous le globe, Alexandre 2026-11-15). */
+.wb-vitrine .marque { flex: none; }
+@media (max-width: 520px) {
+  .wb-vitrine .nav .wb-langue-btn { padding: 6px 4px !important; gap: 0 !important; }
+  .wb-vitrine .nav .wb-langue-btn span { display: none; }
+  .wb-vitrine .nav .w { gap: 8px; }
+  .wb-vitrine .nav .marque { font-size: 18px; gap: 8px; }
+}
 
 /* ── Typo de page ── */
 .wb-vitrine .sur-titre { font-size: 14px; font-weight: 550; color: var(--gris); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
