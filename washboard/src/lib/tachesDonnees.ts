@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/logger'
 import { tableAbsente } from '@/lib/suiviAppels'
-import type { Tache } from '@/lib/tachesEquipe'
+import type { Idee, Tache } from '@/lib/tachesEquipe'
 
 /** `actif` est faux tant que la table `taches_equipe` n'existe pas en base. Toujours précédée de `exigerEquipe`. */
 export async function chargerTaches(): Promise<{ taches: Tache[]; actif: boolean }> {
@@ -13,4 +13,16 @@ export async function chargerTaches(): Promise<{ taches: Tache[]; actif: boolean
     return { taches: [], actif: true }
   }
   return { taches: (data ?? []) as Tache[], actif: true }
+}
+
+/** Idem pour les idées (table `idees_equipe`). */
+export async function chargerIdees(): Promise<{ idees: Idee[]; actif: boolean }> {
+  const { data, error } = await createAdminClient()
+    .from('idees_equipe').select('id, titre, created_at').order('created_at', { ascending: true }).limit(500)
+  if (error) {
+    if (tableAbsente(error)) return { idees: [], actif: false }
+    logger.error('equipe.idees.read_failed', {}, error)
+    return { idees: [], actif: true }
+  }
+  return { idees: (data ?? []) as Idee[], actif: true }
 }

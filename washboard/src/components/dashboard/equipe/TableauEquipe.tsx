@@ -16,7 +16,7 @@ import type { ProspectARappeler } from '@/lib/prospects'
 import type { ResumeMembre } from '@/lib/espaceEquipe'
 import CartesEquipe from './CartesEquipe'
 import TachesEquipe from './TachesEquipe'
-import type { Tache } from '@/lib/tachesEquipe'
+import type { Idee, Tache } from '@/lib/tachesEquipe'
 
 // Accueil de l'espace équipe sur ordinateur (Alexandre, 2026-11-05) : un tableau de
 // bord plutôt que trois portes. Le téléphone garde la liste courte (AccueilEquipeV2).
@@ -145,7 +145,9 @@ export function Vide({ children }: { children: React.ReactNode }) {
 
 type FiltreRappel = 'tous' | 'clients' | 'prospects'
 
-export default function TableauEquipe({ laveurs, resume, email, maintenant, prospects = null, rappelsProspects = [], equipe = [], taches = [], tachesActives = false }: {
+export default function TableauEquipe({ laveurs, resume, email, maintenant, prospects = null, rappelsProspects = [], equipe = [], taches = [], tachesActives = false, idees = [], ideesActives = false }: {
+  idees?: Idee[]
+  ideesActives?: boolean
   taches?: Tache[]
   tachesActives?: boolean
   laveurs: LaveurResume[]
@@ -201,7 +203,7 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
       {/* L'équipe : un clic ouvre les laveurs et les prospects du membre (2026-11-09). */}
       {equipe.length > 0 && <CartesEquipe equipe={equipe} />}
 
-      <TachesEquipe taches={taches} actif={tachesActives} />
+      <TachesEquipe taches={taches} actif={tachesActives} idees={idees} ideesActives={ideesActives} />
 
       {/* Les chiffres : chacun ouvre la liste filtrée correspondante. */}
       <div className="grid grid-cols-5 divide-x divide-[color:var(--v2-filet)] overflow-hidden rounded-[var(--v2-radius-surface)] border border-[color:var(--v2-filet)] bg-[color:var(--v2-color-surface)]">

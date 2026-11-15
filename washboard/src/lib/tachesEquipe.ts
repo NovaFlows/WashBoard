@@ -15,6 +15,25 @@ export const concerne = (t: Tache, f: Assigne): boolean => t.assigne_a === f || 
 
 export const TITRE_MAX = 200
 
+/** Une idée : une note à garder de côté, qui n'est pas (encore) une tâche. */
+export type Idee = { id: string; titre: string; created_at: string }
+
+/** Valide l'ajout d'une idée : un titre non vide. */
+export function validerIdee(corps: unknown): { erreur: string } | { titre: string } {
+  const t = (corps as { titre?: unknown } | null)?.titre
+  const titre = typeof t === 'string' ? t.trim() : ''
+  if (!titre) return { erreur: 'Décrivez l’idée.' }
+  if (titre.length > TITRE_MAX) return { erreur: `L’idée est trop longue (${TITRE_MAX} caractères maximum).` }
+  return { titre }
+}
+
+/** Valide la personne à qui on confie une idée devenue tâche. */
+export function validerAssigne(corps: unknown): { erreur: string } | { assigne_a: Assigne } {
+  const a = (corps as { assigne_a?: unknown } | null)?.assigne_a
+  if (!ASSIGNES.includes(a as Assigne)) return { erreur: 'Choisissez un membre ou « Équipe ».' }
+  return { assigne_a: a as Assigne }
+}
+
 /** Valide la création d'une tâche : un titre non vide et un membre de l'équipe. */
 export function validerTache(corps: unknown): { erreur: string } | { titre: string; assigne_a: Assigne } {
   const c = corps as { titre?: unknown; assigne_a?: unknown } | null
