@@ -13,7 +13,7 @@ import type { PaysTelephone } from '@/lib/phone'
 // n'afficher que ces pays ; le serveur lit la même, et refuse les autres. Absente : FR, BE, CH.
 // La valeur est lue au DÉPLOIEMENT : après l'avoir changée, il faut redéployer.
 
-export const PAYS_OUVERTS_PAR_DEFAUT: readonly PaysTelephone[] = ['FR', 'BE', 'CH']
+export const PAYS_OUVERTS_PAR_DEFAUT: readonly PaysTelephone[] = ['FR', 'BE', 'CH', 'LU']
 // Le Québec est codé (téléphone, facturation) mais PAS ouvrable, même par la variable d'environnement :
 // le fuseau de l'appli est celui de Paris dans une cinquantaine de fichiers (6 h de décalage au Québec :
 // créneaux, rappels et jours qui basculent faux). À ajouter ici quand le fuseau sera par laveur.
