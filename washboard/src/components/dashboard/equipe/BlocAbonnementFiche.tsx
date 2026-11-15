@@ -97,16 +97,20 @@ type Resultat = { payeJusquAu: string; parrainage: { statut: string; parrain?: s
 
 function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parrain: string | null; onClose: () => void }) {
   const router = useRouter()
-  const [offre, setOffre] = useState<Exclude<Plan, 'decouverte'>>(estOffrePayante(w.plan) ? w.plan : 'pro')
+  // Un compte déjà payant renouvelle en général la même offre. En essai, tout le monde est en Pro :
+  // rien n'est choisi d'avance, pour ne pas enregistrer un Pro à la place d'un Starter.
+  const payeDeja = w.subscription_status === 'active' || w.subscription_status === 'past_due'
+  const [offre, setOffre] = useState<Exclude<Plan, 'decouverte'> | null>(payeDeja && estOffrePayante(w.plan) ? w.plan : null)
   const [duree, setDuree] = useState<1 | 12>(1)
   const [verifie, setVerifie] = useState(false)
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [resultat, setResultat] = useState<Resultat | null>(null)
   const [doublon, setDoublon] = useState<{ offre: Plan; dureeMois: number; confirmeLe: string } | null>(null)
-  const montant = duree === 12 ? yearlyPrice(PLAN_PRICES[offre]) : PLAN_PRICES[offre]
+  const montant = offre ? (duree === 12 ? yearlyPrice(PLAN_PRICES[offre]) : PLAN_PRICES[offre]) : null
 
   async function confirmer() {
+    if (!offre) return
     setEnCours(true)
     setErreur(null)
     const confirmerDoublon = doublon !== null
@@ -137,7 +141,7 @@ function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parr
       <Feuille titre="Paiement enregistré" sousTitre={w.name} onClose={onClose}
         pied={<button type="button" onClick={onClose} className={`${BOUTON} w-full border border-[color:var(--v2-filet-fort)]`} style={PRESSION}>Fermer</button>}>
         <div className="space-y-3">
-          <Constat ton="vert">{`${PLAN_LABELS[offre]} actif, payé jusqu’au ${dateCourte(resultat.payeJusquAu)}.`}</Constat>
+          <Constat ton="vert">{`${offre ? PLAN_LABELS[offre] : 'Abonnement'} actif, payé jusqu’au ${dateCourte(resultat.payeJusquAu)}.`}</Constat>
           {p?.statut === 'recompense' && p.parrain && <Constat ton="vert">{`${p.parrain} a reçu son mois offert.`}</Constat>}
           {p?.statut === 'echec' && <Constat ton="ambre">Le mois offert du parrain n’a pas pu être appliqué. Il sera réessayé cette nuit.</Constat>}
         </div>
@@ -150,7 +154,7 @@ function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parr
       pied={
         <div className="flex gap-2.5">
           <button type="button" onClick={onClose} className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)]`} style={PRESSION}>Annuler</button>
-          <button type="button" onClick={() => void confirmer()} disabled={!verifie || enCours} className={`${BOUTON} flex-[1.4] text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
+          <button type="button" onClick={() => void confirmer()} disabled={!offre || !verifie || enCours} className={`${BOUTON} flex-[1.4] text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
             {enCours ? 'Enregistrement…' : doublon ? 'Oui, deuxième paiement' : 'Confirmer le paiement'}
           </button>
         </div>
@@ -179,7 +183,7 @@ function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parr
         </div>
         <p className={`flex items-baseline justify-between text-[14px] ${corps}`}>
           <span className="text-[color:var(--v2-color-gris)]">Paiement à saisir</span>
-          <span className={`text-[20px] ${corpsFort} tabular-nums`}>{montant} €</span>
+          <span className={`text-[20px] ${corpsFort} tabular-nums`}>{montant === null ? '—' : `${montant} €`}</span>
         </p>
         {parrain && <Constat ton="ambre">{`Son parrain ${parrain} recevra 1 mois offert.`}</Constat>}
         <label className={`flex cursor-pointer items-start gap-2.5 text-[14px] ${corps}`}>
