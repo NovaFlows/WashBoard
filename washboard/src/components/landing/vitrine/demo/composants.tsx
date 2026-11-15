@@ -5,6 +5,7 @@ import { variablesCarte } from '@/lib/carteFidelite'
 import '@/components/fidelite/carteFidelite3D.css'
 import '../base.css'
 import './demo.css'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // ── Compte à rebours des promotions (fictif : fin dimanche 23 h 59) ──
 
@@ -30,14 +31,15 @@ function instantane() {
 }
 
 export function CompteARebours() {
-  const t = useSyncExternalStore(abonner, instantane, () => '')
-  return <span className="cd">{t}</span>
+  const restant = useSyncExternalStore(abonner, instantane, () => '')
+  return <span className="cd">{restant}</span>
 }
 
 // ── Carte de fidélité figée (fiche client, réglages) ──
 
 /** Le recto de la carte, sans 3D : mêmes classes `wb-cf-*` que le vrai composant. */
 export function CarteStatique({ tampons, requis, saute, couleur, recompense }: { tampons: number; requis: number; saute?: boolean; couleur: string; recompense: string }) {
+  const t = useT()
   const style = variablesCarte(couleur) as CSSProperties
   return (
     <div className="wb-cf wb-cf-statique" style={style}>
@@ -52,18 +54,18 @@ export function CarteStatique({ tampons, requis, saute, couleur, recompense }: {
               <div className="wb-cf-haut">
                 <div className="wb-cf-logo" aria-hidden>É</div>
                 <div className="wb-cf-ident">
-                  <div className="wb-cf-nom">Éclat Mobile</div>
-                  <div className="wb-cf-sous">Carte de fidélité</div>
+                  <div className="wb-cf-nom">{t('Éclat Mobile')}</div>
+                  <div className="wb-cf-sous">{t('Carte de fidélité')}</div>
                 </div>
                 <div className="wb-cf-numero">N° 4F2A</div>
               </div>
               <div className="wb-cf-bas">
                 <div style={{ minWidth: 0 }}>
-                  <span className="wb-cf-lbl">Récompense</span>
+                  <span className="wb-cf-lbl">{t('Récompense')}</span>
                   <span className="wb-cf-val">{recompense}</span>
                 </div>
                 <div className="wb-cf-compte">
-                  <span className="wb-cf-lbl">Tampons</span>
+                  <span className="wb-cf-lbl">{t('Tampons')}</span>
                   {/* key : l'animation rejoue quand le tampon arrive */}
                   <span key={tampons} className={`wb-cf-val wb-cf-gros${saute ? ' wb-cf-saute' : ''}`}>{tampons}/{requis}</span>
                 </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type Pt = [number, number]
 const H: Pt = [70, 250]
@@ -29,6 +30,7 @@ function Epingle({ p, t, coul = 'var(--encre)' }: { p: Pt; t: string; coul?: str
 }
 
 export default function CarteCreneaux({ avec }: { avec: boolean }) {
+  const tr = useT()
   const [km, setKm] = useState(KM_SANS)
   const kmActuel = useRef(KM_SANS)
   const premier = useRef(true)
@@ -42,8 +44,8 @@ export default function CarteCreneaux({ avec }: { avec: boolean }) {
     const de = kmActuel.current
     const t0 = performance.now()
     let raf = 0
-    const pas = (t: number) => {
-      const p = Math.min(1, (t - t0) / duree)
+    const pas = (ms: number) => {
+      const p = Math.min(1, (ms - t0) / duree)
       kmActuel.current = Math.round(de + (cible - de) * (1 - Math.pow(1 - p, 3)))
       setKm(kmActuel.current)
       if (p < 1) raf = requestAnimationFrame(pas)
@@ -54,7 +56,7 @@ export default function CarteCreneaux({ avec }: { avec: boolean }) {
 
   return (
     <div className="carte-cg">
-      <svg viewBox="0 0 400 310" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Carte illustrative de trois rendez-vous proches">
+      <svg viewBox="0 0 400 310" preserveAspectRatio="xMidYMid slice" role="img" aria-label={tr('Carte illustrative de trois rendez-vous proches')}>
         <rect width="400" height="310" style={{ fill: 'var(--surface-2)' }} />
         {RUES_V.map((r, i) => <path key={`v${i}`} d={r.d} style={{ stroke: 'var(--filet)' }} strokeWidth={r.w} fill="none" />)}
         {RUES_H.map((r, i) => <path key={`h${i}`} d={r.d} style={{ stroke: 'var(--filet)' }} strokeWidth={r.w} fill="none" />)}
@@ -66,11 +68,11 @@ export default function CarteCreneaux({ avec }: { avec: boolean }) {
         <g transform={`translate(${H[0]} ${H[1]})`}>
           <circle r="13" style={{ fill: 'var(--encre)' }} />
           <path d="M-5 1 0-4 5 1v5h-10z" style={{ fill: 'var(--surface)' }} />
-          <text x="0" y="28" textAnchor="middle" fontSize="11" fontWeight="650" style={{ fill: 'var(--encre)' }} fontFamily="var(--font-archivo), sans-serif">Toi</text>
+          <text x="0" y="28" textAnchor="middle" fontSize="11" fontWeight="650" style={{ fill: 'var(--encre)' }} fontFamily="var(--font-archivo), sans-serif">{tr('Toi')}</text>
         </g>
       </svg>
-      <div className="cg-km"><small>Route dans la journée</small><b className="num">{km} km</b></div>
-      <div className={`cg-gain${avec ? ' vu' : ''}`} aria-hidden>−{KM_SANS - KM_AVEC} km</div>
+      <div className="cg-km"><small>{tr('Route dans la journée')}</small><b className="num">{km} {tr('km')}</b></div>
+      <div className={`cg-gain${avec ? ' vu' : ''}`} aria-hidden>−{KM_SANS - KM_AVEC} {tr('km')}</div>
     </div>
   )
 }

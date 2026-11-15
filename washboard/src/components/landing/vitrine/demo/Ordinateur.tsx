@@ -6,6 +6,7 @@ import { useDemo } from './etat'
 import type { EcranDemo } from './types'
 import '../base.css'
 import './demo.css'
+import { useT } from '@/components/i18n/I18nProvider'
 
 const LARGEUR_ECRAN = 1100
 const HAUTEUR_ECRAN = 690
@@ -16,6 +17,7 @@ const HAUTEUR_ECRAN = 690
  * Dans la scène du héros (`.scene`), on laisse 40 px de marge à la scène.
  */
 export function Ordinateur({ ecranInitial = 'auj', largeurMax, masque }: { ecranInitial?: EcranDemo; largeurMax?: number; masque?: boolean }) {
+  const t = useT()
   const { epoque } = useDemo()
   const cadre = useRef<HTMLDivElement>(null)
   const [k, setK] = useState<number | null>(null)
@@ -40,7 +42,7 @@ export function Ordinateur({ ecranInitial = 'auj', largeurMax, masque }: { ecran
   return (
     <div ref={cadre} className="dk-cadre" hidden={masque} data-pret={k !== null ? 'oui' : 'non'} style={k !== null ? { height: HAUTEUR_ECRAN * k } : undefined}>
       <div className="dk" style={{ transform: `scale(${k ?? 1})` }}>
-        <div className="dk-barre"><i /><i /><i /><span>washboard.fr/dashboard</span></div>
+        <div className="dk-barre"><i /><i /><i /><span>{t('washboard.fr/dashboard')}</span></div>
         <AppLaveur key={epoque} mode="dk" ecranInitial={ecranInitial} />
       </div>
     </div>

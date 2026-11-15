@@ -8,6 +8,8 @@ const ts = require(process.cwd() + '/node_modules/typescript')
 const fs = require('fs')
 const path = require('path')
 
+// Nom de la fonction de traduction : `t` par défaut, `I18N_FN=tr` quand `t` est déjà pris (fichier de démonstration).
+const FN = process.env.I18N_FN || 't'
 const SC = process.env.I18N_PHRASES_DIR || require('os').tmpdir() + '/wb-phrases'
 fs.mkdirSync(SC, { recursive: true })
 const ATTRS = new Set(['placeholder', 'title', 'aria-label', 'alt', 'label', 'titre', 'sousTitre', 'texte', 'libelle', 'aide', 'description', 'surTitre', 'etiquette', 'sousLabel', 'valeur', 'message', 'aucunLabel', 'vide'])
@@ -60,7 +62,7 @@ function traiter(fichier, dry) {
   }
 
   function visit(n) {
-    if (ts.isIdentifier(n) && n.text === 't') {
+    if (ts.isIdentifier(n) && n.text === FN) {
       const par = n.parent
       const estDecl = (ts.isVariableDeclaration(par) && par.name === n) || (ts.isParameter(par) && par.name === n) || (ts.isBindingElement(par) && par.name === n)
       if (estDecl) conflitT = true
@@ -72,13 +74,13 @@ function traiter(fichier, dry) {
         const coeur = brut.slice(lead.length, brut.length - trail.length)
         const cle = decode(coeur.replace(/\s+/g, ' '))
         const c = comp(n)
-        if (c) { composants.set(c, true); edits.push({ start: n.getStart() + lead.length, end: n.getEnd() - trail.length, text: `{t('${esc(cle)}')}` }); phrases.push(cle) } else sansComposant.push(cle)
+        if (c) { composants.set(c, true); edits.push({ start: n.getStart() + lead.length, end: n.getEnd() - trail.length, text: `{${FN}('${esc(cle)}')}` }); phrases.push(cle) } else sansComposant.push(cle)
       }
     } else if (ts.isJsxAttribute(n) && n.initializer && ts.isStringLiteral(n.initializer) && ATTRS.has(n.name.getText())) {
       const v = n.initializer.text
       if (aTraduire(v)) {
         const c = comp(n)
-        if (c) { composants.set(c, true); edits.push({ start: n.initializer.getStart(), end: n.initializer.getEnd(), text: `{t('${esc(decode(v))}')}` }); phrases.push(decode(v)) } else sansComposant.push(v)
+        if (c) { composants.set(c, true); edits.push({ start: n.initializer.getStart(), end: n.initializer.getEnd(), text: `{${FN}('${esc(decode(v))}')}` }); phrases.push(decode(v)) } else sansComposant.push(v)
       }
     }
     ts.forEachChild(n, visit)
@@ -91,10 +93,10 @@ function traiter(fichier, dry) {
   for (const c of composants.keys()) {
     const corps = c.body
     if (ts.isBlock(corps)) {
-      const dejaT = corps.statements.some(s => ts.isVariableStatement(s) && s.declarationList.declarations.some(d => ts.isIdentifier(d.name) && d.name.text === 't'))
-      if (!dejaT) edits.push({ start: corps.getStart() + 1, end: corps.getStart() + 1, text: '\n  const t = useT()' })
+      const dejaT = corps.statements.some(s => ts.isVariableStatement(s) && s.declarationList.declarations.some(d => ts.isIdentifier(d.name) && d.name.text === FN))
+      if (!dejaT) edits.push({ start: corps.getStart() + 1, end: corps.getStart() + 1, text: `\n  const ${FN} = useT()` })
     } else {
-      edits.push({ start: corps.getStart(), end: corps.getEnd(), text: `{\n  const t = useT()\n  return ${corps.getText()}\n}` })
+      edits.push({ start: corps.getStart(), end: corps.getEnd(), text: `{\n  const ${FN} = useT()\n  return ${corps.getText()}\n}` })
     }
   }
   // import

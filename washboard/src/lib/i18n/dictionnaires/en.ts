@@ -8,6 +8,9 @@ import { messages } from './en/messages'
 import { landing2 } from './en/landing2'
 import { faq } from './en/faq'
 import { landing3 } from './en/landing3'
+import { demo } from './en/demo'
+import { demo2 } from './en/demo2'
+import { demo3 } from './en/demo3'
 
 // Une partie par fichier : pour traduire un nouvel écran, ajouter `./en/<partie>.ts` ici.
-export const en: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3 }
+export const en: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3, ...demo, ...demo2, ...demo3 }

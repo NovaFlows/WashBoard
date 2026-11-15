@@ -12,6 +12,7 @@ import { EcranPlus } from './plus'
 import type { EcranDemo, Feuille, Reglages, Vue } from './types'
 import '../base.css'
 import './demo.css'
+import { useT } from '@/components/i18n/I18nProvider'
 
 export type ModeApp = 'tel' | 'dk'
 
@@ -32,14 +33,15 @@ function Ecran({ c }: { c: Ctrl }) {
 }
 
 function BarreBas({ c }: { c: Ctrl }) {
-  const b = (k: EcranDemo, ic: string, t: string) => (
-    <button onClick={() => c.aller(k)} aria-current={c.v.ecran === k ? 'page' : undefined}>{I[ic]}{t}</button>
+  const t = useT()
+  const b = (k: EcranDemo, ic: string, libelle: string) => (
+    <button onClick={() => c.aller(k)} aria-current={c.v.ecran === k ? 'page' : undefined}>{I[ic]}{libelle}</button>
   )
   return (
-    <nav className="app-nav" aria-label="Navigation de l’application">
+    <nav className="app-nav" aria-label={t('Navigation de l’application')}>
       {b('auj', 'maison', 'Aujourd’hui')}
       {b('agenda', 'agenda', 'Agenda')}
-      <button className="plus" onClick={() => c.ouvrir({ t: 'nouveau' })} aria-label="Nouveau">{I.plus}</button>
+      <button className="plus" onClick={() => c.ouvrir({ t: 'nouveau' })} aria-label={t('Nouveau')}>{I.plus}</button>
       {b('clients', 'clients', 'Clients')}
       {b('plus', 'plus3', 'Plus')}
     </nav>
@@ -47,26 +49,28 @@ function BarreBas({ c }: { c: Ctrl }) {
 }
 
 function Rail({ c }: { c: Ctrl }) {
-  const b = (k: EcranDemo, ic: string, t: string, style?: { marginTop: string }) => (
-    <button className="it" style={style} onClick={() => c.aller(k)} aria-current={c.v.ecran === k ? 'page' : undefined}>{I[ic]}{t}</button>
+  const t = useT()
+  const b = (k: EcranDemo, ic: string, libelle: string, style?: { marginTop: string }) => (
+    <button className="it" style={style} onClick={() => c.aller(k)} aria-current={c.v.ecran === k ? 'page' : undefined}>{I[ic]}{libelle}</button>
   )
   return (
     <aside className="rail">
-      <div className="marque"><Logo /><div>WashBoard<small>Julien Roussel</small></div></div>
-      <button className="nouveau" onClick={() => c.ouvrir({ t: 'nouveau' })}>{I.plus}Nouveau</button>
+      <div className="marque"><Logo /><div>{t('WashBoard')}<small>{t('Julien Roussel')}</small></div></div>
+      <button className="nouveau" onClick={() => c.ouvrir({ t: 'nouveau' })}>{I.plus}{t('Nouveau')}</button>
       {b('auj', 'maison', 'Aujourd’hui')}
       {b('agenda', 'agenda', 'Agenda')}
       {b('clients', 'clients', 'Clients')}
       {b('chiffres', 'chiffres', 'Chiffres')}
       {b('plus', 'plus3', 'Plus')}
       {b('docs', 'doc', 'Documents', { marginTop: 'auto' })}
-      <div className="bas"><span className="av">JR</span>Julien R. <span className="badge" style={{ marginLeft: 'auto' }}>PRO</span></div>
+      <div className="bas"><span className="av">JR</span>{t('Julien R.')} <span className="badge" style={{ marginLeft: 'auto' }}>PRO</span></div>
     </aside>
   )
 }
 
 /** Application du laveur (téléphone ou ordinateur) : une vue locale, l'état de la journée partagé. */
 export function AppLaveur({ mode, ecranInitial }: { mode: ModeApp; ecranInitial: EcranDemo }) {
+  const t = useT()
   const { etat, dispatch } = useDemo()
   const dk = mode === 'dk'
   const [v, setV] = useState(() => vueInitiale(ecranInitial, dk))
@@ -148,11 +152,11 @@ export function AppLaveur({ mode, ecranInitial }: { mode: ModeApp; ecranInitial:
     <>
       <div className="app-defile" ref={defile}><Ecran c={c} /></div>
       <div className={`voile${ouvert ? ' ouvert' : ''}`} onClick={c.fermer} aria-hidden />
-      <aside className={`feuille${ouvert ? ' ouvert' : ''}`} role="dialog" aria-label="Détail" aria-hidden={!ouvert}>
+      <aside className={`feuille${ouvert ? ' ouvert' : ''}`} role="dialog" aria-label={t('Détail')} aria-hidden={!ouvert}>
         {derniere ? <ContenuFeuille c={c} f={derniere} /> : null}
       </aside>
       {dk ? null : <BarreBas c={c} />}
-      <div className={`toast${message.vu ? ' vu' : ''}`} role="status">{message.m ? <>{I.ok}<span>{message.m}</span></> : null}</div>
+      <div className={`toast${message.vu ? ' vu' : ''}`} role="status">{message.m ? <>{I.ok}<span>{t(message.m)}</span></> : null}</div>
     </>
   )
 

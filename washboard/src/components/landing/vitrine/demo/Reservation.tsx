@@ -7,6 +7,7 @@ import { useDemo } from './etat'
 import { I, RESEAU } from './icones'
 import '../base.css'
 import './demo.css'
+import { useT } from '@/components/i18n/I18nProvider'
 
 const VEH: [string, number][] = [['Citadine', 0], ['Berline', 5], ['SUV', 10], ['Utilitaire', 20]]
 const PRESTA: [string, string, string, number, string][] = [
@@ -23,6 +24,7 @@ const DEPART: Choix = { e: 0, veh: 0, presta: 'complet', poils: false, jour: 1, 
 
 /** Page de réservation côté client, dans un téléphone : elle suit les réglages de la démo. */
 export function ReservationClient() {
+  const t = useT()
   const { etat } = useDemo()
   const { r: reg, promo } = etat
   const [r, setR] = useState<Choix>(DEPART)
@@ -32,8 +34,8 @@ export function ReservationClient() {
   const prixPresta = (k: string) => (k === 'complet' ? reg.prixComplet : PRESTA.find(p => p[0] === k)![3])
   const remiseGroupe = r.h && GROUPES.includes(r.h) && r.jour === 1 ? 5 : 0
   const total = () => {
-    const t = prixPresta(r.presta) + VEH[r.veh][1] + (r.poils ? 15 : 0) - remiseGroupe
-    return promo ? Math.round(t * 0.9) : t
+    const brut = prixPresta(r.presta) + VEH[r.veh][1] + (r.poils ? 15 : 0) - remiseGroupe
+    return promo ? Math.round(brut * 0.9) : brut
   }
   const tot = total()
   const lienPaiement = reg.acLien === 'Virement' ? 'par virement' : `avec le lien ${reg.acLien}`
@@ -43,49 +45,49 @@ export function ReservationClient() {
   if (r.e === 0) {
     corps = (
       <>
-        <p className="r-titre">Que faut-il laver ?</p>
-        <div className="vehs">{VEH.map(([n], i) => <button key={n} className="puce" onClick={() => maj({ veh: i })} aria-pressed={r.veh === i}>{n}</button>)}</div>
+        <p className="r-titre">{t('Que faut-il laver ?')}</p>
+        <div className="vehs">{VEH.map(([n], i) => <button key={n} className="puce" onClick={() => maj({ veh: i })} aria-pressed={r.veh === i}>{t(n)}</button>)}</div>
         {PRESTA.map(([k, n, d, , du]) => {
           const px = prixPresta(k) + VEH[r.veh][1]
           return (
             <button key={k} className="opt" onClick={() => maj({ presta: k })} aria-pressed={r.presta === k}>
-              <span className="rd" /><span className="corps"><b>{n}</b><small>{d} · {du}</small></span>
+              <span className="rd" /><span className="corps"><b>{t(n)}</b><small>{t(d)} · {t(du)}</small></span>
               <span className="px">{promo ? <><s>{px} €</s>{Math.round(px * 0.9)} €</> : `${px} €`}</span>
             </button>
           )
         })}
-        <p className="r-titre" style={{ marginTop: 14 }}>Une option ?</p>
+        <p className="r-titre" style={{ marginTop: 14 }}>{t('Une option ?')}</p>
         <button className="opt" onClick={() => maj({ poils: !r.poils })} aria-pressed={r.poils}>
-          <span className="rd" style={{ borderRadius: 5 }} /><span className="corps"><b>Poils d’animaux</b><small>Aspiration renforcée</small></span><span className="px">+15 €</span>
+          <span className="rd" style={{ borderRadius: 5 }} /><span className="corps"><b>{t('Poils d’animaux')}</b><small>{t('Aspiration renforcée')}</small></span><span className="px">+15 €</span>
         </button>
       </>
     )
   } else if (r.e === 1) {
     corps = (
       <>
-        <p className="r-titre">Quel jour ?</p>
+        <p className="r-titre">{t('Quel jour ?')}</p>
         <div className="jours-r">{JOURS.map(([j, n], i) => <button key={n} onClick={() => maj({ jour: i, h: null })} aria-pressed={r.jour === i}><small>{j}</small><b>{n}</b></button>)}</div>
-        <p className="r-titre">À quelle heure ?</p>
+        <p className="r-titre">{t('À quelle heure ?')}</p>
         <div className="heures-r">
           {HEURES.map(h => {
             const g = r.jour === 1 && GROUPES.includes(h)
             return <button key={h} className={g ? 'groupe' : undefined} onClick={() => maj({ h })} aria-pressed={r.h === h}>{h}{g ? <small>−5 €</small> : null}</button>
           })}
         </div>
-        {r.jour === 1 ? <p className="msg-groupe">−5 € sur 15:30 et 16:30 : ce jour-là, le laveur a déjà un rendez-vous tout près de chez vous. Moins de route pour lui, moins cher pour vous.</p> : null}
+        {r.jour === 1 ? <p className="msg-groupe">{t('−5 € sur 15:30 et 16:30 : ce jour-là, le laveur a déjà un rendez-vous tout près de chez vous. Moins de route pour lui, moins cher pour vous.')}</p> : null}
       </>
     )
   } else if (r.e === 2) {
     corps = (
       <>
-        <p className="r-titre">Vos coordonnées</p>
+        <p className="r-titre">{t('Vos coordonnées')}</p>
         <div className="coord">
-          <div><small>Nom</small><b>Léa Martin</b></div>
-          <div><small>Téléphone</small><b className="num">06 12 34 56 78</b></div>
-          <div><small>Adresse du lavage</small><b>14 rue Notre-Dame, Bordeaux</b></div>
+          <div><small>{t('Nom')}</small><b>{t('Léa Martin')}</b></div>
+          <div><small>{t('Téléphone')}</small><b className="num">06 12 34 56 78</b></div>
+          <div><small>{t('Adresse du lavage')}</small><b>{t('14 rue Notre-Dame, Bordeaux')}</b></div>
         </div>
         {reg.acompteOn ? (
-          <div className="acompte"><b>Acompte de {Math.round((tot * reg.acompte) / 100)} € pour bloquer le créneau</b>Payé {lienPaiement} d’Éclat Mobile {delai}, le reste sur place. Remboursé si vous annulez au moins 48 h avant.</div>
+          <div className="acompte"><b>{t('Acompte de')} {Math.round((tot * reg.acompte) / 100)} {t('€ pour bloquer le créneau')}</b>{t('Payé')} {lienPaiement} {t('d’Éclat Mobile')} {delai}{t(', le reste sur place. Remboursé si vous annulez au moins 48 h avant.')}</div>
         ) : null}
       </>
     )
@@ -93,14 +95,14 @@ export function ReservationClient() {
     corps = (
       <>
         <div className="ok-rond">{I.ok}</div>
-        <p className="r-titre" style={{ textAlign: 'center', fontSize: 19 }}>Réservation envoyée</p>
-        <p style={{ textAlign: 'center', color: 'var(--gris)', fontSize: 13 }}>{JOURS[r.jour][0]} {JOURS[r.jour][1]} oct. à {r.h} · {PRESTA.find(p => p[0] === r.presta)![1]} · {tot} €</p>
+        <p className="r-titre" style={{ textAlign: 'center', fontSize: 19 }}>{t('Réservation envoyée')}</p>
+        <p style={{ textAlign: 'center', color: 'var(--gris)', fontSize: 13 }}>{JOURS[r.jour][0]} {JOURS[r.jour][1]} {t('oct. à')} {r.h} · {PRESTA.find(p => p[0] === r.presta)![1]} · {tot} €</p>
         <div style={{ marginTop: 4 }}>
           {/* key : la carte rejoue son animation quand un réglage change */}
           <CarteFidelite3D key={`${reg.couleur}|${reg.fidReq}|${reg.fidRec}`} couleur={reg.couleur} finition="holo" nom="Éclat Mobile" numero="4F2A"
             requis={reg.fidReq} tampons={0} recompense={reg.fidRec} largeur={240} scenario="reservation" legende="Votre 1er tampon arrive après la prestation." />
         </div>
-        <button className="btn btn-ligne" style={{ width: '100%', marginTop: 4 }} onClick={() => setR(DEPART)}>Refaire une réservation</button>
+        <button className="btn btn-ligne" style={{ width: '100%', marginTop: 4 }} onClick={() => setR(DEPART)}>{t('Refaire une réservation')}</button>
       </>
     )
   }
@@ -115,9 +117,9 @@ export function ReservationClient() {
         <div className="etat" style={{ color: '#fff' }}><span className="num">13:42</span>{RESEAU}</div>
         <div className="app resa">
           <div className="app-defile" ref={defile}>
-            <div className="resa-tete" style={{ background: reg.couleur }}><span className="lg">ÉM</span><p className="r-nom">Éclat Mobile</p><p>Lavage auto à domicile · Bordeaux</p></div>
+            <div className="resa-tete" style={{ background: reg.couleur }}><span className="lg">{t('ÉM')}</span><p className="r-nom">{t('Éclat Mobile')}</p><p>{t('Lavage auto à domicile · Bordeaux')}</p></div>
             <div className="resa-corps">
-              {promo ? <div className="bandeau-promo" style={{ marginBottom: 14 }}><span><b>−10 %</b> ce week-end</span><CompteARebours /></div> : null}
+              {promo ? <div className="bandeau-promo" style={{ marginBottom: 14 }}><span><b>−10 %</b> {t('ce week-end')}</span><CompteARebours /></div> : null}
               <div className="etapes" aria-hidden>{[0, 1, 2, 3].map(i => <i key={i} className={i <= r.e ? 'on' : undefined} />)}</div>
               {corps}
               <div style={{ height: r.e === 3 ? 20 : 110 }} />
@@ -125,10 +127,10 @@ export function ReservationClient() {
           </div>
           {r.e < 3 ? (
             <div className="resa-pied">
-              <div className="tot"><span>Total<small style={{ display: 'block', color: 'var(--vert)', fontWeight: 550 }}>{remises}</small></span><b>{tot} €</b></div>
+              <div className="tot"><span>{t('Total')}<small style={{ display: 'block', color: 'var(--vert)', fontWeight: 550 }}>{remises}</small></span><b>{tot} €</b></div>
               <button className="btn btn-encre" disabled={bloque} style={bloque ? { opacity: 0.4 } : undefined}
                 onClick={() => { if (bloque) return; maj({ e: r.e + 1 }); if (defile.current) defile.current.scrollTop = 0 }}>
-                {['Choisir le créneau', 'Continuer', 'Confirmer la réservation'][r.e]}
+                {t(['Choisir le créneau', 'Continuer', 'Confirmer la réservation'][r.e])}
               </button>
             </div>
           ) : null}

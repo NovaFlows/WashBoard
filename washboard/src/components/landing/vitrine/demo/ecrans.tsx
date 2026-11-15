@@ -8,14 +8,16 @@ import { Statut, Titre, RetourPlus } from './elements'
 import { clientVu, encaisse, rdvDuJour, statutRdv, tousClients, tousDocs, totalDepenses } from './etat'
 import { I } from './icones'
 import type { Rdv } from './types'
+import { useT } from '@/components/i18n/I18nProvider'
 
 const grisPetit: CSSProperties = { color: 'var(--gris)', fontSize: 13 }
 
 function LigneRdv({ c, r }: { c: Ctrl; r: Rdv }) {
+  const tr = useT()
   return (
     <button className="ligne" onClick={() => c.maj({ feuille: { t: 'rdv', id: r.id! } })}>
       <span className="h">{r.h}</span>
-      <span className="corps"><span className="nom">{r.nom}</span><span className="det">{r.presta}</span></span>
+      <span className="corps"><span className="nom">{r.nom}</span><span className="det">{tr(r.presta)}</span></span>
       <span className="fin"><span className="prix">{eur(r.prix)}</span><br /><Statut s={statutRdv(r, c.etat)} /></span>
     </button>
   )
@@ -27,10 +29,11 @@ function ouvrirRdv(c: Ctrl, r: Rdv) {
 }
 
 function Sources() {
+  const tr = useT()
   return (
     <div className="surf" style={{ padding: '6px 0' }}>
       {SOURCES.map(([n, p]) => (
-        <div className="source" key={n}><span>{n}</span><span className="jauge"><i style={{ width: `${p * 2}%` }} /></span><b>{p} %</b></div>
+        <div className="source" key={n}><span>{tr(n)}</span><span className="jauge"><i style={{ width: `${p * 2}%` }} /></span><b>{p} %</b></div>
       ))}
     </div>
   )
@@ -38,6 +41,7 @@ function Sources() {
 
 /* Aujourd'hui */
 export function EcranAuj({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { dk, etat } = c
   const p = RDV[2]
   const total = RDV.reduce((a, r) => a + r.prix, 0)
@@ -49,7 +53,7 @@ export function EcranAuj({ c }: { c: Ctrl }) {
         <span className="heure">{p.h}</span>
         <div className="qui">
           <b>{p.nom}</b>
-          <span className="det" style={{ ...grisPetit, display: 'block' }}>{p.presta}</span>
+          <span className="det" style={{ ...grisPetit, display: 'block' }}>{tr(p.presta)}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
             <Statut s={p.st} /><b className="num" style={{ fontWeight: 550 }}>{eur(p.prix)}</b>
           </div>
@@ -57,31 +61,31 @@ export function EcranAuj({ c }: { c: Ctrl }) {
       </div>
       <div className="adr">{I.pin}<span>{p.lieu}</span></div>
       <div className="duo">
-        <button className="btn btn-accent" onClick={() => c.ouvrir({ t: 'itin' })}>{I.nav}Itinéraire</button>
-        <button className="btn btn-ligne" onClick={() => c.ouvrir({ t: 'appel' })}>{I.tel}Appeler</button>
+        <button className="btn btn-accent" onClick={() => c.ouvrir({ t: 'itin' })}>{I.nav}{tr('Itinéraire')}</button>
+        <button className="btn btn-ligne" onClick={() => c.ouvrir({ t: 'appel' })}>{I.tel}{tr('Appeler')}</button>
       </div>
     </div>
   )
   const journee = (
     <>
-      <div className="sec-lib"><span>La journée</span><span>~22 min de route</span></div>
+      <div className="sec-lib"><span>{tr('La journée')}</span><span>{tr('~22 min de route')}</span></div>
       <div className="surf">{RDV.filter(r => r.id !== 'r3').map(r => <LigneRdv key={r.id} c={c} r={r} />)}</div>
     </>
   )
   const confirmer = etat.sophie ? (
     <>
-      <div className="sec-lib"><span>À confirmer</span><span>aucune demande</span></div>
-      <div className="surf"><div className="ligne"><span className="corps"><span className="det">Tout est confirmé. Sophie Lambert a reçu son email.</span></span></div></div>
+      <div className="sec-lib"><span>{tr('À confirmer')}</span><span>{tr('aucune demande')}</span></div>
+      <div className="surf"><div className="ligne"><span className="corps"><span className="det">{tr('Tout est confirmé. Sophie Lambert a reçu son email.')}</span></span></div></div>
     </>
   ) : (
     <>
-      <div className="sec-lib"><span>À confirmer</span><span>1 demande</span></div>
+      <div className="sec-lib"><span>{tr('À confirmer')}</span><span>{tr('1 demande')}</span></div>
       <div className="surf">
         <div className="ligne">
-          <span className="h">Dim.</span>
-          <span className="corps"><span className="nom">Sophie Lambert</span><span className="det">Extérieur express · 10:00</span></span>
+          <span className="h">{tr('Dim.')}</span>
+          <span className="corps"><span className="nom">{tr('Sophie Lambert')}</span><span className="det">{tr('Extérieur express · 10:00')}</span></span>
           <span className="fin">
-            <button className="btn btn-encre btn-mini" onClick={() => { c.dispatch({ t: 'sophie' }); c.toast('Rendez-vous confirmé : Sophie Lambert reçoit un email.') }}>Confirmer</button>
+            <button className="btn btn-encre btn-mini" onClick={() => { c.dispatch({ t: 'sophie' }); c.toast('Rendez-vous confirmé : Sophie Lambert reçoit un email.') }}>{tr('Confirmer')}</button>
           </span>
         </div>
       </div>
@@ -90,25 +94,25 @@ export function EcranAuj({ c }: { c: Ctrl }) {
   const mois = (
     <div className="surf" style={{ marginTop: 14 }}>
       <button className="ligne" onClick={() => c.aller('chiffres')}>
-        <span className="corps"><span className="nom">Ce mois</span></span>
-        <span className="det num" style={{ color: 'var(--gris)' }}>{eur(encaisse(etat))} encaissés</span>
+        <span className="corps"><span className="nom">{tr('Ce mois')}</span></span>
+        <span className="det num" style={{ color: 'var(--gris)' }}>{eur(encaisse(etat))} {tr('encaissés')}</span>
         <span className="chev">{I.chev}</span>
       </button>
       <button className="ligne" onClick={() => c.aller('clients')}>
-        <span className="corps"><span className="nom">Clients</span></span>
-        <span className="det" style={{ color: 'var(--gris)' }}>{nbClients} · +{3 + etat.clientsPlus.length} ce mois</span>
+        <span className="corps"><span className="nom">{tr('Clients')}</span></span>
+        <span className="det" style={{ color: 'var(--gris)' }}>{nbClients} · +{3 + etat.clientsPlus.length} {tr('ce mois')}</span>
         <span className="chev">{I.chev}</span>
       </button>
     </div>
   )
   const promo = etat.promo ? (
-    <div className="bandeau-promo" style={{ marginBottom: 14 }}><span><b>−10 % ce week-end</b> sur ta page</span><CompteARebours /></div>
+    <div className="bandeau-promo" style={{ marginBottom: 14 }}><span><b>{tr('−10 % ce week-end')}</b> {tr('sur ta page')}</span><CompteARebours /></div>
   ) : null
   const tete = (
     <Titre t="Samedi 17 octobre" s={`${RDV.length} rendez-vous · ${eur(total)}`}
-      droite={<button className="rond" onClick={() => c.ouvrir({ t: 'options' })} aria-label="Options de la journée">{I.plus3}</button>} />
+      droite={<button className="rond" onClick={() => c.ouvrir({ t: 'options' })} aria-label={tr('Options de la journée')}>{I.plus3}</button>} />
   )
-  const libProchain = <div className="sec-lib" style={{ marginTop: 0 }}><span>Prochain rendez-vous</span><span>dans 48 min</span></div>
+  const libProchain = <div className="sec-lib" style={{ marginTop: 0 }}><span>{tr('Prochain rendez-vous')}</span><span>{tr('dans 48 min')}</span></div>
 
   if (!dk) return <>{tete}{promo}{libProchain}{prochain}{journee}{confirmer}{mois}</>
 
@@ -118,18 +122,18 @@ export function EcranAuj({ c }: { c: Ctrl }) {
       <div className="dk-cols">
         <div>{libProchain}{prochain}{journee}{confirmer}</div>
         <div>
-          <div className="sec-lib" style={{ marginTop: 0 }}><span>Demain, dimanche 18</span></div>
+          <div className="sec-lib" style={{ marginTop: 0 }}><span>{tr('Demain, dimanche 18')}</span></div>
           <div className="surf">
             {rdvDuJour(6, etat).map((r, i) => (
               <div className="ligne" key={i}>
                 <span className="h">{r.h}</span>
-                <span className="corps"><span className="nom">{r.nom}</span><span className="det">{r.presta}</span></span>
+                <span className="corps"><span className="nom">{r.nom}</span><span className="det">{tr(r.presta)}</span></span>
                 <span className="fin"><Statut s={r.st} /></span>
               </div>
             ))}
           </div>
           {mois}
-          <div className="sec-lib"><span>D’où viennent tes réservations</span></div>
+          <div className="sec-lib"><span>{tr('D’où viennent tes réservations')}</span></div>
           <Sources />
         </div>
       </div>
@@ -139,12 +143,13 @@ export function EcranAuj({ c }: { c: Ctrl }) {
 
 /* Agenda */
 function ListeJour({ c, i }: { c: Ctrl; i: number }) {
+  const tr = useT()
   const d = SEMAINE[i]
   const rdvs = rdvDuJour(i, c.etat)
   const tot = rdvs.reduce((a, r) => a + r.prix, 0)
   return (
     <>
-      {!rdvs.length ? <div className="surf" style={{ padding: 22, textAlign: 'center', color: 'var(--gris)' }}>Aucun rendez-vous ce jour-là.</div> : null}
+      {!rdvs.length ? <div className="surf" style={{ padding: 22, textAlign: 'center', color: 'var(--gris)' }}>{tr('Aucun rendez-vous ce jour-là.')}</div> : null}
       {rdvs.map((r, k) => {
         const coul = r.st === 'termine' || r.st === 'confirme' ? 'var(--vert)' : 'var(--ambre)'
         return (
@@ -154,12 +159,12 @@ function ListeJour({ c, i }: { c: Ctrl; i: number }) {
               <span className="barre-c" style={{ background: coul }} />
               <button className={`surf carte-c${r.neuf ? ' neuf' : ''}`} onClick={() => ouvrirRdv(c, r)}>
                 <div className="r"><span className="nom">{r.nom}</span><span className="prix num">{eur(r.prix)}</span></div>
-                <div className="det">{r.veh || 'Voiture'} · {r.presta}</div>
+                <div className="det">{tr(r.veh || 'Voiture')} · {tr(r.presta)}</div>
                 <div className="bas"><span>{(r.lieu || 'Bordeaux').split(',').pop()!.trim()}</span><Statut s={r.st} /></div>
               </button>
             </div>
-            {d.auj && k === 1 ? <div className="libre"><span>1 h 50 de libre à Bordeaux</span><button onClick={() => c.ouvrir({ t: 'proposer', quand: 'samedi à 13:00', ou: 'Bordeaux' })}>Proposer</button></div> : null}
-            {d.auj && k === 2 ? <div className="libre"><span>2 h 30 de libre à Bastide</span><button onClick={() => c.ouvrir({ t: 'proposer', quand: 'samedi à 15:00', ou: 'Bastide' })}>Proposer</button></div> : null}
+            {d.auj && k === 1 ? <div className="libre"><span>{tr('1 h 50 de libre à Bordeaux')}</span><button onClick={() => c.ouvrir({ t: 'proposer', quand: 'samedi à 13:00', ou: 'Bordeaux' })}>{tr('Proposer')}</button></div> : null}
+            {d.auj && k === 2 ? <div className="libre"><span>{tr('2 h 30 de libre à Bastide')}</span><button onClick={() => c.ouvrir({ t: 'proposer', quand: 'samedi à 15:00', ou: 'Bastide' })}>{tr('Proposer')}</button></div> : null}
           </div>
         )
       })}
@@ -171,6 +176,7 @@ function ListeJour({ c, i }: { c: Ctrl; i: number }) {
 }
 
 function GrilleMois({ c }: { c: Ctrl }) {
+  const tr = useT()
   // Octobre 2026 commence un jeudi : trois cases vides avant le 1er.
   const cases = []
   for (let k = 0; k < 3; k++) cases.push(<span key={`v${k}`} />)
@@ -193,14 +199,15 @@ function GrilleMois({ c }: { c: Ctrl }) {
         <div className="mois-ent">{['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((x, i) => <span key={i}>{x}</span>)}</div>
         <div className="mois-grille">{cases}</div>
       </div>
-      <p className="ecr-sous" style={{ margin: '10px 4px' }}>Touche un jour de la semaine du 12 pour voir son détail.</p>
+      <p className="ecr-sous" style={{ margin: '10px 4px' }}>{tr('Touche un jour de la semaine du 12 pour voir son détail.')}</p>
     </>
   )
 }
 
 function AgendaSemaine({ c }: { c: Ctrl }) {
+  const tr = useT()
   const H0 = 8, H1 = 21, px = 36
-  const m = (t: string) => { const [a, b] = t.split(':').map(Number); return a + b / 60 }
+  const m = (hm: string) => { const [a, b] = hm.split(':').map(Number); return a + b / 60 }
   const pos = (h: string, f: string): CSSProperties => ({ top: Math.max(0, (m(h) - H0) * px), height: Math.max(24, (m(f) - m(h)) * px - 3) })
   const heures = []
   for (let h = H0; h < H1; h++) heures.push(h)
@@ -209,7 +216,7 @@ function AgendaSemaine({ c }: { c: Ctrl }) {
     <div className="surf sem-grille">
       <div className="ent" />
       {SEMAINE.map((d, i) => (
-        <button key={i} className={`ent${d.auj ? ' auj' : ''}`} onClick={() => c.maj({ jour: i, vueAg: 'jour' })}>{JOURS_NOMS[i]}<b>{d.n}</b></button>
+        <button key={i} className={`ent${d.auj ? ' auj' : ''}`} onClick={() => c.maj({ jour: i, vueAg: 'jour' })}>{tr(JOURS_NOMS[i])}<b>{d.n}</b></button>
       ))}
       <div className="sem-heures">{heures.map(h => <span key={h} style={{ top: (h - H0) * px }}>{h}h</span>)}</div>
       {SEMAINE.map((d, i) => (
@@ -217,7 +224,7 @@ function AgendaSemaine({ c }: { c: Ctrl }) {
           {lignes}
           {rdvDuJour(i, c.etat).map(r => (
             <button key={`${r.h}-${r.nom}`} className={`bloc ${r.st === 'termine' || r.st === 'confirme' ? 'bloc-vert' : 'bloc-ambre'}`} style={pos(r.h, r.fin)} onClick={() => ouvrirRdv(c, r)}>
-              {r.h} {r.nom}<small>{r.presta}</small>
+              {r.h} {r.nom}<small>{tr(r.presta)}</small>
             </button>
           ))}
         </div>
@@ -227,10 +234,11 @@ function AgendaSemaine({ c }: { c: Ctrl }) {
 }
 
 export function EcranAgenda({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { dk, v, etat } = c
   const d = SEMAINE[v.jour]
   const vues = (
-    <div className="segment seg-app" role="group" aria-label="Vue de l’agenda">
+    <div className="segment seg-app" role="group" aria-label={tr('Vue de l’agenda')}>
       {([['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois']] as const).filter(x => dk || x[0] !== 'semaine').map(([k, t]) => (
         <button key={k} onClick={() => c.maj({ vueAg: k })} aria-pressed={v.vueAg === k}>{t}</button>
       ))}
@@ -238,11 +246,11 @@ export function EcranAgenda({ c }: { c: Ctrl }) {
   )
 
   if (dk) {
-    const sous = v.vueAg === 'mois' ? 'Octobre 2026' : v.vueAg === 'jour' ? `${JOURS_NOMS[v.jour]} ${d.n} octobre` : '12 – 18 oct. · 13 rendez-vous cette semaine'
+    const sous = v.vueAg === 'mois' ? 'Octobre 2026' : v.vueAg === 'jour' ? `${tr(JOURS_NOMS[v.jour])} ${d.n} ${tr('octobre')}` : '12 – 18 oct. · 13 rendez-vous cette semaine'
     return (
       <>
         <Titre t="Agenda" s={sous}
-          droite={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>{vues}<button className="btn btn-accent btn-petit" onClick={() => c.ouvrir({ t: 'f-rdv' })}>{I.plus}Ajouter</button></div>} />
+          droite={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>{vues}<button className="btn btn-accent btn-petit" onClick={() => c.ouvrir({ t: 'f-rdv' })}>{I.plus}{tr('Ajouter')}</button></div>} />
         {v.vueAg === 'semaine' ? <AgendaSemaine c={c} /> : null}
         {v.vueAg === 'mois' ? <GrilleMois c={c} /> : null}
         {v.vueAg === 'jour' ? (
@@ -272,11 +280,11 @@ export function EcranAgenda({ c }: { c: Ctrl }) {
   )
   return (
     <>
-      <Titre t="Octobre" s={v.vueAg === 'mois' ? 'Vue du mois' : `${d.auj ? 'Aujourd’hui' : `${JOURS_NOMS[v.jour]} ${d.n}`} · ${rdvDuJour(v.jour, etat).length} rendez-vous`}
+      <Titre t="Octobre" s={v.vueAg === 'mois' ? 'Vue du mois' : `${d.auj ? 'Aujourd’hui' : `${tr(JOURS_NOMS[v.jour])} ${d.n}`} · ${rdvDuJour(v.jour, etat).length} rendez-vous`}
         droite={
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className={`rond${v.vueAg === 'mois' ? ' actif' : ''}`} onClick={() => c.maj({ vueAg: v.vueAg === 'mois' ? 'jour' : 'mois' })} aria-pressed={v.vueAg === 'mois'} aria-label="Vue mois">{I.grille}</button>
-            <button className="rond plein" onClick={() => c.ouvrir({ t: 'f-rdv' })} aria-label="Ajouter un rendez-vous">{I.plus}</button>
+            <button className={`rond${v.vueAg === 'mois' ? ' actif' : ''}`} onClick={() => c.maj({ vueAg: v.vueAg === 'mois' ? 'jour' : 'mois' })} aria-pressed={v.vueAg === 'mois'} aria-label={tr('Vue mois')}>{I.grille}</button>
+            <button className="rond plein" onClick={() => c.ouvrir({ t: 'f-rdv' })} aria-label={tr('Ajouter un rendez-vous')}>{I.plus}</button>
           </div>
         } />
       {v.vueAg === 'mois' ? <GrilleMois c={c} /> : <>{sem}<ListeJour c={c} i={v.jour} /></>}
@@ -286,13 +294,14 @@ export function EcranAgenda({ c }: { c: Ctrl }) {
 
 /* Clients */
 function ListeClients({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { dk, v, etat } = c
   const q = v.q.trim().toLowerCase()
   const l = tousClients(etat).map(x => clientVu(x.id, etat)).filter(x =>
     (v.filtre === 'tous' || (v.filtre === 'pros' && x.type === 'pro') || (v.filtre === 'relance' && x.relance)) && (!q || x.nom.toLowerCase().includes(q)))
   return (
     <>
-      <div className="recherche">{I.loupe}<input value={v.q} onChange={e => c.maj({ q: e.target.value })} placeholder="Nom, téléphone, adresse" aria-label="Chercher un client" /></div>
+      <div className="recherche">{I.loupe}<input value={v.q} onChange={e => c.maj({ q: e.target.value })} placeholder={tr('Nom, téléphone, adresse')} aria-label={tr('Chercher un client')} /></div>
       <div className="puces">
         {([['tous', 'Tous'], ['pros', 'Pros'], ['relance', 'À relancer']] as const).map(([k, t]) => (
           <button key={k} className="puce" onClick={() => c.maj({ filtre: k })} aria-pressed={v.filtre === k}>{t}</button>
@@ -302,21 +311,22 @@ function ListeClients({ c }: { c: Ctrl }) {
         {l.length ? l.map(x => (
           <button key={x.id} className="ligne" onClick={() => c.client(x.id)} style={dk && v.clientSel === x.id ? { background: 'var(--fond)' } : undefined} aria-current={dk && v.clientSel === x.id ? 'true' : undefined}>
             <span className="av">{ini(x.nom)}</span>
-            <span className="corps"><span className="nom">{x.nom}</span><span className="det">{x.v ? `${x.v} prestations · ${x.der}` : 'Nouveau client'}</span></span>
+            <span className="corps"><span className="nom">{x.nom}</span><span className="det">{x.v ? `${x.v} ${tr('prestations')} · ${tr(x.der)}` : 'Nouveau client'}</span></span>
             <span className="fin">
-              {etat.nePlus[x.id] ? <span className="st st-gris">Ne plus contacter</span>
-                : x.relance ? <span className="st st-ambre">À relancer</span>
-                : x.ent ? <span className="st st-gris">Entreprise</span>
+              {etat.nePlus[x.id] ? <span className="st st-gris">{tr('Ne plus contacter')}</span>
+                : x.relance ? <span className="st st-ambre">{tr('À relancer')}</span>
+                : x.ent ? <span className="st st-gris">{tr('Entreprise')}</span>
                 : <span className="prix">{eur(x.ca)}</span>}
             </span>
           </button>
-        )) : <p style={{ padding: 18, color: 'var(--gris)', textAlign: 'center' }}>Aucun client ne correspond.</p>}
+        )) : <p style={{ padding: 18, color: 'var(--gris)', textAlign: 'center' }}>{tr('Aucun client ne correspond.')}</p>}
       </div>
     </>
   )
 }
 
 function Fiche({ c, id }: { c: Ctrl; id: string }) {
+  const tr = useT()
   const { etat } = c
   const cl = clientVu(id, etat)
   const req = etat.r.fidReq
@@ -328,48 +338,49 @@ function Fiche({ c, id }: { c: Ctrl; id: string }) {
         <span className="av">{ini(cl.nom)}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p className="ecr-titre" style={{ fontSize: 21 }}>{cl.nom}</p>
-          <p className="ecr-sous">{cl.veh}{cl.v ? ` · dernière visite ${cl.der}` : ''}</p>
+          <p className="ecr-sous">{tr(cl.veh)}{cl.v ? ` · ${tr('dernière visite')} ${tr(cl.der)}` : ''}</p>
         </div>
-        <button className="rond" onClick={() => c.ouvrir({ t: 'actions', id })} aria-label="Actions sur la fiche">{I.plus3}</button>
+        <button className="rond" onClick={() => c.ouvrir({ t: 'actions', id })} aria-label={tr('Actions sur la fiche')}>{I.plus3}</button>
       </div>
       <div className="surf stats3">
-        <div><small>Prestations</small><b>{cl.v}</b></div>
-        <div><small>Dépensé</small><b>{eur(cl.ca)}</b></div>
-        <div><small>Panier moyen</small><b>{eur(cl.v ? Math.round(cl.ca / cl.v) : 0)}</b></div>
+        <div><small>{tr('Prestations')}</small><b>{cl.v}</b></div>
+        <div><small>{tr('Dépensé')}</small><b>{eur(cl.ca)}</b></div>
+        <div><small>{tr('Panier moyen')}</small><b>{eur(cl.v ? Math.round(cl.ca / cl.v) : 0)}</b></div>
       </div>
-      <div className="sec-lib"><span>Carte de fidélité</span><span>{Math.min(cl.t, req)} / {req}</span></div>
+      <div className="sec-lib"><span>{tr('Carte de fidélité')}</span><span>{Math.min(cl.t, req)} / {req}</span></div>
       <CarteStatique tampons={Math.min(cl.t, req)} requis={req} saute={neuf} couleur={etat.r.couleur} recompense={etat.r.fidRec} />
       {cl.relance && !etat.nePlus[id] ? (
         <>
-          <div className="sec-lib"><span>Relance</span></div>
-          <div className="surf"><div className="reglage"><div>Pas revenue depuis 94 jours<small>Une relance part automatiquement par SMS.</small></div><span className="st st-ambre">Prévue</span></div></div>
+          <div className="sec-lib"><span>{tr('Relance')}</span></div>
+          <div className="surf"><div className="reglage"><div>{tr('Pas revenue depuis 94 jours')}<small>{tr('Une relance part automatiquement par SMS.')}</small></div><span className="st st-ambre">{tr('Prévue')}</span></div></div>
         </>
       ) : null}
       {etat.nePlus[id] ? (
         <>
-          <div className="sec-lib"><span>Contact</span></div>
-          <div className="surf"><div className="reglage"><div>Ne plus contacter<small>Exclu des relances et des demandes d’avis.</small></div><span className="st st-gris">Actif</span></div></div>
+          <div className="sec-lib"><span>{tr('Contact')}</span></div>
+          <div className="surf"><div className="reglage"><div>{tr('Ne plus contacter')}<small>{tr('Exclu des relances et des demandes d’avis.')}</small></div><span className="st st-gris">{tr('Actif')}</span></div></div>
         </>
       ) : null}
-      <div className="sec-lib"><span>Historique</span></div>
+      <div className="sec-lib"><span>{tr('Historique')}</span></div>
       <div className="surf">
         {cl.v ? (
           <>
             {neuf ? (
-              <div className="ligne"><span className="h">17 oct.</span><span className="corps"><span className="nom">Extérieur + intérieur</span><span className="det">Facture F-00043</span></span><span className="fin"><span className="prix">59 €</span><br /><Statut s="termine" /></span></div>
+              <div className="ligne"><span className="h">{tr('17 oct.')}</span><span className="corps"><span className="nom">{tr('Extérieur + intérieur')}</span><span className="det">{tr('Facture F-00043')}</span></span><span className="fin"><span className="prix">59 €</span><br /><Statut s="termine" /></span></div>
             ) : null}
-            <div className="ligne"><span className="h">{date1}</span><span className="corps"><span className="nom">{id === 'c4' ? 'Forfait flotte' : 'Lavage complet'}</span><span className="det">Facture F-00031</span></span><span className="fin"><span className="prix">{id === 'c4' ? '210 €' : '59 €'}</span><br /><Statut s="termine" /></span></div>
-            <div className="ligne"><span className="h">{date2}</span><span className="corps"><span className="nom">Extérieur + intérieur</span><span className="det">Facture F-00019</span></span><span className="fin"><span className="prix">59 €</span><br /><Statut s="termine" /></span></div>
+            <div className="ligne"><span className="h">{date1}</span><span className="corps"><span className="nom">{id === 'c4' ? 'Forfait flotte' : 'Lavage complet'}</span><span className="det">{tr('Facture F-00031')}</span></span><span className="fin"><span className="prix">{id === 'c4' ? '210 €' : '59 €'}</span><br /><Statut s="termine" /></span></div>
+            <div className="ligne"><span className="h">{date2}</span><span className="corps"><span className="nom">{tr('Extérieur + intérieur')}</span><span className="det">{tr('Facture F-00019')}</span></span><span className="fin"><span className="prix">59 €</span><br /><Statut s="termine" /></span></div>
           </>
-        ) : <div className="ligne"><span className="corps"><span className="det">Pas encore de prestation.</span></span></div>}
+        ) : <div className="ligne"><span className="corps"><span className="det">{tr('Pas encore de prestation.')}</span></span></div>}
       </div>
     </>
   )
 }
 
 export function EcranClients({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { dk, v, etat } = c
-  const ajout = <button className="rond plein" onClick={() => c.ouvrir({ t: 'f-client' })} aria-label="Ajouter un client">{I.plus}</button>
+  const ajout = <button className="rond plein" onClick={() => c.ouvrir({ t: 'f-client' })} aria-label={tr('Ajouter un client')}>{I.plus}</button>
   const tete = <Titre t="Clients" s={`${48 + etat.clientsPlus.length} clients · 6 pros`} droite={ajout} />
   if (dk) {
     return (
@@ -382,19 +393,20 @@ export function EcranClients({ c }: { c: Ctrl }) {
       </>
     )
   }
-  if (v.fiche) return <><button className="retour" onClick={() => c.nav({ fiche: null })}>{I.gauche}Clients</button><Fiche c={c} id={v.fiche} /></>
+  if (v.fiche) return <><button className="retour" onClick={() => c.nav({ fiche: null })}>{I.gauche}{tr('Clients')}</button><Fiche c={c} id={v.fiche} /></>
   return <>{tete}<ListeClients c={c} /></>
 }
 
 /* Chiffres */
 export function EcranChiffres({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { dk, v, etat } = c
   const onglets = (
     <div className="puces" style={{ marginTop: 0 }}>
       {([['argent', 'Argent'], ['acquisition', 'Acquisition'], ['clients', 'Clients']] as const).map(([k, t]) => (
         <button key={k} className="puce" onClick={() => c.maj({ onglet: k, barre: null })} aria-pressed={v.onglet === k}>{t}</button>
       ))}
-      <span className="puce" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center' }}>Octobre 2026</span>
+      <span className="puce" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center' }}>{tr('Octobre 2026')}</span>
     </div>
   )
   const tete = (
@@ -413,12 +425,12 @@ export function EcranChiffres({ c }: { c: Ctrl }) {
     b1 = (
       <>
         <div className="surf" style={{ padding: '16px 16px 4px' }}>
-          <small style={{ color: 'var(--gris)', fontSize: 12.5 }}>Résultat du mois</small>
+          <small style={{ color: 'var(--gris)', fontSize: 12.5 }}>{tr('Résultat du mois')}</small>
           <div className="heros-chiffre">{eur(res)}</div>
-          <p className="var-vert">+18 % par rapport à septembre, au même jour</p>
+          <p className="var-vert">{tr('+18 % par rapport à septembre, au même jour')}</p>
         </div>
         <div className="surf" style={{ marginTop: 10 }}>
-          <div className="duo-chiffres"><div><small>Encaissé</small><b>{eur(enc)}</b></div><div style={{ textAlign: 'right' }}><small>Dépensé</small><b>{eur(dep)}</b></div></div>
+          <div className="duo-chiffres"><div><small>{tr('Encaissé')}</small><b>{eur(enc)}</b></div><div style={{ textAlign: 'right' }}><small>{tr('Dépensé')}</small><b>{eur(dep)}</b></div></div>
           <div className="graph">
             <div className="lib"><span>{info}</span></div>
             <div className="barres">
@@ -436,10 +448,10 @@ export function EcranChiffres({ c }: { c: Ctrl }) {
     )
     b2 = (
       <>
-        <div className="sec-lib"><span>Dépenses</span><button onClick={() => c.ouvrir({ t: 'f-depense' })}>+ Ajouter un frais</button></div>
+        <div className="sec-lib"><span>{tr('Dépenses')}</span><button onClick={() => c.ouvrir({ t: 'f-depense' })}>{tr('+ Ajouter un frais')}</button></div>
         <div className="surf">
           {[...etat.depenses, ...DEPENSES].map((d, i) => (
-            <div className="ligne" key={i}><span className="corps"><span className="nom">{d.l}</span><span className="det">{d.c}</span></span><span className="prix">{eur(d.p)}</span></div>
+            <div className="ligne" key={i}><span className="corps"><span className="nom">{tr(d.l)}</span><span className="det">{tr(d.c)}</span></span><span className="prix">{eur(d.p)}</span></div>
           ))}
         </div>
       </>
@@ -448,46 +460,46 @@ export function EcranChiffres({ c }: { c: Ctrl }) {
     b1 = (
       <>
         <div className="surf" style={{ padding: '16px 16px 12px' }}>
-          <small style={{ color: 'var(--gris)', fontSize: 12.5 }}>Visiteurs de ta page ce mois</small>
+          <small style={{ color: 'var(--gris)', fontSize: 12.5 }}>{tr('Visiteurs de ta page ce mois')}</small>
           <div className="heros-chiffre">1 240</div>
-          <p className="var-vert">86 réservations · 6,9 % de conversion</p>
+          <p className="var-vert">{tr('86 réservations · 6,9 % de conversion')}</p>
         </div>
-        <div className="sec-lib"><span>D’où viennent tes réservations</span></div>
+        <div className="sec-lib"><span>{tr('D’où viennent tes réservations')}</span></div>
         <Sources />
       </>
     )
     b2 = (
       <>
-        <div className="sec-lib"><span>Le parcours de tes visiteurs</span></div>
+        <div className="sec-lib"><span>{tr('Le parcours de tes visiteurs')}</span></div>
         <div className="surf">
           {[['Ont vu ta page', '1 240'], ['Ont choisi une prestation', '412'], ['Ont choisi un créneau', '168'], ['Ont réservé', '86']].map(([t, n]) => (
             <div className="ligne" key={t}><span className="corps"><span className="nom">{t}</span></span><span className="prix">{n}</span></div>
           ))}
         </div>
-        <p className="ecr-sous" style={{ margin: '10px 4px' }}>Les liens par réseau (Plus › Mes liens) remplissent ces sources.</p>
+        <p className="ecr-sous" style={{ margin: '10px 4px' }}>{tr('Les liens par réseau (Plus › Mes liens) remplissent ces sources.')}</p>
       </>
     )
   } else {
     b1 = (
       <>
         <div className="surf" style={{ padding: '16px 16px 12px' }}>
-          <small style={{ color: 'var(--gris)', fontSize: 12.5 }}>Clients fidèles (3 visites ou plus)</small>
+          <small style={{ color: 'var(--gris)', fontSize: 12.5 }}>{tr('Clients fidèles (3 visites ou plus)')}</small>
           <div className="heros-chiffre">18</div>
-          <p className="var-vert">38 % de ton fichier · panier moyen 61 €</p>
+          <p className="var-vert">{tr('38 % de ton fichier · panier moyen 61 €')}</p>
         </div>
         <div className="surf" style={{ marginTop: 10 }}>
-          <div className="duo-chiffres"><div><small>Nouveaux ce mois</small><b>{3 + etat.clientsPlus.length}</b></div><div style={{ textAlign: 'right' }}><small>À relancer</small><b>4</b></div></div>
+          <div className="duo-chiffres"><div><small>{tr('Nouveaux ce mois')}</small><b>{3 + etat.clientsPlus.length}</b></div><div style={{ textAlign: 'right' }}><small>{tr('À relancer')}</small><b>4</b></div></div>
         </div>
       </>
     )
     b2 = (
       <>
-        <div className="sec-lib"><span>Tes meilleurs clients</span></div>
+        <div className="sec-lib"><span>{tr('Tes meilleurs clients')}</span></div>
         <div className="surf">
           {tousClients(etat).map(x => clientVu(x.id, etat)).sort((a, b) => b.ca - a.ca).slice(0, 5).map(x => (
             <button key={x.id} className="ligne" onClick={() => c.client(x.id)}>
               <span className="av">{ini(x.nom)}</span>
-              <span className="corps"><span className="nom">{x.nom}</span><span className="det">{x.v} prestations</span></span>
+              <span className="corps"><span className="nom">{x.nom}</span><span className="det">{x.v} {tr('prestations')}</span></span>
               <span className="prix">{eur(x.ca)}</span>
             </button>
           ))}
@@ -500,6 +512,7 @@ export function EcranChiffres({ c }: { c: Ctrl }) {
 
 /* Documents */
 export function EcranDocs({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { dk, v, etat } = c
   const docs = tousDocs(etat)
   const l = docs.filter(d => v.filtreDoc === 'tous' || (v.filtreDoc === 'factures' && d.t === 'Facture') || (v.filtreDoc === 'devis' && d.t === 'Devis'))
@@ -508,7 +521,7 @@ export function EcranDocs({ c }: { c: Ctrl }) {
     <>
       {!dk && v.sous === 'docs' ? <RetourPlus c={c} /> : null}
       <Titre t="Devis et factures" s={`${docs.length} documents · numérotation continue`}
-        droite={<button className="rond plein" onClick={() => c.ouvrir({ t: 'f-facture' })} aria-label="Nouvelle facture">{I.plus}</button>} />
+        droite={<button className="rond plein" onClick={() => c.ouvrir({ t: 'f-facture' })} aria-label={tr('Nouvelle facture')}>{I.plus}</button>} />
       <div className="puces" style={{ marginTop: 0 }}>
         {([['tous', 'Tous'], ['factures', 'Factures'], ['devis', 'Devis']] as const).map(([k, t]) => (
           <button key={k} className="puce" onClick={() => c.maj({ filtreDoc: k })} aria-pressed={v.filtreDoc === k}>{t}</button>
@@ -517,8 +530,8 @@ export function EcranDocs({ c }: { c: Ctrl }) {
       <div className="surf">
         {l.map(d => (
           <button key={d.n} className="ligne" onClick={() => c.ouvrir({ t: 'doc', n: d.n })}>
-            <span className="corps"><span className="nom">{d.n} · {d.cli}</span><span className="det">{d.t} du {d.date}</span></span>
-            <span className="fin"><span className="prix">{eur(d.p)}</span><br /><span className={`st ${stc(d.st)}`}>{d.st}</span></span>
+            <span className="corps"><span className="nom">{d.n} · {d.cli}</span><span className="det">{tr(d.t)} {tr('du')} {d.date}</span></span>
+            <span className="fin"><span className="prix">{eur(d.p)}</span><br /><span className={`st ${stc(d.st)}`}>{tr(d.st)}</span></span>
           </button>
         ))}
       </div>

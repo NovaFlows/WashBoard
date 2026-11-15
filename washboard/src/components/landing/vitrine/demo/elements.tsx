@@ -5,18 +5,21 @@ import type { Ctrl } from './ctrl'
 import { STATUTS } from './donnees'
 import { I } from './icones'
 import type { Reglages, StatutRdv } from './types'
+import { useT } from '@/components/i18n/I18nProvider'
 
 export function Statut({ s }: { s: StatutRdv }) {
+  const tr = useT()
   const [t, cl] = STATUTS[s]
-  return <span className={`st ${cl}`}>{t}</span>
+  return <span className={`st ${cl}`}>{tr(t)}</span>
 }
 
 export function Titre({ t, s, droite }: { t: ReactNode; s?: ReactNode; droite?: ReactNode }) {
+  const tr = useT()
   return (
     <div className="ecr-tete">
       <div>
-        <p className="ecr-titre">{t}</p>
-        {s ? <p className="ecr-sous">{s}</p> : null}
+        <p className="ecr-titre">{typeof t === 'string' ? tr(t) : t}</p>
+        {s ? <p className="ecr-sous">{typeof s === 'string' ? tr(s) : s}</p> : null}
       </div>
       {droite}
     </div>
@@ -25,13 +28,15 @@ export function Titre({ t, s, droite }: { t: ReactNode; s?: ReactNode; droite?: 
 
 /** Retour vers la liste de Plus. */
 export function RetourPlus({ c }: { c: Ctrl }) {
-  return <button className="retour" onClick={() => c.nav({ sous: null, guide: null })}>{I.gauche}Plus</button>
+  const tr = useT()
+  return <button className="retour" onClick={() => c.nav({ sous: null, guide: null })}>{I.gauche}{tr('Plus')}</button>
 }
 
 export function Champ({ c, nom, lib, def, type = 'text' }: { c: Ctrl; nom: string; lib: string; def: string; type?: string }) {
+  const tr = useT()
   return (
     <label className="fchamp">
-      <small>{lib}</small>
+      <small>{tr(lib)}</small>
       <input type={type} value={c.v.form[nom] ?? def} onChange={e => c.setForm(nom, e.target.value)} />
     </label>
   )
@@ -51,14 +56,15 @@ type CleNombre = 'fidReq' | 'delai' | 'prixComplet'
 const LIMITES: Record<CleNombre, [number, number, number]> = { fidReq: [3, 20, 1], delai: [1, 24, 1], prixComplet: [40, 120, 5] }
 
 export function Pas({ c, cle, unite = '' }: { c: Ctrl; cle: CleNombre; unite?: string }) {
+  const tr = useT()
   const val = c.etat.r[cle]
   const [min, max, pas] = LIMITES[cle]
   const bouger = (d: number) => c.regler({ [cle]: Math.max(min, Math.min(max, val + d * pas)) })
   return (
     <span className="pas">
-      <button onClick={() => bouger(-1)} aria-label="Moins">−</button>
+      <button onClick={() => bouger(-1)} aria-label={tr('Moins')}>−</button>
       <b className="num">{val}{unite}</b>
-      <button onClick={() => bouger(1)} aria-label="Plus">+</button>
+      <button onClick={() => bouger(1)} aria-label={tr('Plus')}>+</button>
     </span>
   )
 }

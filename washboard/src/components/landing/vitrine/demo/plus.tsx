@@ -9,27 +9,32 @@ import { EcranChiffres, EcranDocs } from './ecrans'
 import { tousDocs } from './etat'
 import { I } from './icones'
 import type { SousEcran } from './types'
+import { useT } from '@/components/i18n/I18nProvider'
 
 const note: CSSProperties = { margin: '12px 4px' }
 
 function LignePlus({ c, t, s, val, nouveau }: { c: Ctrl; t: string; s: string; val: SousEcran; nouveau?: boolean }) {
+  const tr = useT()
   return (
     <button className="ligne" onClick={() => { c.nav({ sous: val, guide: null }); if (val === 'chiffres') c.dispatch({ t: 'mission', k: 'chiffres' }) }}>
-      <span className="corps"><span className="nom">{t} {nouveau ? <span className="badge badge-new">Nouveau</span> : null}</span><span className="det">{s}</span></span>
+      <span className="corps"><span className="nom">{tr(t)} {nouveau ? <span className="badge badge-new">{tr('Nouveau')}</span> : null}</span><span className="det">{tr(s)}</span></span>
       <span className="chev">{I.chev}</span>
     </button>
   )
 }
 
 function Section({ t, premier, children }: { t: string; premier?: boolean; children: ReactNode }) {
-  return <><div className="sec-lib" style={premier ? { marginTop: 0 } : undefined}><span>{t}</span></div><div className="surf">{children}</div></>
+  const tr = useT()
+  return <><div className="sec-lib" style={premier ? { marginTop: 0 } : undefined}><span>{tr(t)}</span></div><div className="surf">{children}</div></>
 }
 
 function Reg({ t, s, children, bloc }: { t: ReactNode; s?: string; children?: ReactNode; bloc?: boolean }) {
-  return <div className="reglage" style={bloc ? { display: 'block' } : undefined}><div>{t}{s ? <small>{s}</small> : null}</div>{children}</div>
+  const tr = useT()
+  return <div className="reglage" style={bloc ? { display: 'block' } : undefined}><div>{typeof t === 'string' ? tr(t) : t}{s ? <small>{tr(s)}</small> : null}</div>{children}</div>
 }
 
 function SousPromo({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { promo } = c.etat
   const bascule = () => {
     c.dispatch({ t: 'promo', on: !promo })
@@ -39,15 +44,16 @@ function SousPromo({ c }: { c: Ctrl }) {
     <>
       <RetourPlus c={c} />
       <Titre t="Promotions" s="Une remise pendant une période, annoncée sur ta page" />
-      <div className="surf"><Reg t="−10 % ce week-end" s="Toutes les prestations · jusqu’à dimanche 23 h 59"><button className="interr" role="switch" aria-checked={promo} onClick={bascule} aria-label="Activer la promotion" /></Reg></div>
-      <div className="sec-lib"><span>Le bandeau sur ta page</span></div>
-      <div className="bandeau-promo"><span><b>−10 % ce week-end</b> sur toutes les prestations</span><CompteARebours /></div>
+      <div className="surf"><Reg t="−10 % ce week-end" s="Toutes les prestations · jusqu’à dimanche 23 h 59"><button className="interr" role="switch" aria-checked={promo} onClick={bascule} aria-label={tr('Activer la promotion')} /></Reg></div>
+      <div className="sec-lib"><span>{tr('Le bandeau sur ta page')}</span></div>
+      <div className="bandeau-promo"><span><b>{tr('−10 % ce week-end')}</b> {tr('sur toutes les prestations')}</span><CompteARebours /></div>
       <p className="ecr-sous" style={note}>{promo ? 'Elle est en ligne : regarde la page de réservation plus bas sur cette page.' : 'Active-la pour la voir apparaître sur ta page de réservation.'}</p>
     </>
   )
 }
 
 function SousFid({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { r } = c.etat
   return (
     <>
@@ -59,12 +65,13 @@ function SousFid({ c }: { c: Ctrl }) {
         <Reg bloc t="Récompense" s="Appliquée toute seule à la réservation suivante"><PuceReg c={c} cle="fidRec" opts={['Lavage complet offert', '−20 %', '−10 €']} /></Reg>
         <Reg t="Un tampon par véhicule" s="Pour les forfaits à plusieurs voitures"><Bascule c={c} cle="parVeh" lib="Un tampon par véhicule" /></Reg>
       </div>
-      <p className="ecr-sous" style={note}>La carte du client, sur la page de réservation, suit ces réglages.</p>
+      <p className="ecr-sous" style={note}>{tr('La carte du client, sur la page de réservation, suit ces réglages.')}</p>
     </>
   )
 }
 
 function SousAcompte({ c }: { c: Ctrl }) {
+  const tr = useT()
   return (
     <>
       <RetourPlus c={c} />
@@ -74,33 +81,35 @@ function SousAcompte({ c }: { c: Ctrl }) {
         <Reg bloc t="Montant"><PuceReg c={c} cle="acompte" opts={[20, 30, 50]} fmt={x => `${x} %`} /></Reg>
         <Reg bloc t="Délai pour payer" s="Sinon le créneau se libère tout seul"><PuceReg c={c} cle="acDelai" opts={[1, 2, 24]} fmt={x => `${x} h`} /></Reg>
         <Reg bloc t="Ton lien de paiement"><PuceReg c={c} cle="acLien" opts={['PayPal', 'Stripe', 'SumUp', 'Lydia', 'Wero', 'Virement']} /></Reg>
-        <Reg t="Remboursement" s="Annoncé au client avant de réserver"><b>48 h avant</b></Reg>
+        <Reg t="Remboursement" s="Annoncé au client avant de réserver"><b>{tr('48 h avant')}</b></Reg>
       </div>
     </>
   )
 }
 
 function SousPrestations({ c }: { c: Ctrl }) {
+  const tr = useT()
   return (
     <>
       <RetourPlus c={c} />
       <Titre t="Prestations et prix" s="Par catégorie et par type de véhicule" />
-      <div className="sec-lib" style={{ marginTop: 0 }}><span>Voiture</span><span>Citadine</span></div>
+      <div className="sec-lib" style={{ marginTop: 0 }}><span>{tr('Voiture')}</span><span>{tr('Citadine')}</span></div>
       <div className="surf">
         <Reg t="Extérieur" s="Carrosserie, jantes, vitres · 45 min"><b className="num">35 €</b></Reg>
         <Reg t="Intérieur" s="Aspiration, plastiques, tapis · 1 h"><b className="num">45 €</b></Reg>
         <Reg t="Lavage complet" s="Intérieur et extérieur · 1 h 30"><Pas c={c} cle="prixComplet" unite=" €" /></Reg>
       </div>
-      <div className="sec-lib"><span>Selon le véhicule</span></div>
+      <div className="sec-lib"><span>{tr('Selon le véhicule')}</span></div>
       <div className="surf">{[['Berline', '+5 €'], ['SUV', '+10 €'], ['Utilitaire', '+20 €']].map(([n, p]) => <Reg key={n} t={n}><b className="num">{p}</b></Reg>)}</div>
-      <div className="sec-lib"><span>Canapés et textiles</span></div>
+      <div className="sec-lib"><span>{tr('Canapés et textiles')}</span></div>
       <div className="surf"><Reg t="Canapé 3 places" s="Injection-extraction · 1 h 30"><b className="num">90 €</b></Reg></div>
-      <p className="ecr-sous" style={note}>Change le prix du lavage complet : la page de réservation plus bas suit.</p>
+      <p className="ecr-sous" style={note}>{tr('Change le prix du lavage complet : la page de réservation plus bas suit.')}</p>
     </>
   )
 }
 
 function SousHoraires({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { horaires } = c.etat.r
   const j = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
   return (
@@ -114,30 +123,31 @@ function SousHoraires({ c }: { c: Ctrl }) {
           </Reg>
         ))}
       </div>
-      <div className="sec-lib"><span>Congés à venir</span></div>
-      <div className="surf"><Reg t="Vacances" s="4 → 7 novembre · toute l’équipe"><span className="st st-gris">Bloqué</span></Reg></div>
+      <div className="sec-lib"><span>{tr('Congés à venir')}</span></div>
+      <div className="surf"><Reg t="Vacances" s="4 → 7 novembre · toute l’équipe"><span className="st st-gris">{tr('Bloqué')}</span></Reg></div>
     </>
   )
 }
 
 function SousApparence({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { couleur } = c.etat.r
   const cs = ['#306090', '#16161A', '#0F7A55', '#C2185B', '#6D28D9', '#E0533D']
   return (
     <>
       <RetourPlus c={c} />
       <Titre t="Apparence de ma page" s="Ce que voient tes clients" />
-      <div className="apercu-page" style={{ background: couleur }}><span className="lg">ÉM</span><b>Éclat Mobile</b><small>Lavage auto à domicile · Bordeaux</small></div>
+      <div className="apercu-page" style={{ background: couleur }}><span className="lg">{tr('ÉM')}</span><b>{tr('Éclat Mobile')}</b><small>{tr('Lavage auto à domicile · Bordeaux')}</small></div>
       <div className="surf" style={{ marginTop: 12 }}>
         <Reg bloc t="Couleur de ta page" s="Elle colore aussi la carte de fidélité">
           <div className="nuances" style={{ marginTop: 10 }}>
             {cs.map(x => <button key={x} className="nuance" style={{ background: x }} onClick={() => c.regler({ couleur: x })} aria-pressed={couleur === x} aria-label={`Couleur ${x}`} />)}
           </div>
         </Reg>
-        <Reg t="Logo" s="Carré, fond transparent conseillé"><b>ÉM</b></Reg>
-        <Reg t="Photo de fond" s="Visible en haut de ta page"><b>Aucune</b></Reg>
+        <Reg t="Logo" s="Carré, fond transparent conseillé"><b>{tr('ÉM')}</b></Reg>
+        <Reg t="Photo de fond" s="Visible en haut de ta page"><b>{tr('Aucune')}</b></Reg>
       </div>
-      <p className="ecr-sous" style={note}>Choisis une couleur : la page de réservation plus bas change aussi.</p>
+      <p className="ecr-sous" style={note}>{tr('Choisis une couleur : la page de réservation plus bas change aussi.')}</p>
     </>
   )
 }
@@ -149,6 +159,7 @@ function copier(c: Ctrl, lien: string) {
 }
 
 function SousLiens({ c }: { c: Ctrl }) {
+  const tr = useT()
   const l = [['Instagram', 'instagram'], ['TikTok', 'tiktok'], ['Google', 'google'], ['WhatsApp', 'whatsapp']]
   return (
     <>
@@ -157,8 +168,8 @@ function SousLiens({ c }: { c: Ctrl }) {
       <div className="surf">
         {l.map(([n, k]) => (
           <div className="reglage" key={k}>
-            <div>{n}<small className="num">washboard.fr/book/eclat-mobile?src={k}</small></div>
-            <button className="btn btn-ligne btn-mini" onClick={() => copier(c, `https://washboard.fr/book/eclat-mobile?src=${k}`)}>Copier</button>
+            <div>{n}<small className="num">{tr('washboard.fr/book/eclat-mobile?src=')}{k}</small></div>
+            <button className="btn btn-ligne btn-mini" onClick={() => copier(c, `https://washboard.fr/book/eclat-mobile?src=${k}`)}>{tr('Copier')}</button>
           </div>
         ))}
       </div>
@@ -167,6 +178,7 @@ function SousLiens({ c }: { c: Ctrl }) {
 }
 
 function SousAvis({ c }: { c: Ctrl }) {
+  const tr = useT()
   return (
     <>
       <RetourPlus c={c} />
@@ -177,13 +189,14 @@ function SousAvis({ c }: { c: Ctrl }) {
         <Reg t="Délai après la prestation"><Pas c={c} cle="delai" unite=" h" /></Reg>
         <Reg bloc t="SMS ce mois" s="12 envoyés sur 150 inclus"><span className="jauge-l"><i style={{ width: '8%' }} /></span></Reg>
       </div>
-      <div className="sec-lib"><span>Ce que reçoit ton client</span></div>
-      <div className="bulle-sms">Merci pour votre confiance ! Si vous avez 30 secondes, votre avis nous aide beaucoup : <u>g.page/eclat-mobile</u></div>
+      <div className="sec-lib"><span>{tr('Ce que reçoit ton client')}</span></div>
+      <div className="bulle-sms">{tr('Merci pour votre confiance ! Si vous avez 30 secondes, votre avis nous aide beaucoup :')} <u>{tr('g.page/eclat-mobile')}</u></div>
     </>
   )
 }
 
 function SousRelance({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { r } = c.etat
   return (
     <>
@@ -193,13 +206,14 @@ function SousRelance({ c }: { c: Ctrl }) {
         <Reg t="Relancer automatiquement" s="4 clients concernés ce mois"><Bascule c={c} cle="relance" lib="Relancer automatiquement" /></Reg>
         <Reg bloc t="Après combien de temps sans rendez-vous ?"><PuceReg c={c} cle="relMois" opts={[1, 2, 3, 6]} fmt={x => `${x} mois`} /></Reg>
       </div>
-      <div className="sec-lib"><span>Le message</span></div>
-      <div className="bulle-sms">Bonjour, ça fait {r.relMois} mois depuis votre dernier lavage. Un créneau cette semaine ? Réservez en 1 minute : <u>washboard.fr/book/eclat-mobile</u></div>
+      <div className="sec-lib"><span>{tr('Le message')}</span></div>
+      <div className="bulle-sms">{tr('Bonjour, ça fait')} {r.relMois} {tr('mois depuis votre dernier lavage. Un créneau cette semaine ? Réservez en 1 minute :')} <u>{tr('washboard.fr/book/eclat-mobile')}</u></div>
     </>
   )
 }
 
 function SousProfil({ c }: { c: Ctrl }) {
+  const tr = useT()
   return (
     <>
       <RetourPlus c={c} />
@@ -211,26 +225,27 @@ function SousProfil({ c }: { c: Ctrl }) {
         <Champ c={c} nom="p-adr" lib="Adresse de départ" def="14 cours Victor Hugo, Bordeaux" />
         <Champ c={c} nom="p-siret" lib="SIRET" def="912 345 678 00012" />
       </div>
-      <div className="f-actions"><button className="btn btn-encre" onClick={() => c.toast('Profil enregistré. Tes prochaines factures le reprennent.')}>Enregistrer</button></div>
+      <div className="f-actions"><button className="btn btn-encre" onClick={() => c.toast('Profil enregistré. Tes prochaines factures le reprennent.')}>{tr('Enregistrer')}</button></div>
     </>
   )
 }
 
 function SousAbonnement({ c }: { c: Ctrl }) {
+  const tr = useT()
   const o = [['Découverte', '0 €', '5 réservations par mois'], ['Starter', '19 €/mois', 'Compta, factures, avis, relances'], ['Pro', '49 €/mois', 'Illimité, créneaux groupés'], ['Business', 'dès 129 €/mois', 'Équipe, planning collectif']]
   return (
     <>
       <RetourPlus c={c} />
       <Titre t="Abonnement" s="Pro · essai gratuit jusqu’au 14 novembre" />
       <div className="surf" style={{ padding: 16 }}>
-        <small style={{ color: 'var(--gris)' }}>Ton essai</small>
-        <div className="heros-chiffre" style={{ fontSize: 34 }}>27 jours</div>
-        <p className="var-vert">Tout est débloqué, sans carte bancaire</p>
+        <small style={{ color: 'var(--gris)' }}>{tr('Ton essai')}</small>
+        <div className="heros-chiffre" style={{ fontSize: 34 }}>{tr('27 jours')}</div>
+        <p className="var-vert">{tr('Tout est débloqué, sans carte bancaire')}</p>
       </div>
       <div className="surf" style={{ marginTop: 12 }}>
         {o.map(([n, p, d]) => (
           <Reg key={n} t={<>{n} <span className="num" style={{ color: 'var(--gris)', fontWeight: 450 }}>· {p}</span></>} s={d}>
-            {n === 'Pro' ? <span className="st st-vert">Ton essai</span> : <button className="btn btn-ligne btn-mini" onClick={() => c.toast('Paiement sécurisé par Stripe (démo).')}>Choisir</button>}
+            {n === 'Pro' ? <span className="st st-vert">{tr('Ton essai')}</span> : <button className="btn btn-ligne btn-mini" onClick={() => c.toast('Paiement sécurisé par Stripe (démo).')}>{tr('Choisir')}</button>}
           </Reg>
         ))}
       </div>
@@ -239,6 +254,7 @@ function SousAbonnement({ c }: { c: Ctrl }) {
 }
 
 function SousGuide({ c }: { c: Ctrl }) {
+  const tr = useT()
   const { v } = c
   const q = v.qGuide.trim().toLowerCase()
   const l = GUIDE.map((g, i) => [g, i] as const).filter(([g]) => !q || (g[0] + g[1]).toLowerCase().includes(q))
@@ -246,14 +262,14 @@ function SousGuide({ c }: { c: Ctrl }) {
     <>
       <RetourPlus c={c} />
       <Titre t="Guide" s="Toutes les réponses, écran par écran" />
-      <div className="recherche">{I.loupe}<input value={v.qGuide} onChange={e => c.maj({ qGuide: e.target.value })} placeholder="Chercher : fidélité, acompte…" aria-label="Chercher dans le guide" /></div>
+      <div className="recherche">{I.loupe}<input value={v.qGuide} onChange={e => c.maj({ qGuide: e.target.value })} placeholder={tr('Chercher : fidélité, acompte…')} aria-label={tr('Chercher dans le guide')} /></div>
       <div className="surf" style={{ marginTop: 12 }}>
         {l.length ? l.map(([g, i]) => (
           <button key={i} className="ligne" style={{ display: 'block' }} onClick={() => c.maj({ guide: v.guide === i ? null : i })} aria-expanded={v.guide === i}>
-            <span className="nom" style={{ whiteSpace: 'normal' }}>{g[0]}</span>
-            {v.guide === i ? <span className="det" style={{ whiteSpace: 'normal', marginTop: 6, lineHeight: 1.45 }}>{g[1]}</span> : null}
+            <span className="nom" style={{ whiteSpace: 'normal' }}>{tr(g[0])}</span>
+            {v.guide === i ? <span className="det" style={{ whiteSpace: 'normal', marginTop: 6, lineHeight: 1.45 }}>{tr(g[1])}</span> : null}
           </button>
-        )) : <p style={{ padding: 18, color: 'var(--gris)', textAlign: 'center' }}>Aucune réponse ne correspond.</p>}
+        )) : <p style={{ padding: 18, color: 'var(--gris)', textAlign: 'center' }}>{tr('Aucune réponse ne correspond.')}</p>}
       </div>
     </>
   )

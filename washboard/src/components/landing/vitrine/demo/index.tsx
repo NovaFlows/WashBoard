@@ -14,6 +14,7 @@ import { Ordinateur } from './Ordinateur'
 import type { EcranDemo } from './types'
 import '../base.css'
 import './demo.css'
+import { useT } from '@/components/i18n/I18nProvider'
 
 export type { EcranDemo }
 export { DemoProvider } from './etat'
@@ -36,6 +37,7 @@ export function AppOrdinateur({ ecranInitial = 'auj', largeurMax }: { ecranIniti
 
 /** Contenu de la section « Démo manipulable » sous son titre : sélecteur d'appareil, missions, appareil. */
 export function DemoManipulable() {
+  const tr = useT()
   const { etat, raz } = useDemo()
   const [ordi, setOrdi] = useState(false)
   const faites = Object.values(etat.m).filter(Boolean).length
@@ -43,21 +45,21 @@ export function DemoManipulable() {
   return (
     <div className="demo-grille">
       <div>
-        <div className="segment" role="group" aria-label="Appareil">
-          <button aria-pressed={!ordi} onClick={() => setOrdi(false)}>{I.mobile}Téléphone</button>
-          <button aria-pressed={ordi} onClick={() => setOrdi(true)}>{I.ordi}Ordinateur</button>
+        <div className="segment" role="group" aria-label={tr('Appareil')}>
+          <button aria-pressed={!ordi} onClick={() => setOrdi(false)}>{I.mobile}{tr('Téléphone')}</button>
+          <button aria-pressed={ordi} onClick={() => setOrdi(true)}>{I.ordi}{tr('Ordinateur')}</button>
         </div>
         <div className="missions">
           {MISSIONS.map(([k, t, s], i) => (
             <div key={k} className={`mission${etat.m[k] ? ' faite' : ''}`}>
               <span className="coche">{I.ok}<span>{i + 1}</span></span>
-              <div><b>{t}{etat.m[k] ? <span className="vh"> (faite)</span> : null}</b><small>{s}</small></div>
+              <div><b>{tr(t)}{etat.m[k] ? <span className="vh"> {tr('(faite)')}</span> : null}</b><small>{tr(s)}</small></div>
             </div>
           ))}
         </div>
         <div className="demo-pied">
           <span aria-live="polite">{faites === 4 ? 'Tout est fait. Tout s’est mis à jour tout seul.' : `${faites} sur 4`}</span>
-          <button onClick={raz}>Remettre la journée à zéro</button>
+          <button onClick={raz}>{tr('Remettre la journée à zéro')}</button>
         </div>
       </div>
       <div className="demo-scene aura">

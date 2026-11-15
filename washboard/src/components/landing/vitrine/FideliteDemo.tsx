@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { useRef, useState, type ReactNode } from 'react'
 import type { CommandesCarte } from '@/components/fidelite/CarteFidelite3D'
 import { FINITIONS_CARTE, LIBELLES_FINITION, NUANCES_CARTE, type FinitionCarte } from '@/lib/carteFidelite'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Sous la ligne de flottaison : chargée à la demande, côté client seulement.
 const CarteFidelite3D = dynamic(() => import('@/components/fidelite/CarteFidelite3D'), {
@@ -14,6 +15,7 @@ const CarteFidelite3D = dynamic(() => import('@/components/fidelite/CarteFidelit
 const REQUIS = 8
 
 export default function FideliteDemo({ avant, apres }: { avant: ReactNode; apres: ReactNode }) {
+  const t = useT()
   const carte = useRef<CommandesCarte>(null)
   const [couleur, setCouleur] = useState(NUANCES_CARTE[0].hex)
   const [finition, setFinition] = useState<FinitionCarte>('holo')
@@ -42,24 +44,24 @@ export default function FideliteDemo({ avant, apres }: { avant: ReactNode; apres
         {avant}
         <div className="fid-cmd">
           <div>
-            <p className="cmd-lib">Ta couleur</p>
-            <div className="nuances" role="group" aria-label="Couleur de la carte">
+            <p className="cmd-lib">{t('Ta couleur')}</p>
+            <div className="nuances" role="group" aria-label={t('Couleur de la carte')}>
               {NUANCES_CARTE.map(n => (
                 <button key={n.hex} type="button" className="nuance" style={{ background: n.hex }} aria-label={n.nom} aria-pressed={couleur === n.hex} onClick={() => setCouleur(n.hex)} />
               ))}
             </div>
           </div>
           <div>
-            <p className="cmd-lib">La finition</p>
-            <div className="segment" role="group" aria-label="Finition">
+            <p className="cmd-lib">{t('La finition')}</p>
+            <div className="segment" role="group" aria-label={t('Finition')}>
               {FINITIONS_CARTE.map(f => (
                 <button key={f} type="button" aria-pressed={finition === f} onClick={() => setFinition(f)}>{LIBELLES_FINITION[f]}</button>
               ))}
             </div>
           </div>
           <div className="fid-actions">
-            <button type="button" className="btn btn-encre" onClick={terminer}>Terminer une prestation</button>
-            <button type="button" className="btn btn-ligne" onClick={() => carte.current?.retourner()}>Retourner la carte</button>
+            <button type="button" className="btn btn-encre" onClick={terminer}>{t('Terminer une prestation')}</button>
+            <button type="button" className="btn btn-ligne" onClick={() => carte.current?.retourner()}>{t('Retourner la carte')}</button>
           </div>
         </div>
         {apres}
