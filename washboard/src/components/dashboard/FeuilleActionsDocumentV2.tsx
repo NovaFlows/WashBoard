@@ -5,7 +5,7 @@ import { Feuille, BOUTON, PRESSION, corps, corpsFort } from '@/components/dashbo
 import { confirmerEnvoi, annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import { libelleGenre, messageWhatsapp, nomFichierDocument, partagerPdf, type Document } from '@/lib/documents'
 import { whatsappDigits } from '@/lib/phone'
-import { useT , useLocale } from '@/components/i18n/I18nProvider'
+import { useT, useLocale, useLangue } from '@/components/i18n/I18nProvider'
 
 // Ce qu'on peut encore faire d'un document, une fois ouvert — extrait de `DocumentsV2.tsx` le
 // 2026-09-28 pour que la Fiche entreprise puisse ouvrir la MÊME feuille sur une facture
@@ -50,6 +50,7 @@ export default function FeuilleActionsDocumentV2({
 }) {
   const loc = useLocale()
   const t = useT()
+  const langue = useLangue()
   const devis = d.genre === 'devis'
   const client = d.contenu.client.entreprise || d.contenu.client.nom
   const secondaire = `${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`
@@ -80,7 +81,7 @@ export default function FeuilleActionsDocumentV2({
           <button
             type="button"
             onClick={async () => {
-              const lien = `${window.location.origin}/api/documents/${d.id}/pdf`
+              const lien = `${window.location.origin}/api/documents/${d.id}/pdf${langue === 'fr' ? '' : `?lang=${langue}`}`
               // D'abord le partage natif : il envoie le VRAI fichier, que le laveur dépose
               // dans WhatsApp, Messages ou Mail depuis la feuille de partage de son
               // téléphone. Le message n'y porte PAS de lien : le client a le PDF avec.

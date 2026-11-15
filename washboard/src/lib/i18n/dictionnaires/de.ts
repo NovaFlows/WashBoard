@@ -27,6 +27,8 @@ import { ti0 } from './de/ti0'
 import { tj0 } from './de/tj0'
 import { tk0 } from './de/tk0'
 import { tl0 } from './de/tl0'
+import { tl1 } from './de/tl1'
+import { tm0 } from './de/tm0'
 
 // Une partie par fichier : pour traduire un nouvel écran, ajouter `./de/<partie>.ts` ici.
-export const de: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3, ...demo, ...demo2, ...demo3, ...tb0, ...tb1, ...tb2, ...tb3, ...tb4, ...tb5, ...tc0, ...td0, ...te0, ...tf0, ...tg0, ...th0, ...ti0, ...tj0, ...tk0, ...tl0 }
+export const de: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3, ...demo, ...demo2, ...demo3, ...tb0, ...tb1, ...tb2, ...tb3, ...tb4, ...tb5, ...tc0, ...td0, ...te0, ...tf0, ...tg0, ...th0, ...ti0, ...tj0, ...tk0, ...tl0, ...tl1, ...tm0 }

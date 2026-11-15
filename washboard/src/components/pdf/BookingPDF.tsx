@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { adresseAvecLieu } from '@/lib/centreAuto'
+import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 
 const s = StyleSheet.create({
   page:        { backgroundColor: '#ffffff', fontFamily: 'Helvetica', fontSize: 10, color: '#0f172a', padding: 0 },
@@ -36,6 +37,8 @@ const s = StyleSheet.create({
 })
 
 type Props = {
+  t?: Traducteur
+  loc?: string
   booking: {
     id: string
     client_name: string
@@ -58,14 +61,14 @@ type Props = {
   }
 }
 
-export default function BookingPDF({ booking }: Props) {
+export default function BookingPDF({ booking, t = sansTraduction, loc = 'fr-FR' }: Props) {
   const washer  = booking.washers
   const service = booking.services
 
   const date         = new Date(booking.scheduled_at)
-  const formattedDate = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const time          = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-  const today         = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  const formattedDate = date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const time          = date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
+  const today         = new Date().toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' })
   const ref           = booking.id.slice(0, 8).toUpperCase()
 
   const count           = booking.vehicle_count ?? 1
@@ -85,22 +88,22 @@ export default function BookingPDF({ booking }: Props) {
 
         {/* Barre supérieure */}
         <View style={s.topBar}>
-          <Text style={s.topBarLeft}>Récapitulatif de réservation</Text>
-          <Text style={s.topBarRight}>Réf. {ref}</Text>
+          <Text style={s.topBarLeft}>{t('Récapitulatif de réservation')}</Text>
+          <Text style={s.topBarRight}>{t('Réf.')} {ref}</Text>
         </View>
 
         {/* En-tête */}
         <View style={s.header}>
           <View>
             <Text style={s.washerName}>{washer?.name ?? ''}</Text>
-            <Text style={s.subText}>Prestataire de nettoyage et d&apos;entretien à domicile</Text>
+            <Text style={s.subText}>{t('Prestataire de nettoyage et d’entretien à domicile')}</Text>
             {washer?.phone && <Text style={s.subText}>{washer.phone}</Text>}
           </View>
           <View>
-            <Text style={[s.labelSmall, s.rightAlign]}>Date d&apos;émission</Text>
+            <Text style={[s.labelSmall, s.rightAlign]}>{t('Date d’émission')}</Text>
             <Text style={[{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#475569' }, s.rightAlign]}>{today}</Text>
             <View style={{ marginTop: 10, backgroundColor: '#f1f5f9', borderRadius: 4, padding: 8, alignItems: 'flex-end' }}>
-              <Text style={s.labelSmall}>Référence</Text>
+              <Text style={s.labelSmall}>{t('Référence')}</Text>
               <Text style={{ fontSize: 13, fontFamily: 'Courier-Bold', color: '#0f172a' }}>{ref}</Text>
             </View>
           </View>
@@ -111,23 +114,23 @@ export default function BookingPDF({ booking }: Props) {
         {/* Prestataire / Client */}
         <View style={s.twoCol}>
           <View style={s.col}>
-            <Text style={s.labelSmall}>Prestataire</Text>
+            <Text style={s.labelSmall}>{t('Prestataire')}</Text>
             <Text style={s.colName}>{washer?.name ?? ''}</Text>
             {washer?.phone && <Text style={s.subText}>{washer.phone}</Text>}
           </View>
           <View style={[s.col, { borderLeftWidth: 1, borderLeftColor: '#f1f5f9', paddingLeft: 20 }]}>
-            <Text style={s.labelSmall}>{booking.is_professional ? 'Client (Professionnel)' : 'Client'}</Text>
+            <Text style={s.labelSmall}>{booking.is_professional ? t('Client (Professionnel)') : t('Client')}</Text>
             {booking.is_professional && booking.company_name && (
               <Text style={[s.colName, { marginBottom: 2 }]}>{booking.company_name}</Text>
             )}
             {booking.is_professional && booking.siret && (
-              <Text style={{ fontSize: 9, color: '#64748b', fontFamily: 'Courier', marginBottom: 4 }}>SIRET : {booking.siret}</Text>
+              <Text style={{ fontSize: 9, color: '#64748b', fontFamily: 'Courier', marginBottom: 4 }}>{t('SIRET :')} {booking.siret}</Text>
             )}
             <Text style={booking.is_professional ? s.subText : s.colName}>{booking.client_name}</Text>
             <Text style={s.subText}>{booking.client_email}</Text>
             {booking.client_phone && <Text style={s.subText}>{booking.client_phone}</Text>}
             {booking.is_professional && booking.billing_address && (
-              <Text style={{ fontSize: 9, color: '#64748b', marginTop: 4 }}>Facturation : {booking.billing_address}</Text>
+              <Text style={{ fontSize: 9, color: '#64748b', marginTop: 4 }}>{t('Facturation :')} {booking.billing_address}</Text>
             )}
           </View>
         </View>
@@ -135,24 +138,24 @@ export default function BookingPDF({ booking }: Props) {
         {/* Tableau */}
         <View style={s.table}>
           <View style={s.tableHead}>
-            <Text style={s.tableHeadTxt}>Désignation</Text>
-            <Text style={s.tableHeadTxt}>Montant TTC</Text>
+            <Text style={s.tableHeadTxt}>{t('Désignation')}</Text>
+            <Text style={s.tableHeadTxt}>{t('Montant TTC')}</Text>
           </View>
 
           <View style={s.tableRow}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', marginBottom: 4 }}>
-                {service?.name ?? 'Lavage automobile'}
-                {!isMultiVehicle && count > 1 ? ` × ${count} véhicules` : ''}
+                {service?.name ?? t('Lavage automobile')}
+                {!isMultiVehicle && count > 1 ? ` × ${count} ${t('véhicules')}` : ''}
               </Text>
               {!isMultiVehicle && count > 1 && (
-                <Text style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>{unitStr}€/véhicule × {count}</Text>
+                <Text style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>{unitStr}€/{t('véhicule')} × {count}</Text>
               )}
-              <Text style={s.subText}>{formattedDate} à {time}</Text>
+              <Text style={s.subText}>{t('{date} à {heure}', { date: formattedDate, heure: time })}</Text>
               <Text style={s.subText}>{adresseAvecLieu(booking.address, booking.lieu)}</Text>
               {booking.is_smart_slot && discount > 0 && (
                 <Text style={{ fontSize: 9, color: '#d97706', fontFamily: 'Helvetica-Bold', marginTop: 4 }}>
-                  ★ Créneau optimisé (remise de {discount}€)
+                  {t('★ Créneau optimisé (remise de {discount}€)', { discount })}
                 </Text>
               )}
             </View>
@@ -171,23 +174,23 @@ export default function BookingPDF({ booking }: Props) {
           {isMultiVehicle && vehiclesDetail!.map((item, i) => {
             const lineTotal = item.unit_price * item.count
             const lineTotalStr = Number.isInteger(lineTotal) ? String(lineTotal) : lineTotal.toFixed(2)
-            const label = item.label ?? VEHICLE_LABELS[item.type] ?? item.type
+            const label = item.label ?? (VEHICLE_LABELS[item.type] ? t(VEHICLE_LABELS[item.type]) : item.type)
             const mdls = (item.models ?? []).map(m => m.trim()).filter(Boolean)
             return (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 7, paddingLeft: 28, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
-                <Text style={{ fontSize: 10, color: '#475569' }}>{label} × {item.count}{mdls.length ? ` — ${mdls.join(', ')}` : ''}  ({item.unit_price}€/véh)</Text>
+                <Text style={{ fontSize: 10, color: '#475569' }}>{label} × {item.count}{mdls.length ? ` — ${mdls.join(', ')}` : ''}  ({item.unit_price}€/{t('véh')})</Text>
                 <Text style={{ fontSize: 10, color: '#475569' }}>{lineTotalStr}€</Text>
               </View>
             )
           })}
 
           <View style={s.tableFooter}>
-            <Text style={s.totalLabel}>TOTAL À RÉGLER SUR PLACE</Text>
+            <Text style={s.totalLabel}>{t('TOTAL À RÉGLER SUR PLACE')}</Text>
             <Text style={s.totalPrice}>{finalStr}€</Text>
           </View>
         </View>
 
-        <Text style={s.payNote}>Mode de règlement : paiement comptant sur place</Text>
+        <Text style={s.payNote}>{t('Mode de règlement : paiement comptant sur place')}</Text>
 
         {/* Ce document n'est PAS une facture : il se présentait comme tel sans
             porter les mentions obligatoires du laveur (SIRET, adresse,
@@ -195,17 +198,17 @@ export default function BookingPDF({ booking }: Props) {
             pour un laveur qui la facture. La facture est émise après la
             prestation (voir `FacturePDF`). */}
         <View style={s.badge}>
-          <Text style={s.badgeTitle}>Récapitulatif — ce document n&apos;est pas une facture</Text>
+          <Text style={s.badgeTitle}>{t('Récapitulatif — ce document n’est pas une facture')}</Text>
           <Text style={s.badgeText}>
-            La facture est émise par votre prestataire une fois la prestation réalisée.{'\n'}
-            Référence : {ref} · Émis le {today}
+            {t('La facture est émise par votre prestataire une fois la prestation réalisée.')}{'\n'}
+            {t('Référence : {ref} · Émis le {today}', { ref, today })}
           </Text>
         </View>
 
         {/* Pied de page */}
         <View style={s.footer}>
           <Text style={s.footerText}>
-            Ce récapitulatif a été généré automatiquement par WashBoard · Plateforme de réservation de prestations à domicile
+            {t('Ce récapitulatif a été généré automatiquement par WashBoard · Plateforme de réservation de prestations à domicile')}
           </Text>
         </View>
 

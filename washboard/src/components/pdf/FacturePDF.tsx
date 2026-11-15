@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import { identifiantAffiche, libelleCourtIdentifiant, mentionFranchiseTva, paysFacturation, prixHt, type FactureContenu } from '@/lib/facture'
 import { FUSEAU } from '@/lib/dateUtils'
+import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 
 // Facture d'un laveur à son client, rendue depuis le contenu figé à
 // l'émission (`bookings.facture_contenu`) : elle reste identique même si le
@@ -59,23 +60,22 @@ const s = StyleSheet.create({
 // dans la police Helvetica du PDF et s'afficherait comme un caractère cassé.
 const euros = (n: number) => `${n.toFixed(2).replace('.', ',')} €`
 
-const jour = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric' })
+const jourEn = (loc: string, iso: string) =>
+  new Date(iso).toLocaleDateString(loc, { timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric' })
 
-const heure = (iso: string) =>
-  new Date(iso).toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+const heureEn = (loc: string, iso: string) =>
+  new Date(iso).toLocaleTimeString(loc, { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
 
-// Un jour seul (`YYYY-MM-DD`) : midi UTC, sinon la conversion vers Paris peut
-// reculer d'une journée et un devis paraîtrait expirer la veille.
-const jourSeul = (date: string) => jour(`${date}T12:00:00.000Z`)
+type Props = { numero: string; emiseLe: string; contenu: FactureContenu; logo?: Buffer | null; t?: Traducteur; loc?: string }
 
-// La date d'une prestation planifiée porte une heure ; celle d'un devis, non.
-const quandPrestation = (iso: string) =>
-  iso.length <= 10 ? `Le ${jourSeul(iso)}` : `Le ${jour(iso)} à ${heure(iso)}`
-
-type Props = { numero: string; emiseLe: string; contenu: FactureContenu; logo?: Buffer | null }
-
-export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
+export default function FacturePDF({ numero, emiseLe, contenu, logo, t = sansTraduction, loc = 'fr-FR' }: Props) {
+  const jour = (iso: string) => jourEn(loc, iso)
+  // Un jour seul (`YYYY-MM-DD`) : midi UTC, sinon la conversion vers Paris peut
+  // reculer d'une journée et un devis paraîtrait expirer la veille.
+  const jourSeul = (date: string) => jour(`${date}T12:00:00.000Z`)
+  // La date d'une prestation planifiée porte une heure ; celle d'un devis, non.
+  const quandPrestation = (iso: string) =>
+    iso.length <= 10 ? t('Le {jour}', { jour: jourSeul(iso) }) : t('Le {jour} à {heure}', { jour: jour(iso), heure: heureEn(loc, iso) })
   const { vendeur, client, prestation, lignes, remiseTtc, totaux } = contenu
   const devis = contenu.genre === 'devis'
   const franchise = vendeur.regimeTva === 'franchise'
@@ -83,12 +83,12 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
   const taux = String(vendeur.tauxTva).replace('.', ',')
   const couleur = vendeur.couleur && /^#[0-9a-f]{6}$/i.test(vendeur.couleur) ? vendeur.couleur : ENCRE
   const mentionsSociete = vendeur.statut === 'societe'
-    ? [vendeur.formeJuridique, vendeur.capital ? `au capital de ${vendeur.capital}` : null, vendeur.immatriculation]
+    ? [vendeur.formeJuridique, vendeur.capital ? t('au capital de {capital}', { capital: vendeur.capital }) : null, vendeur.immatriculation]
         .filter(Boolean).join(' · ')
     : ''
 
   return (
-    <Document title={`${devis ? 'Devis' : 'Facture'} ${numero}`} author={vendeur.nomLegal}>
+    <Document title={`${devis ? t('Devis') : t('Facture')} ${numero}`} author={vendeur.nomLegal}>
       <Page size="A4" style={s.page}>
 
         {/* Laveur à gauche, numéro et date à droite */}
@@ -101,17 +101,17 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
               {vendeur.nomLegal !== vendeur.nomCommercial ? <Text style={s.ligne}>{vendeur.nomLegal}</Text> : null}
               {mentionsSociete ? <Text style={s.ligne}>{mentionsSociete}</Text> : null}
               <Text style={s.ligne}>{vendeur.adresse}</Text>
-              <Text style={s.ligne}>{libelleCourtIdentifiant(vendeur.siret)} {identifiantAffiche(vendeur.siret)}</Text>
-              {vendeur.numeroTva ? <Text style={s.ligne}>{/^CHE/i.test(vendeur.numeroTva) ? 'N° de TVA' : 'TVA intracommunautaire'} {vendeur.numeroTva}</Text> : null}
+              <Text style={s.ligne}>{t(libelleCourtIdentifiant(vendeur.siret))} {identifiantAffiche(vendeur.siret)}</Text>
+              {vendeur.numeroTva ? <Text style={s.ligne}>{/^CHE/i.test(vendeur.numeroTva) ? t('N° de TVA') : t('TVA intracommunautaire')} {vendeur.numeroTva}</Text> : null}
               {vendeur.telephone ? <Text style={s.ligne}>{vendeur.telephone}</Text> : null}
             </View>
           </View>
           <View>
-            <Text style={s.titre}>{devis ? 'Devis' : 'Facture'}</Text>
-            <Text style={s.meta}>N° <Text style={s.metaFort}>{numero}</Text></Text>
-            <Text style={s.meta}>{devis ? 'Établi' : 'Émise'} le {jour(emiseLe)}</Text>
+            <Text style={s.titre}>{devis ? t('Devis') : t('Facture')}</Text>
+            <Text style={s.meta}>{t('N°')} <Text style={s.metaFort}>{numero}</Text></Text>
+            <Text style={s.meta}>{devis ? t('Établi le {jour}', { jour: jour(emiseLe) }) : t('Émise le {jour}', { jour: jour(emiseLe) })}</Text>
             {devis && contenu.valableJusquau ? (
-              <Text style={s.meta}>Valable jusqu&apos;au <Text style={s.metaFort}>{jourSeul(contenu.valableJusquau)}</Text></Text>
+              <Text style={s.meta}>{t('Valable jusqu’au')} <Text style={s.metaFort}>{jourSeul(contenu.valableJusquau)}</Text></Text>
             ) : null}
           </View>
         </View>
@@ -121,7 +121,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
         {/* Client et prestation */}
         <View style={s.blocs}>
           <View style={s.bloc}>
-            <Text style={s.etiquette}>Facturé à</Text>
+            <Text style={s.etiquette}>{t('Facturé à')}</Text>
             {client.entreprise ? <Text style={s.fort}>{client.entreprise}</Text> : null}
             <Text style={client.entreprise ? {} : s.fort}>{client.nom}</Text>
             {client.adresseFacturation ? <Text>{client.adresseFacturation}</Text> : null}
@@ -130,21 +130,21 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
             {client.telephone ? <Text style={{ color: GRIS }}>{client.telephone}</Text> : null}
           </View>
           <View style={s.bloc}>
-            <Text style={s.etiquette}>Prestation</Text>
+            <Text style={s.etiquette}>{t('Prestation')}</Text>
             <Text>{prestation.nature}</Text>
             {/* Un devis chiffre un travail qui n'a pas encore de date : le dire vaut mieux
                 que d'imprimer la date du jour, que le client lirait comme un rendez-vous. */}
-            <Text>{prestation.date ? quandPrestation(prestation.date) : 'Date à convenir'}</Text>
+            <Text>{prestation.date ? quandPrestation(prestation.date) : t('Date à convenir')}</Text>
             {prestation.lieu ? <Text>{prestation.lieu}</Text> : null}
           </View>
         </View>
 
         {/* Détail */}
         <View style={s.tete}>
-          <Text style={[s.teteTxt, s.cDesig]}>Désignation</Text>
-          <Text style={[s.teteTxt, s.cQte]}>Qté</Text>
-          <Text style={[s.teteTxt, s.cPu]}>{franchise ? 'Prix unitaire' : 'Prix unitaire HT'}</Text>
-          <Text style={[s.teteTxt, s.cTot]}>{franchise ? 'Montant' : 'Montant HT'}</Text>
+          <Text style={[s.teteTxt, s.cDesig]}>{t('Désignation')}</Text>
+          <Text style={[s.teteTxt, s.cQte]}>{t('Qté')}</Text>
+          <Text style={[s.teteTxt, s.cPu]}>{franchise ? t('Prix unitaire') : t('Prix unitaire HT')}</Text>
+          <Text style={[s.teteTxt, s.cTot]}>{franchise ? t('Montant') : t('Montant HT')}</Text>
         </View>
         {lignes.map((l, i) => (
           <View key={i} style={s.rang}>
@@ -159,7 +159,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
             {/* Sur une facture de réservation, la remise ne peut venir que du créneau
                 optimisé, et le client l'a vue nommée ainsi en réservant. Sur un document
                 écrit à la main, c'est une remise, point. */}
-            <Text style={s.cDesig}>{contenu.libelleRemise ?? (contenu.genre ? 'Remise' : 'Remise créneau optimisé')}</Text>
+            <Text style={s.cDesig}>{contenu.libelleRemise ?? (contenu.genre ? t('Remise') : t('Remise créneau optimisé'))}</Text>
             <Text style={s.cQte}>1</Text>
             <Text style={s.cPu}>{euros(-ht(remiseTtc))}</Text>
             <Text style={s.cTot}>{euros(-ht(remiseTtc))}</Text>
@@ -170,12 +170,12 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
         <View style={s.totaux}>
           {franchise ? null : (
             <>
-              <View style={s.totRang}><Text>Total HT</Text><Text>{euros(totaux.ht)}</Text></View>
-              <View style={s.totRang}><Text>TVA {taux} %</Text><Text>{euros(totaux.tva)}</Text></View>
+              <View style={s.totRang}><Text>{t('Total HT')}</Text><Text>{euros(totaux.ht)}</Text></View>
+              <View style={s.totRang}><Text>{t('TVA {taux} %', { taux })}</Text><Text>{euros(totaux.tva)}</Text></View>
             </>
           )}
           <View style={s.totFinal}>
-            <Text style={s.totFinalTxt}>{franchise ? 'Total' : 'Total TTC'}</Text>
+            <Text style={s.totFinalTxt}>{franchise ? t('Total') : t('Total TTC')}</Text>
             <Text style={s.totFinalTxt}>{euros(totaux.ttc)}</Text>
           </View>
         </View>
@@ -187,38 +187,37 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo }: Props) {
             l'objet même du document, elle ne peut pas être une mention en petit. */}
         {devis ? (
           <View style={s.accord} wrap={false}>
-            <Text style={s.accordTitre}>Bon pour accord</Text>
+            <Text style={s.accordTitre}>{t('Bon pour accord')}</Text>
             <Text style={s.accordAide}>
-              Pour accepter ce devis, retournez-le daté et signé, avec la mention « Bon pour accord ».
+              {t('Pour accepter ce devis, retournez-le daté et signé, avec la mention « Bon pour accord ».')}
             </Text>
             <View style={s.signature}>
-              <Text style={s.signCase}>Date</Text>
-              <Text style={s.signCase}>Signature du client</Text>
+              <Text style={s.signCase}>{t('Date')}</Text>
+              <Text style={s.signCase}>{t('Signature du client')}</Text>
             </View>
           </View>
         ) : null}
 
         {/* Mentions obligatoires */}
         <View style={s.mentions}>
-          {franchise ? <Text>{mentionFranchiseTva(paysFacturation({ facture_numero_tva: vendeur.numeroTva, facture_siret: vendeur.siret, phone: vendeur.telephone }))}</Text> : null}
+          {franchise ? <Text>{mentionFranchiseTva(paysFacturation({ facture_numero_tva: vendeur.numeroTva, facture_siret: vendeur.siret, phone: vendeur.telephone }), t)}</Text> : null}
           {devis ? (
             <>
-              <Text>Devis gratuit et sans engagement. Prix garantis jusqu&apos;à la date de validité indiquée.</Text>
-              <Text>Paiement comptant le jour de la prestation.</Text>
+              <Text>{t('Devis gratuit et sans engagement. Prix garantis jusqu’à la date de validité indiquée.')}</Text>
+              <Text>{t('Paiement comptant le jour de la prestation.')}</Text>
             </>
           ) : (
-            <Text>Paiement comptant le jour de la prestation. Pas d&apos;escompte pour paiement anticipé.</Text>
+            <Text>{t('Paiement comptant le jour de la prestation. Pas d’escompte pour paiement anticipé.')}</Text>
           )}
           {client.professionnel && !devis ? (
             <Text>
-              En cas de retard de paiement : pénalités au taux de trois fois le taux d&apos;intérêt légal,
-              et indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).
+              {t('En cas de retard de paiement : pénalités au taux de trois fois le taux d’intérêt légal, et indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).')}
             </Text>
           ) : null}
         </View>
 
         <Text style={s.pied} fixed>
-          {vendeur.nomLegal} · {libelleCourtIdentifiant(vendeur.siret)} {identifiantAffiche(vendeur.siret)} · {vendeur.adresse}
+          {vendeur.nomLegal} · {t(libelleCourtIdentifiant(vendeur.siret))} {identifiantAffiche(vendeur.siret)} · {vendeur.adresse}
         </Text>
 
       </Page>

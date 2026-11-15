@@ -3,11 +3,12 @@ import { nomFichierDocument, rendreDocumentPdf } from '@/lib/pdfDocument'
 import type { FactureContenu } from '@/lib/facture'
 import { logger } from '@/lib/logger'
 import { uuidValide } from '@/lib/uuid'
+import { getTAvec } from '@/lib/i18n/serveur'
 
 // Le PDF d'un devis ou d'une facture écrits à la main. Même gabarit que les factures de
 // réservation (`FacturePDF`), même régime d'accès : route publique dont l'identifiant du
 // document fait le jeton — c'est ce lien que reçoit le client par email, sans compte.
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   // Un id mal formé (lien cassé, bot, `undefined` interpolé côté client) ne
   // doit jamais atteindre Postgres : il répondrait une vraie erreur serveur
@@ -31,7 +32,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     emis_le: document.emis_le as string,
     contenu: document.contenu as FactureContenu,
   }
-  const buffer = await rendreDocumentPdf(rendable)
+  const langue = await getTAvec(new URL(req.url).searchParams.get('lang'))
+  const buffer = await rendreDocumentPdf(rendable, langue)
 
   return new Response(new Uint8Array(buffer), {
     headers: {

@@ -1,5 +1,5 @@
 import { cookies, headers } from 'next/headers'
-import { COOKIE_LANGUE, detecterLangue, type Langue } from './langues'
+import { COOKIE_LANGUE, LANGUES, LOCALES_INTL, detecterLangue, type Langue } from './langues'
 import { dictionnaireDe } from './dictionnaires'
 import { creerTraducteur, type Traducteur } from './traduire'
 
@@ -34,4 +34,13 @@ export async function getTArticle(): Promise<Traducteur> {
   if (!base || langue === 'fr') return creerTraducteur(null)
   const { dictionnaireArticles } = await import('./dictionnaires/articles')
   return creerTraducteur({ ...base, ...(await dictionnaireArticles(langue)) })
+}
+
+/**
+ * Traducteur d'un document hors page (PDF) : la langue demandée par le lien (`?lang=en`, posée quand le laveur
+ * copie ou partage le lien depuis son compte) ou, à défaut, celle de la requête.
+ */
+export async function getTAvec(forcee?: string | null): Promise<{ t: Traducteur; loc: string; langue: Langue }> {
+  const langue = (LANGUES as readonly string[]).includes(forcee ?? '') ? (forcee as Langue) : await getLangue()
+  return { t: creerTraducteur(dictionnaireDe(langue)), loc: LOCALES_INTL[langue], langue }
 }

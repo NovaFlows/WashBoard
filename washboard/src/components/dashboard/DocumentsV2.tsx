@@ -22,7 +22,7 @@ import {
 import { aujourdhuiParis } from '@/lib/chiffresPeriode'
 import { confirmerEnvoi, annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import { whatsappDigits } from '@/lib/phone'
-import { useT , useLocale } from '@/components/i18n/I18nProvider'
+import { useT, useLocale, useLangue } from '@/components/i18n/I18nProvider'
 
 // « Devis et factures » — refonte 2026, destination NEUVE (Alexandre, 2026-09-27 : « on va
 // créer une section nouveau devis facture qui existe pas pour en générer un ou une »).
@@ -224,6 +224,7 @@ function FicheDocumentBureauV2({
 }) {
   const loc = useLocale()
   const tr = useT()
+  const langue = useLangue()
   const devis = d.genre === 'devis'
   const client = d.contenu.client.entreprise || d.contenu.client.nom
   const { label, ton } = statutAffiche(d, aujourdhui)
@@ -307,7 +308,7 @@ function FicheDocumentBureauV2({
             <button
               type="button"
               onClick={async () => {
-                const lien = `${window.location.origin}/api/documents/${d.id}/pdf`
+                const lien = `${window.location.origin}/api/documents/${d.id}/pdf${langue === 'fr' ? '' : `?lang=${langue}`}`
                 // Même logique que `FeuilleActionsDocumentV2.tsx` : partage natif d'abord (le
                 // VRAI fichier, le message n'y porte pas de lien), repli `wa.me` sinon (lui ne
                 // transporte que du texte, le lien y est donc indispensable).

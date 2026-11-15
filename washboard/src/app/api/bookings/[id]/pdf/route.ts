@@ -11,6 +11,7 @@ import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 import { jetonValide } from '@/lib/bookingToken'
 import { uuidValide } from '@/lib/uuid'
+import { getTAvec } from '@/lib/i18n/serveur'
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -66,9 +67,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     if (estVerrouillee(booking, seuils)) return new Response('Not found', { status: 404 })
   }
 
+  const { t, loc } = await getTAvec(new URL(req.url).searchParams.get('lang'))
   const document = facture
-    ? createElement(FacturePDF, { ...facture, logo: await logoPourPdf(facture.contenu.vendeur.logoUrl) })
-    : createElement(BookingPDF, { booking })
+    ? createElement(FacturePDF, { ...facture, logo: await logoPourPdf(facture.contenu.vendeur.logoUrl), t, loc })
+    : createElement(BookingPDF, { booking, t, loc })
 
   // La date du rendez-vous dans le nom du fichier : c'est elle que le laveur
   // et son client cherchent en retrouvant une facture dans leurs téléchargements.

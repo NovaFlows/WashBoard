@@ -4,6 +4,7 @@ import FacturePDF from '@/components/pdf/FacturePDF'
 import { logoPourPdf } from '@/lib/logoFacture'
 import type { FactureContenu } from '@/lib/facture'
 import { nomFichierDocument } from '@/lib/documents'
+import type { Traducteur } from '@/lib/i18n/traduire'
 
 export { nomFichierDocument }
 
@@ -20,11 +21,12 @@ export type DocumentRendable = {
   contenu: FactureContenu
 }
 
-export async function rendreDocumentPdf(d: DocumentRendable): Promise<Buffer> {
+export async function rendreDocumentPdf(d: DocumentRendable, langue?: { t: Traducteur; loc: string }): Promise<Buffer> {
   return renderToBuffer(createElement(FacturePDF, {
     numero: d.numero,
     emiseLe: d.emis_le,
     contenu: d.contenu,
+    ...(langue ? { t: langue.t, loc: langue.loc } : {}),
     logo: await logoPourPdf(d.contenu.vendeur.logoUrl),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any)

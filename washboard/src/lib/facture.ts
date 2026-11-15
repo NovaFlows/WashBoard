@@ -1,3 +1,4 @@
+import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { adresseAvecLieu } from '@/lib/centreAuto'
 import { estPrestationSupplementaire } from '@/lib/plusieursPrestations'
@@ -217,12 +218,12 @@ export function identifiantAffiche(identifiant: string | null | undefined): stri
  *  Belgique : régime de franchise des petites entreprises (art. 56bis du Code de la TVA).
  *  Suisse : entreprise non assujettie sous 100 000 francs de chiffre d'affaires (art. 10 al. 2
  *  let. a LTVA). */
-export function mentionFranchiseTva(pays: PaysFacturation): string {
-  if (pays === 'BE') return 'TVA non applicable — franchise des petites entreprises (art. 56bis du Code de la TVA).'
-  if (pays === 'CH') return 'TVA non applicable — entreprise non assujettie, chiffre d’affaires inférieur à 100 000 CHF (art. 10 al. 2 LTVA).'
-  if (pays === 'LU') return 'TVA non applicable — régime de franchise des petites entreprises (art. 57 de la loi modifiée du 12 février 1979 concernant la TVA).'
-  if (pays === 'QC') return 'TPS et TVQ non perçues — petit fournisseur (revenus inférieurs à 30 000 $ sur quatre trimestres consécutifs).'
-  return 'TVA non applicable, art. 293 B du CGI.'
+export function mentionFranchiseTva(pays: PaysFacturation, t: Traducteur = sansTraduction): string {
+  if (pays === 'BE') return t('TVA non applicable — franchise des petites entreprises (art. 56bis du Code de la TVA).')
+  if (pays === 'CH') return t('TVA non applicable — entreprise non assujettie, chiffre d’affaires inférieur à 100 000 CHF (art. 10 al. 2 LTVA).')
+  if (pays === 'LU') return t('TVA non applicable — régime de franchise des petites entreprises (art. 57 de la loi modifiée du 12 février 1979 concernant la TVA).')
+  if (pays === 'QC') return t('TPS et TVQ non perçues — petit fournisseur (revenus inférieurs à 30 000 $ sur quatre trimestres consécutifs).')
+  return t('TVA non applicable, art. 293 B du CGI.')
 }
 
 export type InfosFacturation = {
