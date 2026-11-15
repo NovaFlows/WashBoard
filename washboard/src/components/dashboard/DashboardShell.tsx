@@ -289,6 +289,47 @@ function AppBetaBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
   )
 }
 
+// Annonce des rappels de rendez-vous par email (2026-11-15), une seule fois par laveur : ils sont
+// actifs par défaut (24 h et 3 h avant), réglables dans Messages automatiques. Même règle de fermeture
+// que les autres annonces : une fois fermée, on ne la remontre plus.
+const CLE_FERMEE_RAPPELS_RDV = 'wb_annonce_rappels_rdv_fermee'
+
+function RappelsRdvBanner({ bureau, actif, onDisponibiliteChange }: PropsBandeau) {
+  const t = useT()
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    let annule = false
+    let fermee = false
+    try { fermee = !!localStorage.getItem(CLE_FERMEE_RAPPELS_RDV) } catch { /* affichée quand même */ }
+    if (!annule && !fermee) setVisible(true)
+    return () => { annule = true }
+  }, [])
+
+  useEffect(() => { onDisponibiliteChange(visible) }, [visible, onDisponibiliteChange])
+
+  if (!visible || !actif) return null
+
+  function fermer() {
+    setVisible(false)
+    try { localStorage.setItem(CLE_FERMEE_RAPPELS_RDV, '1') } catch { /* rien à faire */ }
+  }
+
+  const texte = t('Nouveau : vos clients reçoivent un rappel de rendez-vous par email, activé par défaut 24 h et 3 h avant. Vous pouvez le régler ou le désactiver.')
+  if (bureau) {
+    return (
+      <BandeauBureauV2 etiquette={t('Nouveau')} lien="/dashboard/clients/messages" libelleLien={t('Régler les rappels')} onDismiss={fermer}>
+        {texte}
+      </BandeauBureauV2>
+    )
+  }
+  return (
+    <BandeauV2 etiquette={t('Nouveau')} ton="nouveau" lien="/dashboard/clients/messages" libelleLien={t('Régler les rappels')} onDismiss={fermer}>
+      {texte}
+    </BandeauV2>
+  )
+}
+
 // Fermer le bandeau d'essai le fermait pour CETTE page seulement : chaque écran rend son
 // propre châssis, et il revenait au changement d'onglet (Alexandre, 2026-09-27). Le choix est
 // donc retenu sur l'appareil, et repéré par ce que le bandeau ANNONCE — « 23 jours restants ».
@@ -587,14 +628,15 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   // `estBandeauActif` ci-dessous ne laisse passer que le premier disponible dans cet ordre.
   // Priorité : l'essai/la facturation (ça touche à l'argent) d'abord, puis les annonces
   // produit, dans l'ordre où elles apparaissaient déjà.
-  const ORDRE_BANDEAUX = ['trial', 'offres2026', 'appBeta'] as const
+  const ORDRE_BANDEAUX = ['trial', 'offres2026', 'rappelsRdv', 'appBeta'] as const
   const [dispoBandeaux, setDispoBandeaux] = useState<Record<(typeof ORDRE_BANDEAUX)[number], boolean>>({
-    trial: false, offres2026: false, appBeta: false,
+    trial: false, offres2026: false, rappelsRdv: false, appBeta: false,
   })
   // Identité stable (deps vides) : sans ça, chaque bandeau recevrait une fonction différente à
   // chaque rendu de DashboardShell et redéclencherait son effet de signalement en boucle.
   const rapporterTrial = useCallback((d: boolean) => setDispoBandeaux(s => (s.trial === d ? s : { ...s, trial: d })), [])
   const rapporterOffres2026 = useCallback((d: boolean) => setDispoBandeaux(s => (s.offres2026 === d ? s : { ...s, offres2026: d })), [])
+  const rapporterRappelsRdv = useCallback((d: boolean) => setDispoBandeaux(s => (s.rappelsRdv === d ? s : { ...s, rappelsRdv: d })), [])
   const rapporterAppBeta = useCallback((d: boolean) => setDispoBandeaux(s => (s.appBeta === d ? s : { ...s, appBeta: d })), [])
   const estBandeauActif = (cle: (typeof ORDRE_BANDEAUX)[number]): boolean => {
     const rang = ORDRE_BANDEAUX.indexOf(cle)
@@ -613,6 +655,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
         bureau={showRailBureau} actif={estBandeauActif('trial')} onDisponibiliteChange={rapporterTrial}
       />
       <NouvellesOffresBanner bureau={showRailBureau} actif={estBandeauActif('offres2026')} onDisponibiliteChange={rapporterOffres2026} />
+      <RappelsRdvBanner bureau={showRailBureau} actif={estBandeauActif('rappelsRdv')} onDisponibiliteChange={rapporterRappelsRdv} />
       <AppBetaBanner bureau={showRailBureau} actif={estBandeauActif('appBeta')} onDisponibiliteChange={rapporterAppBeta} />
     </>
   )
