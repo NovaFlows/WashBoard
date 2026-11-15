@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   // bas le choix fait dans ce cas (échouer plutôt que tout exposer en clair).
   const { data: laveur, error: errLaveur } = await admin
     .from('washers')
-    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug')
+    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, slug')
     .eq('id', washerId)
     .single()
   if (errLaveur || !laveur) {

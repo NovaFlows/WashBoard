@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
   // décalage tenu par le client compte juste (voir BookingList).
   const { data: washer, error: errWasher } = await supabase
     .from('washers')
-    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug')
+    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, slug')
     .eq('id', washerId)
     .single()
   // Sans l'offre, impossible de savoir quoi masquer : on ne renvoie rien plutôt

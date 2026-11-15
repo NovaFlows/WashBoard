@@ -20,6 +20,7 @@ const sessions: unknown[] = []
 const confirmations: unknown[] = []
 const fiches: unknown[] = []
 
+vi.mock("@/lib/parrainageServeur", () => ({ annoncerInscriptionFilleul: async () => null }))
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: { verifyOtp: async (params: unknown) => { sessions.push(params); return plan.session } },

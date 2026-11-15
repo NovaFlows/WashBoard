@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.en_veille === false) {
     const { data: washer, error: errWasher } = await supabase
       .from('washers')
-      .select('plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
+      .select('plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au')
       .eq('id', washerId).single()
 
     if (errWasher || !washer) {

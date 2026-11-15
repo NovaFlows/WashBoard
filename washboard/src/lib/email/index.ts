@@ -1061,3 +1061,32 @@ ${bouton(complete ? 'Voir ma carte' : nouveaux > 1 ? 'Voir mes tampons' : 'Voir 
     }),
   })
 }
+
+/** Au parrain, quand un filleul devient abonné (lib/parrainageServeur.ts, `recompenserParrain`). */
+export async function sendParrainageRecompense({ to, washerName, filleulName, phrase, appUrl }: {
+  to: string
+  washerName: string
+  filleulName: string
+  /** Ce qui a été appliqué, en clair : « Votre prochain paiement est repoussé au 5 janvier. » */
+  phrase: string
+  appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `${filleulName} est devenu client : votre mois est offert`,
+    html: page({
+      titre: 'Votre mois est offert',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre mois est offert', sousTitre: 'Merci de faire connaître WashBoard' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`<strong>${escapeHtml(filleulName)}</strong>, que vous avez parrainé, vient de s&apos;abonner. ${escapeHtml(phrase)}`, { marge: '0 0 20px' })}
+${bouton('Parrainer un autre collègue', `${url}/dashboard/parrainage`, 'accent', '0')}
+${paragraphe('Chaque collègue qui s&apos;abonne avec votre code vous offre un mois de plus.', { ton: 'petit', marge: '16px 0 0' })}`,
+      pied: QUESTIONS,
+    }),
+  })
+}

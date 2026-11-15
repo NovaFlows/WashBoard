@@ -49,7 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: washer } = await supabase
     .from('washers')
-    .select('id, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au')
     .eq('user_id', user.id)
     .maybeSingle()
 

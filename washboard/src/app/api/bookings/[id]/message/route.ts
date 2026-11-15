@@ -54,7 +54,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { data: laveur, error: errLaveur } = await admin
     .from('washers')
-    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug, followup_delay_days')
+    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, slug, followup_delay_days')
     .eq('id', washerId)
     .single()
   if (errLaveur || !laveur) {

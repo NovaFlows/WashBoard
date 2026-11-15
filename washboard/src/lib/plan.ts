@@ -317,6 +317,14 @@ export type AbonnementInfo = PlanInfo & {
   subscription_status?: string | null
   trial_ends_at?: string | null
   subscription_ends_at?: string | null
+  /** Mois de Pro gagné par parrainage (lib/parrainage.ts) ; absent avant le SQL. */
+  pro_offert_jusqu_au?: string | null
+}
+
+/** Vrai tant qu'un mois de Pro gagné par parrainage court encore. */
+export function proOffertActif(w: { pro_offert_jusqu_au?: string | null } | null | undefined, now: Date = new Date()): boolean {
+  const fin = w?.pro_offert_jusqu_au ? new Date(w.pro_offert_jusqu_au).getTime() : NaN
+  return fin > now.getTime()
 }
 
 // ── Simulation, en développement UNIQUEMENT ────────────────────────────────
@@ -443,8 +451,10 @@ export function planEffectif(
   if (forcee) return forcee
   if (finEssaiSimuleeEnDev()) return 'decouverte'
 
-  if (suitRetourGratuit(w) && essaiTermineSansFormule(w, now)) return 'decouverte'
-  return washerPlan(w)
+  const base: Plan = suitRetourGratuit(w) && essaiTermineSansFormule(w, now) ? 'decouverte' : washerPlan(w)
+  // Mois gagné par parrainage : au moins le Pro, sans jamais faire descendre un Business.
+  if (proOffertActif(w, now) && RANK[base] < RANK.pro) return 'pro'
+  return base
 }
 
 /** Vrai quand il faut demander au laveur de choisir sa formule : son essai est
@@ -454,6 +464,7 @@ export function doitChoisirFormule(
   now: Date = new Date(),
 ): boolean {
   if (finEssaiSimuleeEnDev()) return true
+  if (proOffertActif(w, now)) return false
   return suitRetourGratuit(w) && essaiTermineSansFormule(w, now)
 }
 

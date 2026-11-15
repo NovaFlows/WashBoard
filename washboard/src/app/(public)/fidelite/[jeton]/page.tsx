@@ -34,7 +34,7 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
 
   const { data: laveur } = await admin
     .from('washers')
-    .select('id, name, slug, logo_url, brand_color, profile_updated_at, fidelite, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, account_status')
+    .select('id, name, slug, logo_url, brand_color, profile_updated_at, fidelite, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, account_status')
     .eq('id', carte.washer_id)
     .maybeSingle()
   if (!laveur || laveur.account_status !== 'active') notFound()

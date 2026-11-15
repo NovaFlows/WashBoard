@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   let washerQuery = admin
     .from('washers')
-    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, sms_sender_statut, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, name, followup_delay_days, followup_message, review_channel, sms_sender, sms_sender_statut, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au')
     .eq('followup_enabled', true)
     .not('followup_message', 'is', null)
 
