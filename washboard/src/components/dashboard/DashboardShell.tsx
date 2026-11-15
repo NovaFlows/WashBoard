@@ -465,6 +465,19 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
     if (grandfathered && subscriptionEndsAt && new Date(subscriptionEndsAt).getTime() > now) return null
 
     if (subscriptionStatus === 'expired') {
+      // Un abonné (client historique ou abonnement déjà réglé) dont l'échéance est passée n'est PAS en
+      // « période d'essai » : il a 30 jours de grâce pour régler, calés sur son échéance d'origine
+      // (voir `graceEnded` dans lib/plan.ts, qui garde son accès ouvert jusque-là).
+      const echeanceBase = subscriptionEndsAt ?? (grandfathered ? trialEndsAt : null)
+      if (echeanceBase) {
+        const finGrace = new Date(echeanceBase)
+        finGrace.setDate(finGrace.getDate() + 30)
+        return bandeau(`echeance-${echeanceBase}`, fermer => etat(
+          'rouge',
+          t('Votre abonnement est arrivé à échéance. Réglez-le d’ici le {date} pour continuer à utiliser WashBoard.', { date: formatDateFR(finGrace.toISOString(), loc) }),
+          t('Voir les offres'), fermer,
+        ))
+      }
       return bandeau('expire', fermer => etat(
         'rouge',
         t('Votre période d’essai a expiré. Activez votre abonnement pour continuer à utiliser WashBoard.'),
