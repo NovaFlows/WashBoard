@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ARTICLES, SITE_URL, THEME_LABEL, type Article, type Theme } from '@/lib/blog'
+import { getLangue, getT } from '@/lib/i18n/serveur'
+import { LOCALES_INTL } from '@/lib/i18n/langues'
 
 // Titre mesuré au pixel (canvas 2D, police Arial 20px — celle que Google
 // utilise pour le titre du résultat sur desktop) : 394px, sous la limite de
@@ -75,17 +77,19 @@ const SECONDARY_THEMES: Theme[] = ['vitres', 'menage', 'piscine', 'exterieur', '
 const SECONDARY_ID = 'autres-metiers'
 const SECONDARY_LABEL = 'Autres métiers mobiles'
 
-function ArticleRow({ article }: { article: Article }) {
+async function ArticleRow({ article }: { article: Article }) {
+  const loc = LOCALES_INTL[await getLangue()]
+  const t = await getT()
   return (
     <li>
       <Link href={`/blog/${article.slug}`}>
         <p className="meta">
           <time dateTime={article.updatedAt}>
-            {new Date(article.updatedAt).toLocaleDateString('fr-FR', {
+            {new Date(article.updatedAt).toLocaleDateString(loc, {
               day: 'numeric', month: 'long', year: 'numeric',
             })}
           </time>
-          {' · '}{article.readingMinutes} min de lecture
+          {' · '}{t('{n} min de lecture', { n: article.readingMinutes })}
         </p>
         <h3>{article.title}</h3>
         <p className="desc">{article.description}</p>
@@ -94,7 +98,8 @@ function ArticleRow({ article }: { article: Article }) {
   )
 }
 
-export default function BlogIndex() {
+export default async function BlogIndex() {
+  const t = await getT()
   // Piliers : chacun sa section, les plus récemment mis à jour en premier.
   const primaryGroups = PRIMARY_THEMES
     .map(theme => ({
@@ -121,15 +126,15 @@ export default function BlogIndex() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <header className="bl-tete">
-        <p className="sur-titre"><span className="pt" />Le blog</p>
+        <p className="sur-titre"><span className="pt" />{t('Le blog')}</p>
         <h1 className="pr-h1">
-          Lavage auto & detailing&nbsp;: les conseils du blog
+          {t('Lavage auto & detailing : les conseils du blog')}
         </h1>
         <p className="chapo">
-          Ce que WashBoard apprend en travaillant avec des laveurs auto, des pros du detailing et du nettoyage de canapés et textiles à domicile : trouver des clients, fixer ses tarifs, organiser ses tournées, arrêter de perdre du temps sur l&apos;administratif. D&apos;autres métiers mobiles (vitres, ménage, piscines, extérieur) restent couverts, réunis plus bas dans une dernière rubrique.
+          {t('Ce que WashBoard apprend en travaillant avec des laveurs auto, des pros du detailing et du nettoyage de canapés et textiles à domicile : trouver des clients, fixer ses tarifs, organiser ses tournées, arrêter de perdre du temps sur l’administratif. D’autres métiers mobiles (vitres, ménage, piscines, extérieur) restent couverts, réunis plus bas dans une dernière rubrique.')}
         </p>
         {/* Accès direct à chaque pilier : sur mobile, la liste complète est longue. */}
-        <nav aria-label="Métiers" className="puces">
+        <nav aria-label={t('Métiers')} className="puces">
           {navItems.map(item => (
             <a key={item.id} href={`#${item.id}`}>{item.label}</a>
           ))}
