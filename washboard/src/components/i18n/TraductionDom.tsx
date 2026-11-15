@@ -61,9 +61,14 @@ export default function TraductionDom({ dictionnaire }: { dictionnaire: Dictionn
       return null
     }
 
+    // Ce que le filet a lui-même écrit : le retraiter ferait grossir le texte à chaque passage (« cliente » qui
+    // épouse à nouveau « {n} client{s} » → « clienteeee… »). Une valeur écrite par nous n'est jamais retraduite.
+    const ecrit = new WeakMap<Node, string>()
+    const ecritAttr = new WeakMap<Element, Map<string, string>>()
     const traiterNoeudTexte = (n: Text) => {
       const brut = n.nodeValue
       if (!brut) return
+      if (ecrit.get(n) === brut) return
       const parent = n.parentElement
       if (!parent || parent.closest(IGNORES)) return
       // Une phrase coupée par un élément en ligne (« lien de <b>réservation</b> ») : traduire un seul morceau
@@ -72,15 +77,20 @@ export default function TraductionDom({ dictionnaire }: { dictionnaire: Dictionn
       const voisins = Array.from(parent.childNodes).filter(x => x !== n && (x.nodeType === Node.ELEMENT_NODE ? /\S/.test(x.textContent ?? '') : /\S/.test(x.nodeValue ?? '')))
       if (voisins.length > 0) return
       const nouveau = traduireTexte(brut)
-      if (nouveau !== null && nouveau !== brut) n.nodeValue = nouveau
+      if (nouveau !== null && nouveau !== brut) { ecrit.set(n, nouveau); n.nodeValue = nouveau }
     }
     const traiterAttributs = (el: Element) => {
       if (el.closest(IGNORES)) return
       for (const a of ATTRIBUTS) {
         const v = el.getAttribute(a)
         if (!v) continue
+        if (ecritAttr.get(el)?.get(a) === v) continue
         const nouveau = traduireTexte(v)
-        if (nouveau !== null && nouveau !== v) el.setAttribute(a, nouveau)
+        if (nouveau !== null && nouveau !== v) {
+          const m = ecritAttr.get(el) ?? new Map<string, string>()
+          m.set(a, nouveau); ecritAttr.set(el, m)
+          el.setAttribute(a, nouveau)
+        }
       }
     }
     const parcourir = (racine: Node) => {

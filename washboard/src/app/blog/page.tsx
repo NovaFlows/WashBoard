@@ -91,8 +91,8 @@ async function ArticleRow({ article }: { article: Article }) {
           </time>
           {' · '}{t('{n} min de lecture', { n: article.readingMinutes })}
         </p>
-        <h3>{article.title}</h3>
-        <p className="desc">{article.description}</p>
+        <h3>{t(article.title)}</h3>
+        <p className="desc">{t(article.description)}</p>
       </Link>
     </li>
   )
@@ -136,14 +136,14 @@ export default async function BlogIndex() {
         {/* Accès direct à chaque pilier : sur mobile, la liste complète est longue. */}
         <nav aria-label={t('Métiers')} className="puces">
           {navItems.map(item => (
-            <a key={item.id} href={`#${item.id}`}>{item.label}</a>
+            <a key={item.id} href={`#${item.id}`}>{t(item.label)}</a>
           ))}
         </nav>
       </header>
 
       {primaryGroups.map(g => (
         <section key={g.theme} id={g.theme} className="bl-rubrique">
-          <h2>{g.label}</h2>
+          <h2>{t(g.label)}</h2>
           <ul className="bl-liste">
             {g.articles.map(article => (
               <ArticleRow key={article.slug} article={article} />
@@ -154,7 +154,7 @@ export default async function BlogIndex() {
 
       {secondaryArticles.length > 0 && (
         <section id={SECONDARY_ID} className="bl-rubrique">
-          <h2>{SECONDARY_LABEL}</h2>
+          <h2>{t(SECONDARY_LABEL)}</h2>
           <ul className="bl-liste">
             {secondaryArticles.map(article => (
               <ArticleRow key={article.slug} article={article} />
