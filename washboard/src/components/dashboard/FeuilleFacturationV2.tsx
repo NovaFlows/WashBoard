@@ -110,7 +110,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
   async function soumettre(e: React.FormEvent) {
     e.preventDefault()
     if (enCours) return
-    const refus = validerFacturation({ siret, regime, numeroTva, prochainNumero, numeroActuel, pays })
+    const refus = validerFacturation({ siret, regime, numeroTva, prochainNumero, numeroActuel, pays }, t)
     if (refus) { setErreur(refus); return }
     setErreur(null)
     setEnCours(true)
@@ -150,8 +150,8 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
             valeur={statut}
             onChange={setStatut}
             options={[
-              { valeur: 'ei', libelle: regles.statutEi.libelle, aide: regles.statutEi.aide },
-              { valeur: 'societe', libelle: regles.statutSociete.libelle, aide: regles.statutSociete.aide },
+              { valeur: 'ei', libelle: t(regles.statutEi.libelle), aide: t(regles.statutEi.aide) },
+              { valeur: 'societe', libelle: t(regles.statutSociete.libelle), aide: t(regles.statutSociete.aide) },
             ] as const}
           />
         </Bloc>
@@ -255,8 +255,8 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
             valeur={regime}
             onChange={setRegime}
             options={[
-              { valeur: 'franchise', libelle: 'Franchise en base', aide: t('Vous ne facturez pas la TVA (cas le plus courant)') },
-              { valeur: 'assujetti', libelle: 'Assujetti', aide: t('Vous facturez la TVA et la reversez') },
+              { valeur: 'franchise', libelle: t('Franchise en base'), aide: t('Vous ne facturez pas la TVA (cas le plus courant)') },
+              { valeur: 'assujetti', libelle: t('Assujetti'), aide: t('Vous facturez la TVA et la reversez') },
             ] as const}
           />
           {assujetti && (

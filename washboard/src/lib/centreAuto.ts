@@ -1,3 +1,4 @@
+import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 import { z } from 'zod'
 
 // Prestation en centre auto (demande d'un client, 2026-11-01) : un laveur qui a un local
@@ -153,14 +154,14 @@ export const CHOIX_LIEUX: { valeur: LieuxProposes; libelle: string; detail: stri
 ]
 
 /** Ligne de la feuille « Mon profil ». */
-export function resumeCentreAuto(brut: unknown): string {
+export function resumeCentreAuto(brut: unknown, t: Traducteur = sansTraduction): string {
   const r = ReglagesCentreAutoSchema.safeParse(brut)
-  if (!r.success || !r.data.actif) return 'Non'
+  if (!r.success || !r.data.actif) return t('Non')
   const n = centresDeReglages(r.data).length
-  const nb = n > 1 ? `${n} centres · ` : ''
-  if (r.data.lieux === 'domicile') return `Oui · ${nb}page : à domicile seulement`
-  if (r.data.lieux === 'centre') return `Oui · ${nb}page : en centre auto seulement`
-  return `Oui · ${nb}page : à domicile et en centre auto`
+  const nb = n > 1 ? t('{n} centres · ', { n }) : ''
+  if (r.data.lieux === 'domicile') return t('Oui · {nb}page : à domicile seulement', { nb })
+  if (r.data.lieux === 'centre') return t('Oui · {nb}page : en centre auto seulement', { nb })
+  return t('Oui · {nb}page : à domicile et en centre auto', { nb })
 }
 
 /** Intitulé de l'adresse d'un rendez-vous (emails, reçu, agenda) : au centre, c'est celle

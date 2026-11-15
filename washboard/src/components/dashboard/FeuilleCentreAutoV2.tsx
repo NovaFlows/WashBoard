@@ -166,8 +166,8 @@ export default function FeuilleCentreAutoV2({
                         {choisi && <span className="h-2 w-2 rounded-full" style={{ background: 'var(--v2-color-accent)' }} />}
                       </span>
                       <span className="min-w-0">
-                        <span className={`block text-[15px] ${corpsFort}`}>{c.libelle}</span>
-                        <span className={`mt-0.5 block text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{c.detail}</span>
+                        <span className={`block text-[15px] ${corpsFort}`}>{t(c.libelle)}</span>
+                        <span className={`mt-0.5 block text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t(c.detail)}</span>
                       </span>
                     </button>
                   )

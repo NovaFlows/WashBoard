@@ -36,7 +36,7 @@ export default function ChangerTelephoneV1({ telephone }: { telephone: string | 
   async function demander(e: React.FormEvent) {
     e.preventDefault()
     if (enCours) return
-    const refus = validerTelephone(nouveau) ?? (nouveau.trim() ? null : t('Indiquez votre nouveau numéro.'))
+    const refus = validerTelephone(nouveau, t) ?? (nouveau.trim() ? null : t('Indiquez votre nouveau numéro.'))
     if (refus) { setMessage({ ok: false, texte: refus }); return }
     if (!motDePasse) { setMessage({ ok: false, texte: t('Indiquez votre mot de passe actuel.') }); return }
     setMessage(null)

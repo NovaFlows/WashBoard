@@ -93,18 +93,18 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
     return null
   }
 
-  const nom = resumeNomEntreprise(fiche.name)
-  const telephone = resumeTelephone(fiche.phone)
-  const adresse = resumeAdresseDepart(fiche.base_address)
+  const nom = resumeNomEntreprise(fiche.name, t)
+  const telephone = resumeTelephone(fiche.phone, t)
+  const adresse = resumeAdresseDepart(fiche.base_address, t)
   const paliers = fiche.travel_fee_tiers ?? []
   const deplacement = paliers.length === 0 && !peut('frais_deplacement')
     ? { texte: t('Inclus dans l’offre {requiredPlanLabel}', { requiredPlanLabel: requiredPlanLabel('frais_deplacement') }) }
-    : resumeFraisDeplacement(paliers)
+    : resumeFraisDeplacement(paliers, t)
   const etatCompte = fiche.account_status === 'deactivated' || fiche.account_status === 'pending_deletion'
     ? fiche.account_status : null
-  const equipe = resumeEquipe(fiche.team_size, peutEquipe)
-  const facturation = resumeFacturation(fiche)
-  const courriel = resumeEmail(email)
+  const equipe = resumeEquipe(fiche.team_size, peutEquipe, t)
+  const facturation = resumeFacturation(fiche, t)
+  const courriel = resumeEmail(email, t)
 
   async function reactiver(): Promise<string | null> {
     const r = await actionCompte('reactivate')
@@ -159,7 +159,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
             <Ligne label={t('Nom de l’entreprise')} valeur={nom.texte} ton={nom.ton} tronquer onClick={() => setFeuille('nom')} />
             <Ligne label={t('Adresse de départ')} valeur={adresse.texte} ton={adresse.ton} onClick={() => setFeuille('adresse')} />
             <Ligne label={t('Frais de déplacement')} valeur={deplacement.texte} onClick={() => setFeuille('deplacement')} />
-            <Ligne label={t('Centre auto')} valeur={resumeCentreAuto(centre)} onClick={() => setFeuille('centre')} />
+            <Ligne label={t('Centre auto')} valeur={resumeCentreAuto(centre, t)} onClick={() => setFeuille('centre')} />
             <Ligne
               label={t('Nombre de laveurs')}
               valeur={equipe.texte}
@@ -221,7 +221,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
           etiquette={t('Nom')}
           valeur={fiche.name ?? ''}
           placeholder={t('AutoNettoyage')}
-          valider={validerNomEntreprise}
+          valider={s => validerNomEntreprise(s, t)}
           onEnregistrer={v => enregistrer({ name: v })}
           onClose={fermer}
         />
