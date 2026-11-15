@@ -52,7 +52,7 @@ export default function FeuilleLogoV2({ nom, logoUrl, etat, couleur, retouches, 
             className={`${BOUTON} w-full text-white`}
             style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
           >
-            {occupe ? 'En cours…' : logoUrl ? t('Changer le logo') : t('Choisir une image')}
+            {occupe ? t('En cours…') : logoUrl ? t('Changer le logo') : t('Choisir une image')}
           </button>
           {logoUrl && (
             <button

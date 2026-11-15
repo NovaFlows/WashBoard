@@ -186,7 +186,7 @@ export default function FeuillePrestationV2({
           className={`${BOUTON} flex-[1.4] text-white`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          {enCours ? 'Enregistrement…' : 'Enregistrer'}
+          {enCours ? tr('Enregistrement…') : tr('Enregistrer')}
         </button>
       </div>
     </div>
@@ -194,7 +194,7 @@ export default function FeuillePrestationV2({
 
   return (
     <Feuille
-      titre={service ? tr('Modifier la prestation') : 'Nouvelle prestation'}
+      titre={service ? tr('Modifier la prestation') : tr('Nouvelle prestation')}
       onClose={onClose}
       pied={pied}
     >
@@ -314,7 +314,7 @@ export default function FeuillePrestationV2({
                 onClick={() => setForm(f => retirerOrphelins(f, categorie))}
                 className={`flex min-h-11 items-center pl-[15px] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] underline underline-offset-4`}
               >
-                {orphelins.length === 1 ? 'Le retirer' : 'Les retirer'}
+                {orphelins.length === 1 ? tr('Le retirer') : tr('Les retirer')}
               </button>
             </div>
           )}
@@ -345,7 +345,7 @@ export default function FeuillePrestationV2({
                     min="0"
                     value={form.vehicle_price_overrides[id] ?? ''}
                     onChange={e => setForm(f => changerPrixType(f, id, e.target.value))}
-                    placeholder={form.price || 'Base'}
+                    placeholder={form.price || tr('Base')}
                     className={`${CHAMP} !w-28 shrink-0 tabular-nums`}
                   />
                   <span className={`w-3 shrink-0 text-[14px] ${corps} text-[color:var(--v2-color-gris)]`}>€</span>
@@ -648,8 +648,8 @@ export default function FeuillePrestationV2({
               style={{ color: 'var(--v2-color-accent)' }}
             >
               {veille.enCours
-                ? 'Enregistrement…'
-                : veille.enVeille ? 'Remettre en ligne' : 'Mettre en veille'}
+                ? tr('Enregistrement…')
+                : veille.enVeille ? tr('Remettre en ligne') : tr('Mettre en veille')}
             </button>
           </div>
         )}

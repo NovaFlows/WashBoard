@@ -9,6 +9,7 @@ import { ReglagesCentreAutoSchema, centreAutoPublic, centresDe, normaliserReglag
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { planEffectif, quotaPrestations } from '@/lib/plan'
 import { resumeHorairesCourt } from '@/lib/horaires'
+import { getT } from '@/lib/i18n/serveur'
 import type { Availability, Service, ServiceCategory } from '@/types'
 
 // Refonte 2026 — « Prestations et prix » : les lavages proposés aux clients, leurs
@@ -126,7 +127,7 @@ export default async function PrestationsPage() {
             plan: washer.plan,
             grandfathered: washer.grandfathered,
             servicesCount: errServices ? undefined : (services ?? []).length,
-            resumeHoraires: errDispos ? undefined : resumeHorairesCourt((availabilities ?? []) as Availability[]),
+            resumeHoraires: errDispos ? undefined : resumeHorairesCourt((availabilities ?? []) as Availability[], await getT()),
           }}
         />
       </Suspense>

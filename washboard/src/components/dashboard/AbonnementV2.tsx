@@ -167,7 +167,7 @@ export default function AbonnementV2({
                 style={{ backgroundColor: PLAN_COULEURS[offreAffichee] }}
                 aria-hidden
               />
-              {grandfathered ? t('Client historique') : 'Votre offre'}
+              {grandfathered ? t('Client historique') : t('Votre offre')}
             </span>
             <p className={`mt-1 text-[24px] leading-none ${titre}`}>{PLAN_LABELS[offreAffichee]}</p>
             <p
@@ -178,7 +178,7 @@ export default function AbonnementV2({
             </p>
           </div>
           <p className={`shrink-0 text-right text-[26px] leading-none ${hero}`}>
-            {prixActuel === 0 ? 'Gratuit' : <>{prixActuel} €<span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('par mois')}</span></>}
+            {prixActuel === 0 ? t('Gratuit') : <>{prixActuel} €<span className={`block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('par mois')}</span></>}
           </p>
         </div>
 
@@ -253,7 +253,7 @@ export default function AbonnementV2({
                     : 'border border-[color:var(--v2-filet-fort)] bg-transparent text-[color:var(--v2-color-gris)]'
                 }`}
               >
-                {libelle}
+                {t(libelle)}
               </button>
             ))}
           </div>
@@ -297,7 +297,7 @@ export default function AbonnementV2({
                   {carte.surDevis ? (
                     <span className={`text-[16px] ${titre}`}>{LIBELLE_CONTACT}</span>
                   ) : carte.price === 0 ? (
-                    'Gratuit'
+                    t('Gratuit')
                   ) : (
                     <>
                       {carte.from && <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('dès')} </span>}
@@ -383,9 +383,9 @@ export default function AbonnementV2({
         <h2 className={`px-4 pt-4 text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Questions fréquentes')}</h2>
         <div className="mt-1 divide-y divide-[color:var(--v2-filet)]">
           {[
-            { q: 'Comment annuler mon abonnement ?', r: t('Écrivez-nous à novaflows.pro@gmail.com. Aucun engagement, résiliation immédiate.') },
+            { q: t('Comment annuler mon abonnement ?'), r: t('Écrivez-nous à novaflows.pro@gmail.com. Aucun engagement, résiliation immédiate.') },
             { q: t('Mes données sont-elles conservées si j’arrête ?'), r: t('Oui : clients, rendez-vous et historique sont gardés 30 jours après la résiliation.') },
-            { q: 'Puis-je changer de mode de paiement ?', r: t('Oui, écrivez-nous à tout moment.') },
+            { q: t('Puis-je changer de mode de paiement ?'), r: t('Oui, écrivez-nous à tout moment.') },
             { q: t('Comment changer d’offre ?'), r: t('Payez l’offre voulue ci-dessus, ou écrivez-nous : nous l’activons sous 24 h.') },
           ].map(({ q, r }) => (
             <div key={q} className="px-4 py-3">

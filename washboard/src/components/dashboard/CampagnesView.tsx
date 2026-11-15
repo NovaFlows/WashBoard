@@ -99,6 +99,7 @@ function Chiffre({ label, valeur, aide, accent, discret }: {
 
 /** Le lien à copier, sur une ligne. */
 function LigneLien({ lien, libelle }: { lien: string; libelle: string }) {
+  const t = useT()
   const [copie, setCopie] = useState(false)
   return (
     <div className="flex items-center gap-2 min-w-0">
@@ -112,7 +113,7 @@ function LigneLien({ lien, libelle }: { lien: string; libelle: string }) {
         style={{ backgroundColor: BLEU }}
       >
         {copie ? <Check size={12} strokeWidth={3} /> : <Copy size={12} strokeWidth={2.5} />}
-        {copie ? 'Copié' : 'Copier'}
+        {copie ? t('Copié') : t('Copier')}
       </button>
     </div>
   )
@@ -170,7 +171,7 @@ function LigneCreation({ b, rang, lien, onSupprimer }: {
                 ressemble à un succès, alors que c'est du hasard. Le cacher
                 empêche de couper la bonne vidéo sur un chiffre inventé. */}
             <Chiffre
-              label={b.fiable ? 'Transformation' : t('Peu de données')}
+              label={b.fiable ? t('Transformation') : t('Peu de données')}
               valeur={b.fiable ? pourcent(b.tauxConversion) : '—'}
               aide={b.fiable ? undefined : t('dès {SEUIL_FIABILITE} visites', { SEUIL_FIABILITE })}
               discret={!b.fiable}
@@ -285,7 +286,7 @@ function FormCreation({ campagneId, onFait }: { campagneId: string; onFait: () =
       <button onClick={ajouter} disabled={enCours || !nom.trim()}
         className="px-4 py-2.5 text-white text-sm font-semibold rounded-xl transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-40"
         style={{ backgroundColor: BLEU }}>
-        {enCours ? 'Ajout…' : t('Ajouter cette vidéo')}
+        {enCours ? t('Ajout…') : t('Ajouter cette vidéo')}
       </button>
     </div>
   )
@@ -381,7 +382,7 @@ function FormModification({ c, onFait, onAnnuler }: {
         <button onClick={enregistrer} disabled={enCours || !nom.trim()}
           className="px-4 py-2.5 text-white text-sm font-semibold rounded-xl transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-40"
           style={{ backgroundColor: BLEU }}>
-          {enCours ? 'Enregistrement…' : 'Enregistrer'}
+          {enCours ? t('Enregistrement…') : t('Enregistrer')}
         </button>
         <button onClick={onAnnuler}
           className="px-4 py-2.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
@@ -437,7 +438,7 @@ function CarteCampagne({ c, baseUrl, onSupprimer, onRafraichir }: {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
             }`}
           >
-            {active ? 'En cours' : t('Terminée')}
+            {active ? t('En cours') : t('Terminée')}
           </span>
           <button
             onClick={() => setEdition(e => !e)}

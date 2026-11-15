@@ -2,6 +2,7 @@
 
 import { KeyRound } from 'lucide-react'
 import { ResultatAcces, useDemandeAcces } from '@/components/dashboard/SupportAccessForm'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Bouton « Prendre la main sur son compte » d'une conversation de la boîte de
 // l'équipe : le lien du laveur (`slug`) est déjà connu, inutile de le retaper.
@@ -9,6 +10,7 @@ import { ResultatAcces, useDemandeAcces } from '@/components/dashboard/SupportAc
 // visiteur hors équipe et tout laveur n'ayant pas ouvert d'accès. Ce composant ne
 // décide jamais d'un accès, il affiche la réponse.
 export default function AccesRapide({ slug, nom }: { slug: string; nom: string }) {
+  const t = useT()
   const { occupe, erreur, resultat, demander } = useDemandeAcces()
   if (!slug) return null
   return (
@@ -21,7 +23,7 @@ export default function AccesRapide({ slug, nom }: { slug: string; nom: string }
         className="inline-flex min-h-11 items-center gap-2 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
       >
         <KeyRound size={16} aria-hidden />
-        {occupe ? 'Vérification…' : 'Prendre la main sur son compte'}
+        {occupe ? t('Vérification…') : t('Prendre la main sur son compte')}
       </button>
       <ResultatAcces erreur={erreur} resultat={resultat} />
     </div>

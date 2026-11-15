@@ -211,7 +211,7 @@ export default function FeuilleZoneV2({ zone, adresseDeBase, onEnregistrer, onCl
     if (message) setErreur(message)
   }
 
-  const phrase = phraseRayon(f.mode, f.rayon, f.adresse)
+  const phrase = phraseRayon(f.mode, f.rayon, f.adresse, t)
 
   return (
     <Feuille
@@ -258,8 +258,8 @@ export default function FeuilleZoneV2({ zone, adresseDeBase, onEnregistrer, onCl
                   <LigneRadio
                     key={m.id}
                     actif={f.mode === m.id}
-                    label={m.label}
-                    aide={m.aide}
+                    label={t(m.label)}
+                    aide={t(m.aide)}
                     onClick={() => { setChampFautif(null); modifier({ mode: m.id }) }}
                   />
                 ))}

@@ -225,7 +225,7 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
   // ── Vue formulaire ─────────────────────────────────────────────────────
   const b = brouillon
   const apercu = b && {
-    nom: b.nom.trim() || 'Votre promotion',
+    nom: b.nom.trim() || t('Votre promotion'),
     type_remise: b.type_remise,
     valeur: Number(b.valeur.replace(',', '.')) || 0,
     // Une fin déjà passée masquerait l'aperçu : il montre alors un compte à rebours d'un jour.
@@ -257,7 +257,7 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
               <button type="button" onClick={() => maj({ type_remise: 'pourcentage' })} className={puce(b.type_remise === 'pourcentage')}>{t('En %')}</button>
               <button type="button" onClick={() => maj({ type_remise: 'montant' })} className={puce(b.type_remise === 'montant')}>{t('En €')}</button>
             </div>
-            <input aria-label={b.type_remise === 'pourcentage' ? 'Remise en pourcentage' : 'Remise en euros'} className={CHAMP} inputMode="decimal" value={b.valeur} onChange={e => maj({ valeur: e.target.value.replace(/[^\d.,]/g, '') })} />
+            <input aria-label={b.type_remise === 'pourcentage' ? t('Remise en pourcentage') : t('Remise en euros')} className={CHAMP} inputMode="decimal" value={b.valeur} onChange={e => maj({ valeur: e.target.value.replace(/[^\d.,]/g, '') })} />
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -343,7 +343,7 @@ export default function PromotionsV2({ slug, services, liste }: { slug: string; 
 
         <div className="flex flex-col gap-2">
           <button type="button" onClick={enregistrer} disabled={enregistrement} className={`${BOUTON} w-full `} style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)', ...PRESSION }}>
-            {enregistrement ? 'Enregistrement…' : b.id ? 'Enregistrer' : t('Créer la promotion')}
+            {enregistrement ? t('Enregistrement…') : b.id ? t('Enregistrer') : t('Créer la promotion')}
           </button>
           {b.id && (
             <button type="button" onClick={() => setSuppression(true)} className={`${BOUTON} w-full`} style={{ color: 'var(--v2-color-rouge)', ...PRESSION }}>

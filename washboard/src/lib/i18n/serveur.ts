@@ -5,13 +5,18 @@ import { creerTraducteur, type Traducteur } from './traduire'
 
 /** Langue de la requête en cours (composants serveur, métadonnées). */
 export async function getLangue(): Promise<Langue> {
-  const [jar, h] = await Promise.all([cookies(), headers()])
-  return detecterLangue({
-    cookie: jar.get(COOKIE_LANGUE)?.value,
-    acceptLanguage: h.get('accept-language'),
-    pays: h.get('x-vercel-ip-country'),
-    userAgent: h.get('user-agent'),
-  })
+  try {
+    const [jar, h] = await Promise.all([cookies(), headers()])
+    return detecterLangue({
+      cookie: jar.get(COOKIE_LANGUE)?.value,
+      acceptLanguage: h.get('accept-language'),
+      pays: h.get('x-vercel-ip-country'),
+      userAgent: h.get('user-agent'),
+    })
+  } catch {
+    // Hors requête (test, tâche planifiée) : le français, jamais une erreur.
+    return 'fr'
+  }
 }
 
 /** `const t = await getT()` puis `t('Se connecter')` dans un composant serveur. */

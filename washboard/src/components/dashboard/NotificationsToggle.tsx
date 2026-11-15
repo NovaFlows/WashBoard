@@ -52,7 +52,7 @@ export function NotificationsToggle() {
               : 'bg-[#1651E8] text-white hover:bg-[#0F4ACC]'
           }`}
         >
-          {occupe ? 'Un instant…' : etat === 'actif' ? t('Désactiver sur cet appareil') : t('Activer les notifications')}
+          {occupe ? t('Un instant…') : etat === 'actif' ? t('Désactiver sur cet appareil') : t('Activer les notifications')}
         </button>
       )}
 

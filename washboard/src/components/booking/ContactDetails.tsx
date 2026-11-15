@@ -114,7 +114,7 @@ export default function ContactDetails({ isProfessional, clientsProAutorises, fa
     </div>
     {error && <p role="alert" className="mt-4 p-3 rounded-xl bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 text-sm">{error}</p>}
     <BookingAction target={actionTarget} accent={accent} disabled={!pret || loading} onClick={() => ref.current?.requestSubmit()}>
-      {loading ? 'Envoi en cours…' : pret ? t('Confirmer la réservation') : valid ? t('Acceptez les conditions de l’acompte') : t('Complétez vos coordonnées')}
+      {loading ? t('Envoi en cours…') : pret ? t('Confirmer la réservation') : valid ? t('Acceptez les conditions de l’acompte') : t('Complétez vos coordonnées')}
     </BookingAction>
   </form>
 }

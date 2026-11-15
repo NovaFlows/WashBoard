@@ -343,7 +343,7 @@ export function ChoixVeilleModal({ actives, plafond, aRanger, offre }: {
                     className={V.principal}
                     style={{ backgroundColor: pret && !loading ? V.accent : V.inactif }}
                   >
-                    {loading ? 'Enregistrement…' : 'Confirmer'}
+                    {loading ? t('Enregistrement…') : t('Confirmer')}
                   </button>
                 </div>
               </div>

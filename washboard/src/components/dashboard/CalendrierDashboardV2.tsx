@@ -566,7 +566,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                 <button
                   type="button"
                   onClick={() => naviguerBureau(1)}
-                  aria-label={vueBureau === 'semaine' ? 'Semaine suivante' : tr('Jour suivant')}
+                  aria-label={vueBureau === 'semaine' ? tr('Semaine suivante') : tr('Jour suivant')}
                   className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--v2-color-gris)] transition-colors hover:text-[color:var(--v2-color-encre)]"
                 >
                   <ChevronRight size={16} strokeWidth={2} />
@@ -1469,7 +1469,7 @@ function DetailRendezVous({
                     className={`flex-1 h-10 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} text-white disabled:opacity-50 transition-transform active:scale-[.97]`}
                     style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
                   >
-                    {rescheduleSaving ? 'Enregistrement…' : 'Enregistrer'}
+                    {rescheduleSaving ? tr('Enregistrement…') : tr('Enregistrer')}
                   </button>
                   <button
                     type="button"
@@ -1625,7 +1625,7 @@ function DetailRendezVous({
                   className={`flex h-11 w-full items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] disabled:opacity-50 transition-transform active:scale-[.97]`}
                   style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
                 >
-                  {factureEnCours ? 'Émission…' : tr('Émettre la facture')}
+                  {factureEnCours ? tr('Émission…') : tr('Émettre la facture')}
                 </button>
               )}
               {factureMsg?.id === b.id && (
@@ -1886,7 +1886,7 @@ function FicheRdvBureauV2({
                     className={`h-9 flex-1 rounded-[var(--v2-radius-bouton)] text-[13px] ${corpsFort} text-white disabled:opacity-50 transition-transform active:scale-[.97]`}
                     style={{ background: 'var(--v2-color-accent)', transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
                   >
-                    {rescheduleSaving ? 'Enregistrement…' : 'Enregistrer'}
+                    {rescheduleSaving ? tr('Enregistrement…') : tr('Enregistrer')}
                   </button>
                   <button
                     type="button"
@@ -2066,7 +2066,7 @@ function FicheRdvBureauV2({
                 className={`flex h-10 w-full items-center justify-center rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-encre)] disabled:opacity-50 transition-transform active:scale-[.97]`}
                 style={{ transitionDuration: 'var(--v2-duration-press)', transitionTimingFunction: 'var(--v2-ease-out)' }}
               >
-                {factureEnCours ? 'Émission…' : tr('Émettre la facture')}
+                {factureEnCours ? tr('Émission…') : tr('Émettre la facture')}
               </button>
             )}
             {factureMsg?.id === b.id && (

@@ -637,7 +637,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
               </div>
             </div>
             <p key={etape} aria-live="polite" className={`wb-visite-texte mt-2.5 text-[15px] leading-snug ${corps}`}>
-              {vientDeReussir ? 'Fait ✓' : etapeActuelle.texte}
+              {vientDeReussir ? t('Fait ✓') : etapeActuelle.texte}
             </p>
             {!vientDeReussir && etapeActuelle.cheminPwa && (
               <p className={`mt-1 text-[12px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
@@ -647,7 +647,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
                 {vientDeReussir
-                  ? 'On continue…'
+                  ? t('On continue…')
                   : dejaFaitAffiche
                     ? t('Déjà configuré — tu peux continuer.')
                     : t('L\'écran reste à toi — la visite avance dès que c\'est fait.')}
@@ -658,7 +658,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
                 disabled={navigation || vientDeReussir}
                 className={`h-9 shrink-0 px-4 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} text-[color:var(--v2-color-accent)] border border-[color:var(--v2-filet-fort)] disabled:opacity-50 transition-opacity`}
               >
-                {navigation ? <Spinner /> : dejaFaitAffiche ? 'Suivant' : 'Plus tard'}
+                {navigation ? <Spinner /> : dejaFaitAffiche ? t('Suivant') : t('Plus tard')}
               </button>
             </div>
           </div>
@@ -726,7 +726,7 @@ export default function VisiteGuidee({ aFaire: aFaireParAppareil, avancement, bu
           >
             {navigation ? (
               <span className="flex items-center justify-center gap-2"><Spinner />{t('Chargement…')}</span>
-            ) : suivante === null ? t('Terminé') : 'Suivant'}
+            ) : suivante === null ? t('Terminé') : t('Suivant')}
           </button>
         </div>
       </div>

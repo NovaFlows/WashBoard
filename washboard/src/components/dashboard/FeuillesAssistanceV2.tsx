@@ -84,7 +84,7 @@ export function BullesConversationV2({ fil, erreur, finRef }: {
               }`}
               style={moi ? { background: 'var(--v2-color-accent)' } : undefined}
             >
-              <span className="sr-only">{moi ? 'Vous' : 'Support WashBoard'} : </span>
+              <span className="sr-only">{moi ? tr('Vous') : tr('Support WashBoard')} : </span>
               <p className={`whitespace-pre-wrap text-[15px] leading-snug ${corps}`}>{m.text}</p>
               <p className={`mt-1 text-[11px] ${corps} ${moi ? 'text-white/70' : 'text-[color:var(--v2-color-gris)]'}`}>
                 {formatSupportDate(m.createdAt)}

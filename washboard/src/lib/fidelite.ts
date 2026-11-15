@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 import { EMBLEMES_CARTE, FINITIONS_CARTE } from '@/lib/carteFidelite'
 
 // Carte de fidélité (décisions d'Alexandre, 2026-10-17) :
@@ -144,35 +145,35 @@ export function remiseFidelite(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'
 }
 
 /** Ce qui est offert, en toutes lettres (« la prestation, les options et le déplacement »). */
-export function partiesOffertes(r: Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>): string {
-  const parties = ['la prestation']
-  if (r.offre_options !== false) parties.push('les options')
-  if (r.offre_deplacement) parties.push('le déplacement')
-  return parties.length === 1 ? parties[0] : `${parties.slice(0, -1).join(', ')} et ${parties[parties.length - 1]}`
+export function partiesOffertes(r: Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>, t: Traducteur = sansTraduction): string {
+  const parties = [t('la prestation')]
+  if (r.offre_options !== false) parties.push(t('les options'))
+  if (r.offre_deplacement) parties.push(t('le déplacement'))
+  return parties.length === 1 ? parties[0] : t('{debut} et {fin}', { debut: parties.slice(0, -1).join(', '), fin: parties[parties.length - 1] })
 }
 
 /** « Prestation offerte », « −20 % », « −15 € ». */
-export function libelleRecompense(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'> & Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>): string {
+export function libelleRecompense(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'> & Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>, t: Traducteur = sansTraduction): string {
   if (r.recompense === 'offerte') {
-    const extra = [r.offre_options !== false ? 'options' : null, r.offre_deplacement ? 'déplacement' : null].filter(Boolean)
-    return extra.length ? `une prestation offerte (${extra.join(' et ')} compris)` : 'une prestation offerte'
+    const extra = [r.offre_options !== false ? t('options') : null, r.offre_deplacement ? t('déplacement') : null].filter(Boolean)
+    return extra.length ? t('une prestation offerte ({extra} compris)', { extra: extra.length === 2 ? t('{debut} et {fin}', { debut: extra[0], fin: extra[1] }) : extra.join('') }) : t('une prestation offerte')
   }
   const v = Number.isInteger(r.valeur) ? String(r.valeur) : r.valeur.toFixed(2).replace('.', ',')
-  return r.recompense === 'pourcentage' ? `−${v} % sur une prestation` : `−${v} € sur une prestation`
+  return r.recompense === 'pourcentage' ? t('−{v} % sur une prestation', { v }) : t('−{v} € sur une prestation', { v })
 }
 
 /** La récompense en deux mots, pour le recto de la carte : « Prestation offerte », « −20 % ». */
-export function recompenseCourte(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'>): string {
-  if (r.recompense === 'offerte') return 'Prestation offerte'
+export function recompenseCourte(r: Pick<ReglagesFidelite, 'recompense' | 'valeur'>, t: Traducteur = sansTraduction): string {
+  if (r.recompense === 'offerte') return t('Prestation offerte')
   const v = Number.isInteger(r.valeur) ? String(r.valeur) : r.valeur.toFixed(2).replace('.', ',')
   return r.recompense === 'pourcentage' ? `−${v} %` : `−${v} €`
 }
 
 /** La phrase que lit le client sous sa carte. */
-export function phraseCarte(e: EtatCarte, r: Pick<ReglagesFidelite, 'recompense' | 'valeur'> & Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>): string {
-  if (e.disponibles > 0) return `Récompense débloquée : ${libelleRecompense(r)}, appliquée automatiquement à votre prochaine réservation.`
+export function phraseCarte(e: EtatCarte, r: Pick<ReglagesFidelite, 'recompense' | 'valeur'> & Partial<Pick<ReglagesFidelite, 'offre_options' | 'offre_deplacement'>>, t: Traducteur = sansTraduction): string {
+  if (e.disponibles > 0) return t('Récompense débloquée : {recompense}, appliquée automatiquement à votre prochaine réservation.', { recompense: libelleRecompense(r, t) })
   const reste = e.requis - e.progression
-  return `Plus que ${reste} prestation${reste > 1 ? 's' : ''} avant ${libelleRecompense(r)}.`
+  return t('Plus que {reste} prestation{v1} avant {recompense}.', { reste, v1: reste > 1 ? 's' : '', recompense: libelleRecompense(r, t) })
 }
 
 /** Jeton de la page carte (`/fidelite/<jeton>`) : assez long pour ne pas se deviner. */

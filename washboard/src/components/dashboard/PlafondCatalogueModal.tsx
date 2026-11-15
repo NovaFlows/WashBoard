@@ -145,7 +145,7 @@ export function PlafondCatalogueModal({ message, cible, actives, onEchanger, onF
                 className="mt-4 w-full px-5 py-3 text-white text-[15px] font-semibold rounded-xl transition-[transform,background-color] duration-150 ease-out active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100"
                 style={{ backgroundColor: BLEU }}
               >
-                {enCours ? 'Échange en cours…' : 'Échanger'}
+                {enCours ? t('Échange en cours…') : t('Échanger')}
               </button>
             </div>
           )}

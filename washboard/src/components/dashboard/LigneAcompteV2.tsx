@@ -56,7 +56,7 @@ export default function LigneAcompteV2({ rdv, modifiable }: { rdv: AcompteRdv; m
           <p className={`text-[14px] ${corps}`}>{t('Acompte · {formatPrice}', { formatPrice: formatPrice(Number(rdv.acompte_montant)) })}</p>
           <p className={`mt-0.5 flex items-center gap-1.5 text-[12.5px] ${corpsFort}`} style={{ color: couleur }}>
             <span className="h-[7px] w-[7px] rounded-full" style={{ background: couleur }} aria-hidden />
-            {recu ? t('Reçu') : echeance ? `En attente · avant ${echeance}` : 'En attente'}
+            {recu ? t('Reçu') : echeance ? `En attente · avant ${echeance}` : t('En attente')}
           </p>
         </div>
         {modifiable && (
@@ -69,7 +69,7 @@ export default function LigneAcompteV2({ rdv, modifiable }: { rdv: AcompteRdv; m
               ? { borderColor: 'var(--v2-filet-fort)', color: 'var(--v2-color-gris)' }
               : { borderColor: 'var(--v2-color-vert)', color: 'var(--v2-color-vert)' }}
           >
-            {enCours ? '…' : recu ? 'Annuler' : t('Acompte reçu')}
+            {enCours ? '…' : recu ? t('Annuler') : t('Acompte reçu')}
           </button>
         )}
       </div>

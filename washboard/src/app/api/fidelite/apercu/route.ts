@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { rateLimit, clientIp } from '@/lib/rateLimit'
 import { carteVisible, cleFidelite, etatCarte, fideliteActive, numeroStable, partiesOffertes, phraseCarte, remiseFidelite } from '@/lib/fidelite'
 import { lireCarte, reservationsDuClient } from '@/lib/fideliteServeur'
+import { getT } from '@/lib/i18n/serveur'
 
 // Aperçu de la carte de fidélité au moment où le client a donné ses coordonnées, juste avant
 // de confirmer (demande d'Alexandre, 2026-10-17 : le bandeau ne doit pas dépendre de
@@ -27,6 +28,7 @@ const Corps = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  const tr = await getT()
   const limite = rateLimit(`fidelite-apercu:${clientIp(request)}`, 30, 10 * 60_000)
   if (!limite.ok) return NextResponse.json({ active: false }, { status: 429 })
 
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest) {
     disponibles: etat.disponibles,
     remise,
     offerte: etat.disponibles > 0 && reglages.recompense === 'offerte',
-    offert: etat.disponibles > 0 && reglages.recompense === 'offerte' ? partiesOffertes(reglages) : null,
-    phrase: phraseCarte(etat, reglages),
+    offert: etat.disponibles > 0 && reglages.recompense === 'offerte' ? partiesOffertes(reglages, tr) : null,
+    phrase: phraseCarte(etat, reglages, tr),
   })
 }

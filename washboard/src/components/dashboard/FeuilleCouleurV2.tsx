@@ -99,7 +99,7 @@ export default function FeuilleCouleurV2({ couleur, enAttente, erreur, faite, on
         )}
         {erreur && <Constat ton="rouge" role="alert">{erreur}</Constat>}
         {(enAttente || (faite && !erreur)) && (
-          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{enAttente ? 'Enregistrement…' : t('Enregistré.')}</p>
+          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{enAttente ? t('Enregistrement…') : t('Enregistré.')}</p>
         )}
       </div>
     </Feuille>

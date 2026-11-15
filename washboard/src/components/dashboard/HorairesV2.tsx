@@ -159,7 +159,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
             // Chaque groupe (« Lun–Ven 8h–18h ») reste d'un bloc : la phrase passe à la
             // ligne entre deux groupes, jamais au milieu d'une plage.
             <p className={`mt-1.5 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-              {resumeHoraires(plages).split(' · ').map((groupe, i) => (
+              {resumeHoraires(plages, t).split(' · ').map((groupe, i) => (
                 <span key={groupe}>{i > 0 && ' · '}<span className="whitespace-nowrap">{groupe}</span></span>
               ))}
             </p>
@@ -205,7 +205,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
             <CarteListe>
               <ul className="divide-y divide-[color:var(--v2-filet)]">
                 {JOURS_AFFICHES.map(jour => {
-                  const texte = libelleJour(plages, jour)
+                  const texte = libelleJour(plages, jour, t)
                   return (
                     <li key={jour}>
                       <button
@@ -213,9 +213,9 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
                         onClick={() => setFeuille({ quoi: 'jour', jour })}
                         className="flex min-h-[52px] w-full items-center gap-3 py-2.5 text-left"
                       >
-                        <span className={`w-[92px] shrink-0 text-[15.5px] ${nom}`}>{NOMS_JOURS[jour]}</span>
+                        <span className={`w-[92px] shrink-0 text-[15.5px] ${nom}`}>{t(NOMS_JOURS[jour])}</span>
                         <span
-                          className={`min-w-0 flex-1 text-[14.5px] tabular-nums ${texte === FERME ? `${corps} text-[color:var(--v2-color-gris)]` : corpsFort}`}
+                          className={`min-w-0 flex-1 text-[14.5px] tabular-nums ${texte === t(FERME) ? `${corps} text-[color:var(--v2-color-gris)]` : corpsFort}`}
                         >
                           {texte}
                         </span>
@@ -299,7 +299,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
 
       {retrait && (
         <ConfirmationSuppression
-          titre={t('Retirer {libellePlage} le {v1} ?', { libellePlage: libellePlage(retrait), v1: NOMS_JOURS[retrait.day_of_week].toLowerCase() })}
+          titre={t('Retirer {libellePlage} le {v1} ?', { libellePlage: libellePlage(retrait), v1: t(NOMS_JOURS[retrait.day_of_week]).toLowerCase() })}
           texte={t('Ce jour-là, plus de créneaux sur cette plage.')}
           remarque={t('Les rendez-vous déjà pris ne sont pas touchés.')}
           enCours={retraitEnCours}
@@ -338,7 +338,7 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
 
   if (!grandEcran) return contenu
 
-  const resumeHorairesActuel = vide ? undefined : resumeHoraires(plages)
+  const resumeHorairesActuel = vide ? undefined : resumeHoraires(plages, t)
 
   return (
     <div className="flex items-start gap-5">

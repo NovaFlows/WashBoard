@@ -107,7 +107,7 @@ function LigneFil({
                 style={{ background: resolue ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}
                 aria-hidden
               />
-              <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{resolue ? tr('Résolue') : 'Ouverte'}</span>
+              <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{resolue ? tr('Résolue') : tr('Ouverte')}</span>
             </span>
           </span>
           {nonLues > 0 && (
@@ -161,7 +161,7 @@ function PanneauConversationV2({ feuille, filOuvert, erreurNouvelle, erreurFil, 
         <div className="shrink-0 border-b border-[color:var(--v2-filet)] px-4 py-3.5">
           <p className={`text-[14.5px] ${corpsFort}`}>{filOuvert.title}</p>
           <p className={`mt-0.5 text-[11px] ${corpsFort}`} style={{ color: filOuvert.status === 'resolue' ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}>
-            {filOuvert.status === 'resolue' ? tr('Résolue') : 'Ouverte'}
+            {filOuvert.status === 'resolue' ? tr('Résolue') : tr('Ouverte')}
           </p>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">

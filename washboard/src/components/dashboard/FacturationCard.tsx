@@ -153,13 +153,13 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         </div>
 
         <div>
-          <label htmlFor="facture-nom-legal" className={labelClass}>{societe ? 'Raison sociale' : tr('Nom légal')}</label>
+          <label htmlFor="facture-nom-legal" className={labelClass}>{societe ? tr('Raison sociale') : tr('Nom légal')}</label>
           <input
             id="facture-nom-legal"
             type="text"
             value={nomLegal}
             onChange={e => setNomLegal(e.target.value)}
-            placeholder={societe ? 'Dupont Nettoyage' : 'Jean Dupont'}
+            placeholder={societe ? tr('Dupont Nettoyage') : tr('Jean Dupont')}
             className={inputClass}
           />
           <p className={aideClass}>
@@ -176,7 +176,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
         </div>
 
         <div>
-          <label className={labelClass}>{societe ? tr('Adresse du siège') : 'Adresse professionnelle'}</label>
+          <label className={labelClass}>{societe ? tr('Adresse du siège') : tr('Adresse professionnelle')}</label>
           <AddressAutocomplete value={adresse} onChange={setAdresse} placeholder={regles.adresseExemple} className={inputClass} />
         </div>
 
@@ -238,7 +238,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
               </select>
             </div>
             <div>
-              <label htmlFor="facture-numero-tva" className={labelClass}>{pays === 'CH' ? 'N° de TVA' : 'N° de TVA intracommunautaire'}</label>
+              <label htmlFor="facture-numero-tva" className={labelClass}>{pays === 'CH' ? tr('N° de TVA') : tr('N° de TVA intracommunautaire')}</label>
               <input id="facture-numero-tva" type="text" value={numeroTva} onChange={e => setNumeroTva(e.target.value)} placeholder={regles.numeroTvaExemple} className={inputClass} />
             </div>
           </div>
@@ -254,7 +254,7 @@ export function FacturationCard({ washer }: { washer: Washer }) {
           disabled={loading}
           className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
         >
-          {loading ? 'Enregistrement...' : 'Enregistrer'}
+          {loading ? tr('Enregistrement...') : tr('Enregistrer')}
         </button>
       </form>
     </div>

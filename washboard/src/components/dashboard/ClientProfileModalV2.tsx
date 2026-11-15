@@ -156,7 +156,7 @@ function FeuilleRattacherV2({
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void soumettre()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
-          {enCours ? 'Rattachement…' : 'Rattacher'}
+          {enCours ? tr('Rattachement…') : tr('Rattacher')}
         </button>
       }
     >
@@ -237,7 +237,7 @@ function FeuilleModifierFicheV2({
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
-          {enCours ? 'Enregistrement…' : 'Enregistrer'}
+          {enCours ? tr('Enregistrement…') : tr('Enregistrer')}
         </button>
       }
     >
@@ -296,7 +296,7 @@ function FeuilleAjouterTacheV2({ cle, onAjoute, onClose }: { cle: string; onAjou
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void ajouter()} disabled={enCours || !texte.trim()} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)] disabled:opacity-50`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
-          {enCours ? 'Ajout…' : 'Ajouter'}
+          {enCours ? tr('Ajout…') : tr('Ajouter')}
         </button>
       }
     >
@@ -347,7 +347,7 @@ function FeuilleAnonymiserV2({ titreClient, onConfirme, onClose }: { titreClient
               type="button" onClick={() => void confirmer()} disabled={enCours || !coche}
               className={`${BOUTON} flex-1 text-white disabled:opacity-50`} style={{ background: 'var(--v2-color-rouge)', ...PRESSION }}
             >
-              {enCours ? 'Anonymisation…' : tr('Anonymiser définitivement')}
+              {enCours ? tr('Anonymisation…') : tr('Anonymiser définitivement')}
             </button>
           </div>
         </div>
@@ -852,7 +852,7 @@ export default function ClientProfileModalV2({
                   <li key={d.id} className="flex items-baseline justify-between gap-2 py-1.5">
                     <span className="min-w-0">
                       <span className={`text-[14px] ${nom}`}>
-                        {d.genre === 'devis' ? 'Devis' : 'Facture'} {d.numero ?? ''}
+                        {d.genre === 'devis' ? tr('Devis') : tr('Facture')} {d.numero ?? ''}
                       </span>
                       <span className={`ml-2 text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                         {dateCourte(d.emis_le ?? d.created_at, maintenant, loc)}
@@ -865,7 +865,7 @@ export default function ClientProfileModalV2({
                           className={`ml-2 text-[12.5px] ${corpsFort}`}
                           style={{ color: d.paye_le ? 'var(--v2-color-vert)' : 'var(--v2-color-ambre)' }}
                         >
-                          {d.paye_le ? tr('Encaissée') : 'À encaisser'}
+                          {d.paye_le ? tr('Encaissée') : tr('À encaisser')}
                         </span>
                       )}
                     </span>
@@ -1003,7 +1003,7 @@ export default function ClientProfileModalV2({
             )}
             <LigneOption
               icone={BellOff}
-              titre={nePlusContacter ? tr('Autoriser à nouveau les messages') : 'Ne plus contacter'}
+              titre={nePlusContacter ? tr('Autoriser à nouveau les messages') : tr('Ne plus contacter')}
               sousTitre={tr('Stoppe relances et messages groupés')}
               couleur={nePlusContacter ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)'}
               disabled={enCours}

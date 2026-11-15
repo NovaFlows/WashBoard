@@ -77,7 +77,7 @@ export default function FeuilleCentreAutoV2({
                   }`}
                   style={PRESSION}
                 >
-                  {v ? 'Oui' : 'Non'}
+                  {v ? t('Oui') : t('Non')}
                 </button>
               )
             })}
@@ -91,7 +91,7 @@ export default function FeuilleCentreAutoV2({
 
         {actif && (
           <>
-            <Bloc titre={centres.length > 1 ? 'Vos centres' : t('Adresse du centre')}>
+            <Bloc titre={centres.length > 1 ? t('Vos centres') : t('Adresse du centre')}>
               <div className="flex flex-col gap-4">
                 {centres.map((c, i) => (
                   <div key={c.cle} className="flex flex-col gap-2">

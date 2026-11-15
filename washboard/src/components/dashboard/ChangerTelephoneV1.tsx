@@ -114,7 +114,7 @@ export default function ChangerTelephoneV1({ telephone }: { telephone: string | 
               </div>
               {message && <p className="text-sm text-red-600" role="alert">{message.texte}</p>}
               <div className="flex items-center gap-4">
-                <button type="submit" disabled={enCours} className={boutonClass}>{enCours ? 'Envoi…' : t('Recevoir le code')}</button>
+                <button type="submit" disabled={enCours} className={boutonClass}>{enCours ? t('Envoi…') : t('Recevoir le code')}</button>
                 <button type="button" onClick={fermer} className={lienClass}>{t('Annuler')}</button>
               </div>
             </form>

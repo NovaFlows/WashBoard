@@ -314,7 +314,7 @@ export default function StepSlot({
       <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={tr('Lieu du lavage')}>
         {(['domicile', 'centre'] as const).map(l => <button key={l} type="button" role="radio" aria-checked={lieu === l} onClick={() => choisirLieu(l)}
           className={'min-h-12 rounded-xl border text-sm font-semibold ' + (lieu === l ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-300 dark:border-zinc-700')}>
-          {l === 'domicile' ? 'À domicile' : 'En centre auto'}
+          {l === 'domicile' ? tr('À domicile') : tr('En centre auto')}
         </button>)}
       </div>
       {!auCentre && hasTravelFee && <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mt-2">{tr('Le laveur se déplace chez vous : des frais de déplacement peuvent s’ajouter selon la distance.')}</p>}
@@ -341,7 +341,7 @@ export default function StepSlot({
         : zoneMessage ? <p role="alert" className="text-sm text-red-600 mt-3">{zoneMessage} <button type="button" className="underline" onClick={() => setRetry(v => v + 1)}>{tr('Réessayer')}</button></p>
         : zoneAllowed && <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-3">{tr('● Dans le secteur du laveur{v0}', { v0: fee === 0 ? tr(' : déplacement compris') : fee !== undefined ? tr(' · déplacement ') + fee + ' €' : '' })}</p>)}
       {zoneOk && <>
-        <div className="flex items-center justify-between mt-6 mb-2"><h3 className="text-sm font-medium">{tr('Jour')}</h3><button type="button" className="text-xs underline min-h-8" onClick={() => setChoixDateOuvert(v => !v)}>{choixDateOuvert ? tr('Fermer le calendrier') : 'Calendrier'}</button></div>
+        <div className="flex items-center justify-between mt-6 mb-2"><h3 className="text-sm font-medium">{tr('Jour')}</h3><button type="button" className="text-xs underline min-h-8" onClick={() => setChoixDateOuvert(v => !v)}>{choixDateOuvert ? tr('Fermer le calendrier') : tr('Calendrier')}</button></div>
         <div className="flex gap-2 overflow-x-auto pb-2 snap-x" aria-label={tr('Jours disponibles')}>
           {days.map(day => <button key={toDateStr(day)} type="button" aria-label={day.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} aria-pressed={!!selectedDate && memeJour(day, selectedDate)}
             onClick={() => choisirJour(day)} className={'shrink-0 snap-start w-[58px] min-h-[64px] rounded-xl border text-center ' + (selectedDate && memeJour(day, selectedDate) ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-300 dark:border-zinc-700')}>

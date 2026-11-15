@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type Props = {
   id?: string
@@ -20,6 +21,7 @@ type Props = {
 type Suggestion = { label: string; placeId: string }
 
 export default function AddressAutocomplete({ id, value, onChange, onSelectWithCoords, placeholder, className, style, allowGeolocation = false }: Props) {
+  const t = useT()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [open, setOpen]               = useState(false)
   const [locating, setLocating]       = useState(false)
@@ -140,7 +142,7 @@ export default function AddressAutocomplete({ id, value, onChange, onSelectWithC
             <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
             <path strokeLinecap="round" d="M12 2v3M12 19v3M2 12h3M19 12h3" />
           </svg>
-          {locating ? 'Recherche de votre position…' : 'Utiliser ma position'}
+          {locating ? t('Recherche de votre position…') : t('Utiliser ma position')}
         </button>
       )}
       {locateError && (

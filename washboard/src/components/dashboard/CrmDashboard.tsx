@@ -458,7 +458,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}>
-                {f === 'all' ? 'Tous' : f === 'individual' ? 'Particuliers' : 'Professionnels'}
+                {f === 'all' ? t('Tous') : f === 'individual' ? t('Particuliers') : t('Professionnels')}
               </button>
             ))}
           </div>

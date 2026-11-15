@@ -160,7 +160,7 @@ export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisi
                   className={`${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
                   style={PRESSION}
                 >
-                  {occupe ? 'En cours…' : 'Changer'}
+                  {occupe ? tr('En cours…') : tr('Changer')}
                 </button>
                 <button
                   type="button"
@@ -181,7 +181,7 @@ export default function FeuilleFondV2({ fond, enAttente, erreur, photo, onChoisi
               className={`${BOUTON} w-full border border-dashed border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              {occupe ? 'En cours…' : tr('Choisir ma photo')}
+              {occupe ? tr('En cours…') : tr('Choisir ma photo')}
             </button>
           )}
           <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>

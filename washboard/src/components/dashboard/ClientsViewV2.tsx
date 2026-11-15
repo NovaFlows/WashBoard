@@ -23,6 +23,7 @@ import AutomatismesClientsV2, { type AutomatismesClients } from '@/components/da
 import { Ligne, CarteListe, TitreSection } from '@/components/dashboard/ParametresFormV2'
 import { BoutonSupprimerSurvol } from '@/components/dashboard/BoutonSupprimerSurvol'
 import { useT } from '@/components/i18n/I18nProvider'
+import type { Traducteur } from '@/lib/i18n/traduire'
 
 /** Client masqué par le plafond de l'offre (rendu flouté en tête de liste). */
 export type ClientBloque = { id: string; scheduled_at: string }
@@ -129,12 +130,12 @@ function initiales(texte: string): string {
 
 // Le contenu de la ligne secondaire : le contact (pour un pro) puis la
 // dernière prestation réellement faite, ou l'état "pas encore" existant.
-function ligneSecondaire(c: ResumeClient, maintenant: number): string {
+function ligneSecondaire(c: ResumeClient, maintenant: number, t: Traducteur): string {
   const contact = c.isProfessional && c.companyName ? c.name : null
   const prestation = c.derniere
     ? `${c.derniere.service} · ${dateCourte(c.derniere.date, maintenant)}`
-    : 'Pas encore de prestation faite'
-  const connu = c.source ? `Connu via ${libelleSourceDecouverte(c.source)}` : null
+    : t('Pas encore de prestation faite')
+  const connu = c.source ? t('Connu via {source}', { source: t(libelleSourceDecouverte(c.source)) }) : null
   return [contact, prestation, connu].filter(Boolean).join(' · ')
 }
 
@@ -801,7 +802,7 @@ function LigneClient({ client: c, maintenant, onOuvrir, selectionnee, ouverte, o
           <span className="flex-1 min-w-0">
             <span className={`block text-[15px] ${nom} truncate`}>{titreClient}</span>
             <span className={`block text-[13px] ${corps} text-[color:var(--v2-color-gris)] mt-0.5`}>
-              {ligneSecondaire(c, maintenant)}
+              {ligneSecondaire(c, maintenant, t)}
             </span>
           </span>
 

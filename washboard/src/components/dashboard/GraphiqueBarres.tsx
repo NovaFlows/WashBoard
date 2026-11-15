@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Graphique en barres de l'écran Chiffres (refonte 2026), commun aux onglets
 // Argent (résultat par créneau) et Acquisition (visiteurs par créneau).
@@ -55,6 +56,7 @@ type Props = {
 const clamp = (i: number, n: number) => Math.max(0, Math.min(n - 1, i))
 
 export default function GraphiqueBarres({ points, formaterValeur, resume, titreParDefaut, hauteur = 112 }: Props) {
+  const t = useT()
   const n = points.length
   const [choisi, setChoisi] = useState<number | null>(null)
   const zone = useRef<HTMLDivElement>(null)
@@ -116,7 +118,7 @@ export default function GraphiqueBarres({ points, formaterValeur, resume, titreP
                 className={`text-[15px] ${corpsFort} tabular-nums shrink-0`}
                 style={lu.valeur < 0 && !lu.futur ? { color: 'var(--v2-color-rouge)' } : undefined}
               >
-                {lu.futur ? 'À venir' : formaterValeur(lu.valeur)}
+                {lu.futur ? t('À venir') : formaterValeur(lu.valeur)}
               </span>
             </span>
             {lu.detail && !lu.futur && (

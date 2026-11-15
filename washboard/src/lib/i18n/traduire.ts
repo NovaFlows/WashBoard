@@ -16,6 +16,9 @@ export function traduire(dictionnaire: Dictionnaire | null, phrase: string, vari
 
 export type Traducteur = (phrase: string, variables?: Variables) => string
 
+/** Traducteur par défaut des fonctions de `lib/` : le français, variables remplacées. */
+export const sansTraduction: Traducteur = (phrase, variables) => traduire(null, phrase, variables)
+
 export function creerTraducteur(dictionnaire: Dictionnaire | null): Traducteur {
   return (phrase, variables) => traduire(dictionnaire, phrase, variables)
 }

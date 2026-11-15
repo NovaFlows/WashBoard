@@ -170,7 +170,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                     <button type="button" onClick={() => maj({ type: 'pourcentage' })} className={puce(b.type === 'pourcentage')}>{t('En %')}</button>
                     <button type="button" onClick={() => maj({ type: 'montant' })} className={puce(b.type === 'montant')}>{t('En €')}</button>
                   </div>
-                  <input aria-label={b.type === 'pourcentage' ? t('Acompte en pourcentage du total') : 'Acompte en euros'} className={CHAMP} inputMode="decimal" value={b.valeur} onChange={e => maj({ valeur: e.target.value.replace(/[^\d.,]/g, '') })} />
+                  <input aria-label={b.type === 'pourcentage' ? t('Acompte en pourcentage du total') : t('Acompte en euros')} className={CHAMP} inputMode="decimal" value={b.valeur} onChange={e => maj({ valeur: e.target.value.replace(/[^\d.,]/g, '') })} />
                 </div>
 
                 {b.type === 'pourcentage' ? (
@@ -221,7 +221,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
                       <div className="flex flex-wrap items-center gap-3">
                         {b.weroLien && <QrDepuisLien lien={b.weroLien} taille={80} alt={t('Votre QR code Wero')} />}
                         <label className={`${BOUTON} cursor-pointer border border-[color:var(--v2-filet-fort)]`} style={PRESSION}>
-                          {lectureQr ? 'Lecture…' : b.weroLien ? t('Changer la capture') : t('Ajouter la capture')}
+                          {lectureQr ? t('Lecture…') : b.weroLien ? t('Changer la capture') : t('Ajouter la capture')}
                           <input type="file" accept="image/*" className="sr-only" disabled={lectureQr} onChange={e => { const f = e.target.files?.[0]; if (f) void lireCapture(f); e.target.value = '' }} />
                         </label>
                         {b.weroLien && <button type="button" onClick={() => maj({ weroLien: null })} className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] underline underline-offset-2`}>{t('Retirer')}</button>}
@@ -313,7 +313,7 @@ export default function AcompteV2({ slug, liste }: { slug: string; liste: Reglag
 
           <div className="flex flex-col gap-2">
             <button type="button" onClick={enregistrer} disabled={enregistrement} className={`${BOUTON} w-full`} style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)', ...PRESSION }}>
-              {enregistrement ? 'Enregistrement…' : fait ? t('Enregistré') : 'Enregistrer'}
+              {enregistrement ? t('Enregistrement…') : fait ? t('Enregistré') : t('Enregistrer')}
             </button>
             <a href={`/book/${slug}`} target="_blank" rel="noopener" className={`mt-1 self-center text-[13.5px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}>
               {t('Voir ma page de réservation')}

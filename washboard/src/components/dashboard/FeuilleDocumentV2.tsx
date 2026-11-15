@@ -179,7 +179,7 @@ export default function FeuilleDocumentV2({
 
   return (
     <Feuille
-      titre={devis ? t('Nouveau devis') : 'Nouvelle facture'}
+      titre={devis ? t('Nouveau devis') : t('Nouvelle facture')}
       sousTitre={devis
         ? t('Un prix engageant, valable un temps donné. Il ne compte pas tant que le client n’a pas dit oui.')
         : t('Une facture pour un travail fait hors de votre page de réservation.')}
@@ -197,7 +197,7 @@ export default function FeuilleDocumentV2({
               className={`${puce(saisie.genre === g)} flex-1 justify-center`}
               style={PRESSION}
             >
-              {g === 'devis' ? 'Devis' : 'Facture'}
+              {g === 'devis' ? t('Devis') : t('Facture')}
             </button>
           ))}
         </div>

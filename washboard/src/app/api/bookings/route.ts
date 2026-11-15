@@ -31,6 +31,7 @@ import { genererJetonReservation } from '@/lib/bookingToken'
 import { remiseALaSaisie } from '@/lib/remiseLaveur'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
+import { getT } from '@/lib/i18n/serveur'
 
 // Plafonds anti-spam (réservation publique)
 const IP_LIMIT = 8           // réservations max par IP
@@ -123,6 +124,7 @@ async function utilisateurConnecte() {
 }
 
 export const POST = withErrorHandling('bookings.create', async (req: Request) => {
+  const tCarte = await getT()
   // ── Anti-spam #1 : rate-limit par IP ────────────────────────────────────
   cleanupRateLimit()
   const ip = clientIp(req)
@@ -874,7 +876,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         selectedAddons: selected_addons ?? undefined,
         fidelite: fidelite ? (() => {
           const e = etatCarte([...fidelite.reservations, { status: 'pending', fidelite_remise: fidelite.remise }], fidelite.carte.ajustement, fidelite.reglages.tampons, fidelite.reglages.tampon_par_vehicule)
-          return { url: `${SITE_URL_FALLBACK}/fidelite/${fidelite.carte.jeton}`, progression: e.progression, requis: e.requis, phrase: phraseCarte(e, fidelite.reglages) }
+          return { url: `${SITE_URL_FALLBACK}/fidelite/${fidelite.carte.jeton}`, progression: e.progression, requis: e.requis, phrase: phraseCarte(e, fidelite.reglages, tCarte) }
         })() : undefined,
         acompte: acompte ? { montant: acompte.montant, liens: liensDePaiement(acompte.reglages.liens, acompte.montant), virement: virementPour(acompte.reglages, id), wero: weroPour(acompte.reglages), conditions: conditionsAcompte(acompte.reglages) } : undefined,
       }).catch(err => logger.error('bookings.email.client_failed', { bookingId: id }, err)),
@@ -984,7 +986,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       id, booked_price, jeton,
       ...(remise_laveur > 0 ? { remise_laveur } : {}),
       // La carte APRÈS cette réservation : la récompense utilisée n'est plus disponible.
-      ...(fidelite && etatApres ? { fidelite: { jeton: fidelite.carte.jeton, remise: fidelite.remise, etat: etatApres, phrase: phraseCarte(etatApres, fidelite.reglages), carte: fidelite.apparence, gain: tamponsPour({ vehicle_count: count }, fidelite.reglages.tampon_par_vehicule) } } : {}),
+      ...(fidelite && etatApres ? { fidelite: { jeton: fidelite.carte.jeton, remise: fidelite.remise, etat: etatApres, phrase: phraseCarte(etatApres, fidelite.reglages, tCarte), carte: fidelite.apparence, gain: tamponsPour({ vehicle_count: count }, fidelite.reglages.tampon_par_vehicule) } } : {}),
       ...(acompte ? { acompte: { montant: acompte.montant, liens: liensDePaiement(acompte.reglages.liens, acompte.montant), virement: virementPour(acompte.reglages, id), wero: weroPour(acompte.reglages), echeance: acompte.echeance, conditions: conditionsAcompte(acompte.reglages) } } : {}),
     },
   }, { status: 201 })

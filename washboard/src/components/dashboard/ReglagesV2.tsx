@@ -94,13 +94,13 @@ export default function ReglagesV2({ liste, progress }: Props) {
         <CarteListe>
           <Ligne
             label={t('Apparence')}
-            valeur={theme === 'dark' ? 'Sombre' : 'Clair'}
+            valeur={theme === 'dark' ? t('Sombre') : t('Clair')}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             chevron={false}
           />
           <Ligne
             label={t('Notifications')}
-            valeur={notifications.texte || undefined}
+            valeur={notifications.texte ? t(notifications.texte) : undefined}
             signal={notifications.ton === 'ambre'
               ? <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'var(--v2-color-ambre)' }} aria-hidden />
               : undefined}

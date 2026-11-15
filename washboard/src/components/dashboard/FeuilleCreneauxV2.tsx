@@ -52,7 +52,7 @@ export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas,
   const [remiseLibre, setRemiseLibre] = useState(() => !remiseEnPuce)
   const choixRemise: number | 'autre' = remiseLibre || !remiseEnPuce ? 'autre' : Number(f.valeur)
 
-  const exemple = exempleRemise(prestation, f.type, f.valeur)
+  const exemple = exempleRemise(prestation, f.type, f.valeur, t)
   // Une saisie hors bornes ne doit pas produire une phrase qui décrit un réglage
   // que le serveur n'accepterait pas (« à moins de 90 min »).
   const minutes = lireProximite(f.proximite)
@@ -141,7 +141,7 @@ export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas,
               )}
               {minutes !== null && (
                 <p className={`mt-2 text-[12.5px] leading-[1.55] ${corps} text-[color:var(--v2-color-gris)]`}>
-                  {phraseProche(minutes)}
+                  {phraseProche(minutes, t)}
                 </p>
               )}
             </Bloc>
@@ -163,7 +163,7 @@ export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas,
                       }`}
                       style={PRESSION}
                     >
-                      {label}
+                      {t(label)}
                     </button>
                   )
                 })}
@@ -190,7 +190,7 @@ export default function FeuilleCreneauxV2({ reglages, prestation, prixLePlusBas,
                     inputMode="decimal"
                     value={f.valeur}
                     onChange={e => modifier({ valeur: e.target.value })}
-                    aria-label={f.type === 'percent' ? 'Remise en pourcentage' : 'Remise en euros'}
+                    aria-label={f.type === 'percent' ? t('Remise en pourcentage') : t('Remise en euros')}
                     aria-invalid={!!erreurDe('valeur')}
                     className={`${CHAMP} !w-24`}
                   />

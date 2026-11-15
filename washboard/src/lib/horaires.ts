@@ -13,6 +13,7 @@
 // (`flatMap`) et proposerait le même horaire deux fois.
 
 import { enMinutes } from '@/lib/bookingWindow'
+import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 import type { Availability, Unavailability } from '@/types'
 
 export type Plage = Pick<Availability, 'day_of_week' | 'start_time' | 'end_time'>
@@ -65,9 +66,9 @@ export function plagesDuJour<T extends Plage>(plages: T[], jour: number): T[] {
 
 /** « 8h–12h · 14h–18h », ou « Fermé ». Jamais « Indisponible » : ce mot-là
  *  désigne les congés (`unavailabilities`) dans l'agenda. */
-export function libelleJour(plages: Plage[], jour: number): string {
+export function libelleJour(plages: Plage[], jour: number, t: Traducteur = sansTraduction): string {
   const duJour = plagesDuJour(plages, jour)
-  return duJour.length === 0 ? FERME : duJour.map(libellePlage).join(' · ')
+  return duJour.length === 0 ? t(FERME) : duJour.map(libellePlage).join(' · ')
 }
 
 /** « Lun–Ven 8h–18h · Sam 9h–12h ». Les jours CONSÉCUTIFS (dans l'ordre lundi →
@@ -92,32 +93,32 @@ function groupesHoraires(plages: Plage[]): GroupeHoraire[] {
   return groupes
 }
 
-const libelleGroupe = (g: GroupeHoraire) =>
-  `${NOMS_COURTS[g.premier]}${g.dernier === g.premier ? '' : `–${NOMS_COURTS[g.dernier]}`} ${g.plages}`
+const libelleGroupe = (g: GroupeHoraire, t: Traducteur) =>
+  `${t(NOMS_COURTS[g.premier])}${g.dernier === g.premier ? '' : `–${t(NOMS_COURTS[g.dernier])}`} ${g.plages}`
 
-export function resumeHoraires(plages: Plage[]): string {
+export function resumeHoraires(plages: Plage[], t: Traducteur = sansTraduction): string {
   const groupes = groupesHoraires(plages)
-  if (groupes.length === 0) return 'Aucun horaire'
-  return groupes.map(libelleGroupe).join(' · ')
+  if (groupes.length === 0) return t('Aucun horaire')
+  return groupes.map(g => libelleGroupe(g, t)).join(' · ')
 }
 
 /** Le même résumé, mais garanti court : une ligne de menu n'a pas la place de trois groupes
  *  (« Lun 15h–18h · Mar–Ven 8h–18h · Sam 8h–23h30 » débordait et se faisait couper au milieu
  *  d'un chiffre — signalé par Alexandre, 2026-09-27). Au-delà de deux groupes, on annonce le
  *  nombre de jours ouverts : le détail est à un tap. */
-export function resumeHorairesCourt(plages: Plage[]): string {
+export function resumeHorairesCourt(plages: Plage[], t: Traducteur = sansTraduction): string {
   const groupes = groupesHoraires(plages)
-  if (groupes.length === 0) return 'Aucun horaire'
-  if (groupes.length <= 2) return groupes.map(libelleGroupe).join(' · ')
+  if (groupes.length === 0) return t('Aucun horaire')
+  if (groupes.length <= 2) return groupes.map(g => libelleGroupe(g, t)).join(' · ')
   const jours = JOURS_AFFICHES.filter(j => plagesDuJour(plages, j).length > 0).length
-  return `${jours} jours ouverts`
+  return t('{jours} jours ouverts', { jours })
 }
 
 /** « lundi », « lundi et mardi », « lundi, mardi et mercredi ». */
-export function listeJours(jours: number[]): string {
-  const noms = trierJours(jours).map(j => NOMS_JOURS[j].toLowerCase())
+export function listeJours(jours: number[], t: Traducteur = sansTraduction): string {
+  const noms = trierJours(jours).map(j => t(NOMS_JOURS[j]).toLowerCase())
   if (noms.length <= 1) return noms.join('')
-  return `${noms.slice(0, -1).join(', ')} et ${noms[noms.length - 1]}`
+  return t('{debut} et {fin}', { debut: noms.slice(0, -1).join(', '), fin: noms[noms.length - 1] })
 }
 
 /** Fin après début ? `null` si la plage est cohérente. */

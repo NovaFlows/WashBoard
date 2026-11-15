@@ -189,7 +189,7 @@ export function FeuilleAjoutConge({
               className={`${BOUTON} flex-1 text-white`}
               style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
             >
-              {saving ? 'Enregistrement…' : 'Bloquer'}
+              {saving ? t('Enregistrement…') : t('Bloquer')}
             </button>
           </div>
         </div>
@@ -226,7 +226,7 @@ export function FeuilleAjoutConge({
                 </select>
               </div>
               <div className="min-w-0 flex-1">
-                <label htmlFor="conge-a" className={ETIQUETTE}>À</label>
+                <label htmlFor="conge-a" className={ETIQUETTE}>{t('À')}</label>
                 <select id="conge-a" value={form.fin} onChange={e => setForm(m => (m ? { ...m, fin: e.target.value } : m))} className={`${CHAMP} tabular-nums`}>
                   {HEURES_CHOIX.map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
@@ -279,7 +279,7 @@ export function FeuilleAjoutConge({
                   }`}
                   style={PRESSION}
                 >
-                  {p}
+                  {t(p)}
                 </button>
               )
             })}
@@ -376,7 +376,7 @@ export function FeuilleSuppressionConge({
             className={`${BOUTON} flex-1 text-white`}
             style={{ background: 'var(--v2-color-rouge)', ...PRESSION }}
           >
-            {saving ? 'Suppression…' : 'Supprimer'}
+            {saving ? t('Suppression…') : t('Supprimer')}
           </button>
         </div>
       }

@@ -86,7 +86,7 @@ export default function FeuillePlageV2({ joursInitiaux, plages, onAjouter, onClo
           className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
           style={PRESSION}
         >
-          {echec ? 'Fermer' : 'Annuler'}
+          {echec ? t('Fermer') : t('Annuler')}
         </button>
         <button
           type="button"
@@ -95,7 +95,7 @@ export default function FeuillePlageV2({ joursInitiaux, plages, onAjouter, onClo
           className={`${BOUTON} flex-[1.4] text-white`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          {enCours ? 'Ajout…' : jours.length > 1 ? t('Ajouter ({length} jours)', { length: jours.length }) : 'Ajouter'}
+          {enCours ? t('Ajout…') : jours.length > 1 ? t('Ajouter ({length} jours)', { length: jours.length }) : t('Ajouter')}
         </button>
       </div>
     </div>
@@ -119,12 +119,12 @@ export default function FeuillePlageV2({ joursInitiaux, plages, onAjouter, onClo
                   key={j}
                   type="button"
                   aria-pressed={actif}
-                  aria-label={NOMS_JOURS[j]}
+                  aria-label={t(NOMS_JOURS[j])}
                   onClick={() => basculerJour(j)}
                   className={`${puce(actif)} !px-0`}
                   style={PRESSION}
                 >
-                  {NOMS_COURTS[j]}
+                  {t(NOMS_COURTS[j])}
                 </button>
               )
             })}

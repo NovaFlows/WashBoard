@@ -246,7 +246,7 @@ export function ImportFactures() {
                 <div className="flex-1 min-w-[12rem]">
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-200 break-all">{l.nom}</p>
                   <p className={`text-xs mt-0.5 ${l.etat === 'erreur' ? 'text-red-600 dark:text-red-400' : aVerifier ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                    {l.etat === 'envoi' && 'Envoi…'}
+                    {l.etat === 'envoi' && tr('Envoi…')}
                     {l.etat === 'analyse' && tr('Lecture de la date…')}
                     {l.etat === 'erreur' && l.erreur}
                     {l.etat === 'pret' && (l.source ? SOURCES[l.source] : tr('Date introuvable : à saisir'))}
@@ -297,7 +297,7 @@ export function ImportFactures() {
           disabled={!peutEnregistrer}
           className="px-4 py-2.5 bg-[#1651E8] hover:bg-[#1244c4] text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors"
         >
-          {enregistrement ? 'Enregistrement…' : tr('Enregistrer {length} facture{v1}', { length: prets.length, v1: prets.length > 1 ? 's' : '' })}
+          {enregistrement ? tr('Enregistrement…') : tr('Enregistrer {length} facture{v1}', { length: prets.length, v1: prets.length > 1 ? 's' : '' })}
         </button>
         <button
           type="button"

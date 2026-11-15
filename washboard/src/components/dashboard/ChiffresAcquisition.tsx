@@ -150,7 +150,7 @@ export default function ChiffresAcquisition({
         <>
           {stats.comparable && pct !== null && (
             <span className={`text-[13.5px] ${corps}`} style={{ color: pct >= 0 ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}>
-              {pct >= 0 ? '+' : ''}{pct} % {libelleComparaison(periode.type)}
+              {pct >= 0 ? '+' : ''}{pct} % {t(libelleComparaison(periode.type))}
             </span>
           )}
           <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{v0} réservation{v1}, soit {formatConversionRate} des visiteurs', { v0: nombre.format(stats.conversionCount), v1: stats.conversionCount > 1 ? 's' : '', formatConversionRate: formatConversionRate(stats.conversionCount, stats.visitorCount) })}</span>
@@ -166,8 +166,8 @@ export default function ChiffresAcquisition({
   // bas de l'écran, après les sources — inchangé.
   const blocAppareilsHoraires = stats.visitorCount > 0 && (
     <p className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed ${grandEcran ? 'mt-1' : 'px-1'}`}>
-      {stats.deviceBreakdown.map(d => `${LABEL_APPAREIL[d.device] ?? d.device} ${d.pct} %`).join(' · ')}
-      {stats.visitTiming.topSlot && t(' · les visites montent surtout en {v0}', { v0: stats.visitTiming.topSlot.toLowerCase() })}
+      {stats.deviceBreakdown.map(d => `${t(LABEL_APPAREIL[d.device] ?? d.device)} ${d.pct} %`).join(' · ')}
+      {stats.visitTiming.topSlot && t(' · les visites montent surtout en {v0}', { v0: t(stats.visitTiming.topSlot).toLowerCase() })}
     </p>
   )
 
@@ -178,7 +178,7 @@ export default function ChiffresAcquisition({
         points={points}
         formaterValeur={v => `${nombre.format(v)} visiteur${v > 1 ? 's' : ''}`}
         resume={resume}
-        titreParDefaut={t('{titreVisites} · touchez une barre pour lire sa valeur', { titreVisites: titreVisites(periode.type) })}
+        titreParDefaut={t('{titreVisites} · touchez une barre pour lire sa valeur', { titreVisites: t(titreVisites(periode.type)) })}
         hauteur={grandEcran ? 140 : undefined}
       />
     </div>
@@ -201,7 +201,7 @@ export default function ChiffresAcquisition({
           </div>
         ))}
         {stats.pire && stats.pireAvant && stats.pire.pctDropFromPrevious > 0 && (
-          <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed pt-1.5`}>{t('Le plus gros décrochage est entre {v0} et {v1} :{v2}{pctDropFromPrevious} % des visiteurs abandonnent là.', { v0: ETAPE_COURTE[stats.pireAvant.step].toLowerCase(), v1: ETAPE_COURTE[stats.pire.step].toLowerCase(), v2: ' ', pctDropFromPrevious: stats.pire.pctDropFromPrevious })}</p>
+          <p className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)] leading-relaxed pt-1.5`}>{t('Le plus gros décrochage est entre {v0} et {v1} :{v2}{pctDropFromPrevious} % des visiteurs abandonnent là.', { v0: t(ETAPE_COURTE[stats.pireAvant.step]).toLowerCase(), v1: t(ETAPE_COURTE[stats.pire.step]).toLowerCase(), v2: ' ', pctDropFromPrevious: stats.pire.pctDropFromPrevious })}</p>
         )}
       </div>
     </div>
@@ -214,7 +214,7 @@ export default function ChiffresAcquisition({
         {stats.referrerBreakdown.slice(0, 6).map((r, i) => (
           <div key={r.host} className="flex items-center gap-3 py-[9px]">
             <span className={`w-[78px] shrink-0 truncate text-[13.5px] ${i === 0 ? corpsFort : corps}`} style={{ color: i === 0 ? 'var(--v2-color-encre)' : 'var(--v2-color-gris)' }}>
-              {r.host === websiteHost ? 'Votre site' : r.host === 'direct' ? 'Direct' : r.host}
+              {r.host === websiteHost ? t('Votre site') : r.host === 'direct' ? t('Direct') : r.host}
             </span>
             <span className="flex-1 h-1.5 rounded bg-[color:var(--v2-filet-fort)] flex overflow-hidden">
               <span className="rounded" style={{ width: `${Math.max((r.sessions / maxReferrer) * 100, 3)}%`, backgroundColor: i === 0 ? 'var(--v2-color-encre)' : 'var(--v2-color-encre-pale)' }} />

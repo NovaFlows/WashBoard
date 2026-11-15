@@ -472,7 +472,7 @@ export default function CarteFidelite3D({ couleur, finition, nom, logo, numero, 
                       )
                     })}
                   </div>
-                  <div className="wb-cf-recompense">{complet ? tr('★ Récompense débloquée : {dansLaPhrase}', { dansLaPhrase }) : `Au ${requis}e tampon : ${dansLaPhrase}`}</div>
+                  <div className="wb-cf-recompense">{complet ? tr('★ Récompense débloquée : {dansLaPhrase}', { dansLaPhrase }) : tr('Au {requis}e tampon : {dansLaPhrase}', { requis, dansLaPhrase })}</div>
                 </div>
                 <div className="wb-cf-holo" /><div className="wb-cf-reflet" /><div className="wb-cf-arete" />
               </div>

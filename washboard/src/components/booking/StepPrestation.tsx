@@ -120,7 +120,7 @@ export default function StepPrestation({ services, categories, category, onCateg
     </div>)}
     {vehicles.length > 1 && !mixed && types.length > 1 && <button type="button" className="text-xs underline mb-3" onClick={() => setMixed(true)}>{tr('Mes véhicules sont de types différents')}</button>}
     <div className="flex items-baseline justify-between gap-3 mt-6 mb-2">
-      <h3 className="font-semibold">{plusieurs ? 'Les prestations' : 'La prestation'}</h3>
+      <h3 className="font-semibold">{plusieurs ? tr('Les prestations') : tr('La prestation')}</h3>
       <span className="text-xs text-zinc-500">{sansVehicule
         ? tr('Prix selon votre véhicule')
         : sansChoixDeType(types) ? <>{tr('Prix pour {nombreDeVehicules}', { nombreDeVehicules: nombreDeVehicules(vehicles.length) })}</>

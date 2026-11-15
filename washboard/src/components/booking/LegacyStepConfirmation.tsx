@@ -104,7 +104,7 @@ export default function LegacyStepConfirmation({ washerName, bookingId, jeton, f
             value={`${date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })}`}
           />
         )}
-        {form.address && <Row label={form.lieu === 'centre' ? 'En centre auto' : 'Adresse'} value={form.address} right />}
+        {form.address && <Row label={form.lieu === 'centre' ? t('En centre auto') : t('Adresse')} value={form.address} right />}
         {form.notes && <Row label={t('Note')} value={form.notes} right />}
       </div>
 

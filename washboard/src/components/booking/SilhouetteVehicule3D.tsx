@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { silhouettePour } from '@/lib/silhouettesVehicules'
 import './silhouetteVehicule.css'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Le véhicule choisi sur la page de réservation, en 3D (demande d'Alexandre, 2026-10-18 :
 // « comme la carte, une animation rotation 3D 360 », puis la vraie voiture détourée de sa photo
@@ -70,6 +71,7 @@ function Face({ image, masque, cote, reflet, dos }: { image: string; masque: CSS
 
 /** `couleur` : la voiture dans ses couleurs d'origine (réglage du laveur) ; sinon grisée, par défaut. */
 export default function SilhouetteVehicule3D({ type, nom, couleur = false }: { type: string | null; nom?: string | null; couleur?: boolean }) {
+  const t = useT()
   const image = silhouettePour(type, nom, couleur)
   const scene = useRef<HTMLDivElement>(null)
   const objet = useRef<HTMLDivElement>(null)
@@ -165,7 +167,7 @@ export default function SilhouetteVehicule3D({ type, nom, couleur = false }: { t
   const tranche = Array.from({ length: COUCHES }, (_, i) => -EPAISSEUR / 2 + 0.5 + (i * (EPAISSEUR - 1)) / (COUCHES - 1))
 
   return (
-    <div className="wb-sv" role="img" aria-label={nom ? `Votre véhicule : ${nom}` : 'Votre véhicule'}>
+    <div className="wb-sv" role="img" aria-label={nom ? `Votre véhicule : ${nom}` : t('Votre véhicule')}>
       <div ref={scene} className="wb-sv-scene">
         <div ref={ombre} className="wb-sv-ombre" />
         <div ref={objet} className="wb-sv-objet" data-cache="oui" aria-hidden>

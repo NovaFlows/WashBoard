@@ -50,7 +50,7 @@ export default function FeuilleMessageProgrammeV2({
           className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          {enCours === 'decaler' ? 'Enregistrement…' : t('Décaler de {libelleJours}', { libelleJours: libelleJours(jours) })}
+          {enCours === 'decaler' ? t('Enregistrement…') : t('Décaler de {libelleJours}', { libelleJours: libelleJours(jours) })}
         </button>
       }
     >
@@ -86,7 +86,7 @@ export default function FeuilleMessageProgrammeV2({
             className={`flex min-h-11 items-center text-[15px] ${corpsFort} disabled:opacity-50`}
             style={{ color: 'var(--v2-color-rouge)' }}
           >
-            {enCours === 'annuler' ? 'Enregistrement…' : `Ne pas envoyer ${quoi}`}
+            {enCours === 'annuler' ? t('Enregistrement…') : `Ne pas envoyer ${quoi}`}
           </button>
           <p className={`text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>
             {t('Seulement ce message. Pour ne plus jamais écrire à ce client, utilisez « Ne plus contacter » dans sa fiche.')}

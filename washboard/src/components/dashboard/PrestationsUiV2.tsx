@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Feuille, BOUTON, PRESSION, corps, corpsFort, police } from '@/components/dashboard/FeuilleV2'
 import { Chevron } from '@/components/dashboard/ParametresFormV2'
+import { useT } from '@/components/i18n/I18nProvider'
 
 // Petites pièces partagées par les écrans « Prestations et prix », « Horaires »,
 // « Apparence de ma page » et « Messages automatiques » de la PWA.
@@ -57,6 +58,7 @@ export function ConfirmationSuppression({
   onConfirmer: () => void
   onClose: () => void
 }) {
+  const t = useT()
   return (
     <Feuille
       titre={intitule}
@@ -71,7 +73,7 @@ export function ConfirmationSuppression({
               className={`${BOUTON} flex-1 border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
               style={PRESSION}
             >
-              {erreur ? 'Fermer' : 'Annuler'}
+              {erreur ? t('Fermer') : t('Annuler')}
             </button>
             <button
               type="button"

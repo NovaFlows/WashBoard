@@ -194,7 +194,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                   </div>
                 )}
                 {b.recompense !== 'offerte' && (
-                  <input aria-label={b.recompense === 'pourcentage' ? 'Remise en pourcentage' : 'Remise en euros'} className={`${CHAMP} mt-2.5`} inputMode="decimal"
+                  <input aria-label={b.recompense === 'pourcentage' ? t('Remise en pourcentage') : t('Remise en euros')} className={`${CHAMP} mt-2.5`} inputMode="decimal"
                     value={b.valeur} onChange={e => maj({ valeur: e.target.value.replace(/[^\d.,]/g, '') })} />
                 )}
                 <p className={`mt-2.5 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t('Appliquée automatiquement à la réservation suivante{v0}. Vous pouvez ajouter ou retirer un tampon depuis la fiche d’un client.', { v0: b.recompense === 'offerte' ? '' : t(', sur la prestation et ses options (pas sur le déplacement)') })}</p>
@@ -220,7 +220,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                     numero="0427"
                     requis={b.tampons}
                     tampons={exempleAffiche}
-                    recompense={recompenseCourte({ recompense: b.recompense, valeur: valeurNum })}
+                    recompense={recompenseCourte({ recompense: b.recompense, valeur: valeurNum }, t)}
                     largeur={340}
                   />
                 </div>
@@ -238,6 +238,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
                       ? { total: requis, progression: 0, requis, disponibles: 1 }
                       : { total: exempleAffiche, progression: exempleAffiche, requis, disponibles: 0 },
                     { recompense: b.recompense, valeur: valeurNum, offre_options: b.offre_options, offre_deplacement: b.offre_deplacement },
+                    t,
                   )}
                 </p>
                 <p className={`mt-1 text-center text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('Ajoutez des tampons pour voir l’animation de la récompense. Touchez la carte pour la retourner.')}</p>
@@ -283,7 +284,7 @@ export default function FideliteV2({ slug, liste, marque = null, logo = null, lo
 
           <div className="flex flex-col gap-2">
             <button type="button" onClick={enregistrer} disabled={enregistrement} className={`${BOUTON} w-full`} style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)', ...PRESSION }}>
-              {enregistrement ? 'Enregistrement…' : fait ? t('Enregistré') : 'Enregistrer'}
+              {enregistrement ? t('Enregistrement…') : fait ? t('Enregistré') : t('Enregistrer')}
             </button>
             <a href={`/book/${slug}`} target="_blank" rel="noopener" className={`mt-1 self-center text-[13.5px] ${corpsFort} underline decoration-[color:var(--v2-filet-fort)] underline-offset-4`}>
               {t('Voir ma page de réservation')}

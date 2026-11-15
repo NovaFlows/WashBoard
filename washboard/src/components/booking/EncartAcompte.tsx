@@ -20,6 +20,7 @@ export type AcompteDu = { montant: number; liens: LienPaiement[]; virement?: Vir
 // laveur qui le confirme dans son tableau de bord.
 
 function Copier({ texte, libelle }: { texte: string; libelle: string }) {
+  const t = useT()
   const [fait, setFait] = useState<'ok' | 'ko' | null>(null)
   return (
     <button
@@ -30,7 +31,7 @@ function Copier({ texte, libelle }: { texte: string; libelle: string }) {
       aria-label={`Copier ${libelle}`}
       className="shrink-0 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
     >
-      {fait === 'ok' ? 'Copié' : fait === 'ko' ? 'Sélectionnez' : 'Copier'}
+      {fait === 'ok' ? t('Copié') : fait === 'ko' ? t('Sélectionnez') : t('Copier')}
     </button>
   )
 }

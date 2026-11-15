@@ -182,7 +182,7 @@ export default function ChiffresClients({ bookings, periode, maintenant, reserva
           <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 divide-y divide-[color:var(--v2-filet)]">
             {sources.lignes.map(l => (
               <div key={l.valeur} className="grid grid-cols-[1fr_auto] gap-2.5 items-center py-2.5">
-                <span className={`text-[14.5px] ${corpsFort}`}>{l.libelle}</span>
+                <span className={`text-[14.5px] ${corpsFort}`}>{t(l.libelle)}</span>
                 <span className={`text-[14.5px] ${corpsFort} tabular-nums text-right`}>
                   {nombre.format(l.nombre)} · {Math.round((l.nombre / sources.reponses) * 100)} %
                 </span>

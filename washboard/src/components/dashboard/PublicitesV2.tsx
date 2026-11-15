@@ -108,6 +108,7 @@ function Mesure({ label, valeur, aide, couleur, pale }: {
 }
 
 function LienCopiable({ lien }: { lien: string }) {
+  const t = useT()
   const [copie, setCopie] = useState(false)
   return (
     <button
@@ -119,7 +120,7 @@ function LienCopiable({ lien }: { lien: string }) {
       <span className={`min-w-0 flex-1 truncate text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{lien}</span>
       <span className={`inline-flex shrink-0 items-center gap-1 text-[13px] ${corpsFort} text-[color:var(--v2-color-accent)]`}>
         {copie ? <Check size={14} strokeWidth={2.5} /> : <Copy size={14} strokeWidth={2} />}
-        {copie ? 'Copié' : 'Copier'}
+        {copie ? t('Copié') : t('Copier')}
       </span>
     </button>
   )
@@ -234,7 +235,7 @@ function FeuilleCampagne({ campagne, onClose, onFait }: {
 
   return (
     <Feuille
-      titre={campagne ? t('Modifier la campagne') : 'Nouvelle campagne'}
+      titre={campagne ? t('Modifier la campagne') : t('Nouvelle campagne')}
       onClose={onClose}
       verrou="campagnes"
       pied={
@@ -244,7 +245,7 @@ function FeuilleCampagne({ campagne, onClose, onFait }: {
           className={`${BOUTON} w-full`}
           style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-surface)' }}
         >
-          {enCours ? 'Enregistrement…' : campagne ? 'Enregistrer' : t('Créer la campagne')}
+          {enCours ? t('Enregistrement…') : campagne ? t('Enregistrer') : t('Créer la campagne')}
         </button>
       }
     >
@@ -357,7 +358,7 @@ function FeuilleVideo({ campagneId, onClose, onFait }: {
           className={`${BOUTON} w-full`}
           style={{ background: 'var(--v2-color-encre)', color: 'var(--v2-color-surface)' }}
         >
-          {enCours ? 'Ajout…' : 'Ajouter'}
+          {enCours ? t('Ajout…') : t('Ajouter')}
         </button>
       }
     >
@@ -427,7 +428,7 @@ function CarteCampagne({ c, baseUrl, onRafraichir, onModifier }: {
               ? { background: 'color-mix(in srgb, var(--v2-color-vert) 12%, transparent)', color: 'var(--v2-color-vert)' }
               : { background: 'var(--v2-filet-fort)', color: 'var(--v2-color-gris)' }}
           >
-            {active ? 'En cours' : t('Terminée')}
+            {active ? t('En cours') : t('Terminée')}
           </span>
         </div>
 

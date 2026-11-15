@@ -187,7 +187,7 @@ export default function MesLiensV2({ slug: slugServeur, liste }: { slug: string;
                       style={{ color: fait ? 'var(--v2-color-vert)' : 'var(--v2-color-accent)' }}
                     >
                       {fait && <Check size={16} strokeWidth={2.5} aria-hidden />}
-                      {fait ? t('Copié') : 'Copier'}
+                      {fait ? t('Copié') : t('Copier')}
                     </span>
                   </button>
                 </li>

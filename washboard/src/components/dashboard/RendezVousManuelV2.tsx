@@ -267,7 +267,7 @@ export default function RendezVousManuelV2({
                       }`}
                       style={PRESSION}
                     >
-                      {l === 'domicile' ? 'À domicile' : 'En centre auto'}
+                      {l === 'domicile' ? tr('À domicile') : tr('En centre auto')}
                     </button>
                   )
                 })}
@@ -404,7 +404,7 @@ export default function RendezVousManuelV2({
                     style={PRESSION}
                   >
                     <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: couleur }} aria-hidden />
-                    {s === 'confirmed' ? tr('Confirmé') : 'En attente'}
+                    {s === 'confirmed' ? tr('Confirmé') : tr('En attente')}
                   </button>
                 )
               })}

@@ -320,7 +320,7 @@ export default function PersonnaliserV2({ visibles, onClose }: { visibles: Widge
               transitionTimingFunction: 'var(--v2-ease-out)',
             }}
           >
-            {enregistrement ? 'Enregistrement…' : 'Enregistrer'}
+            {enregistrement ? t('Enregistrement…') : t('Enregistrer')}
           </button>
         </div>
       </div>

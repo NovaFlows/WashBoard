@@ -5,6 +5,7 @@ import { corps, corpsFort, titre, PRESSION } from '@/components/dashboard/Feuill
 import { Constat, nom } from '@/components/dashboard/PrestationsUiV2'
 import { resumeHoraires } from '@/lib/horaires'
 import { useT } from '@/components/i18n/I18nProvider'
+import type { Traducteur } from '@/lib/i18n/traduire'
 
 // « Quand travaillez-vous ? » — état vide de « Horaires » (aucune plage : aucun
 // créneau réservable sur la page de réservation).
@@ -31,8 +32,8 @@ const MODELES: ModeleHoraires[] = [
   { jours: [1, 2, 3, 4, 5, 6], debut: '09:00', fin: '18:00' },
 ]
 
-const libelle = (m: ModeleHoraires) =>
-  resumeHoraires(m.jours.map(j => ({ day_of_week: j, start_time: m.debut, end_time: m.fin })))
+const libelle = (m: ModeleHoraires, t: Traducteur) =>
+  resumeHoraires(m.jours.map(j => ({ day_of_week: j, start_time: m.debut, end_time: m.fin })), t)
 
 type Props = {
   /** Crée les plages du modèle. Rend `null` si tout s'est bien passé (ou si le
@@ -81,7 +82,7 @@ export default function HorairesEtatVideV2({ onModele, onAutre }: Props) {
             className={`${carte} flex min-h-[80px] flex-col justify-center gap-1 py-4`}
             style={PRESSION}
           >
-            <span className={`text-[20px] ${nom}`}>{enCours === i ? t('Création…') : libelle(m)}</span>
+            <span className={`text-[20px] ${nom}`}>{enCours === i ? t('Création…') : libelle(m, t)}</span>
             <span className={`text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('{length} jours par semaine', { length: m.jours.length })}</span>
           </button>
         ))}

@@ -1,3 +1,4 @@
+import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 // Logique de la feuille « Où vous intervenez » de la PWA (refonte 2026,
 // `FeuilleZoneV2`, ouverte depuis l'écran « Prestations et prix »). Fonctions
 // pures : la feuille ne contient que de la présentation et de l'état.
@@ -118,13 +119,13 @@ export function lireRayon(saisie: string): number | null {
 
 /** La phrase vivante sous les puces : ce que la zone veut dire, en français.
  *  `null` tant qu'il manque le rayon (rien à dire plutôt qu'une phrase à trous). */
-export function phraseRayon(mode: ModeZone, saisieRayon: string, adresse: string): string | null {
+export function phraseRayon(mode: ModeZone, saisieRayon: string, adresse: string, t: Traducteur = sansTraduction): string | null {
   if (mode === 'departments') return null
   const rayon = lireRayon(saisieRayon)
   if (rayon === null) return null
-  const ou = adresse.trim() ? `autour de ${adresse.trim()}` : 'autour de votre point de départ'
-  if (mode === 'road') return `Jusqu’à ${rayon} km par les routes ${ou}.`
-  return `Jusqu’à ${rayon} km en ligne droite ${ou}.`
+  const ou = adresse.trim() ? t('autour de {adresse}', { adresse: adresse.trim() }) : t('autour de votre point de départ')
+  if (mode === 'road') return t('Jusqu’à {rayon} km par les routes {ou}.', { rayon, ou })
+  return t('Jusqu’à {rayon} km en ligne droite {ou}.', { rayon, ou })
 }
 
 /** Vrai pour le mode « ligne droite » : le rayon est mesuré à vol d'oiseau, la

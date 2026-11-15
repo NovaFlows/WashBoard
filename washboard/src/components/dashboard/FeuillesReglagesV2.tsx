@@ -287,7 +287,7 @@ export function ChampExpediteurSms({
             className={`${BOUTON} mt-3 w-full bg-[color:var(--v2-color-accent)] text-white disabled:opacity-40`}
             style={PRESSION}
           >
-            {enCours ? 'Enregistrement…' : t('Enregistrer le nom')}
+            {enCours ? t('Enregistrement…') : t('Enregistrer le nom')}
           </button>
         </Bloc>
 
@@ -297,7 +297,7 @@ export function ChampExpediteurSms({
             className={`${BOUTON} w-full border border-[color:var(--v2-filet-fort)] text-[color:var(--v2-color-encre)]`}
             style={PRESSION}
           >
-            {test.enCours ? 'Envoi…' : t('M’envoyer un SMS test')}
+            {test.enCours ? t('Envoi…') : t('M’envoyer un SMS test')}
           </button>
           {test.erreur && <div className="mt-2"><Constat ton="rouge" role="alert">{test.erreur}</Constat></div>}
           <p className={`mt-2 text-[12.5px] leading-[1.55] ${corps} text-[color:var(--v2-color-gris)]`}>
@@ -382,7 +382,7 @@ export function FeuilleSuppressionV2({
               className={`${BOUTON} flex-[1.4] text-white`}
               style={{ background: 'var(--v2-color-rouge)', ...PRESSION }}
             >
-              {enCours ? 'Suppression…' : 'Supprimer mon compte'}
+              {enCours ? t('Suppression…') : t('Supprimer mon compte')}
             </button>
           </div>
         </div>
@@ -434,11 +434,11 @@ export function CarteEtatCompte({
 
   return (
     <section
-      aria-label={supprime ? t('Suppression programmée') : 'Compte en pause'}
+      aria-label={supprime ? t('Suppression programmée') : t('Compte en pause')}
       className="mt-3 rounded-[var(--v2-radius-surface)] border bg-[color:var(--v2-color-surface)] p-4"
       style={{ borderColor: supprime ? 'var(--v2-color-rouge)' : 'var(--v2-color-ambre)' }}
     >
-      <h2 className={`text-[16px] ${corpsFort}`}>{supprime ? t('Suppression programmée') : 'Compte en pause'}</h2>
+      <h2 className={`text-[16px] ${corpsFort}`}>{supprime ? t('Suppression programmée') : t('Compte en pause')}</h2>
       <p className={`mt-1.5 text-[14px] leading-[1.55] ${corps}`}>
         {supprime
           ? <>{trans(t, 'Votre compte sera {e0}, avec toutes vos données. Votre page de réservation est déjà masquée.', { e0: <strong className={corpsFort}>{t('définitivement supprimé dans {jours} jour{v1}', { jours, v1: jours > 1 ? 's' : '' })}</strong> })}</>

@@ -184,7 +184,7 @@ export default function StepContact({ isProfessional, loading, error, onSubmit, 
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder={isProfessional ? 'Marie Dupont' : 'Jean Dupont'}
+            placeholder={isProfessional ? t('Marie Dupont') : t('Jean Dupont')}
             className={inputClass}
             style={{ '--tw-ring-color': accent } as React.CSSProperties}
           />

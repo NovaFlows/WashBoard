@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { TRAFFIC_SOURCES, buildTrackedBookingLink } from '@/lib/trafficSources'
+import { useT } from '@/components/i18n/I18nProvider'
 
 type Props = {
   baseUrl: string
@@ -13,6 +14,7 @@ type Props = {
  *  referrer (voir funnelTracking.ts). Affiché à la fois dans Réglages (pour
  *  copier) et dans le CRM (pour s'y retrouver en lisant les statistiques). */
 export default function TrafficSourceLinks({ baseUrl, accent = '#2563eb' }: Props) {
+  const t = useT()
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
   function copy(key: string, link: string) {
@@ -43,7 +45,7 @@ export default function TrafficSourceLinks({ baseUrl, accent = '#2563eb' }: Prop
               onClick={() => copy(source.key, link)}
               className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-2 py-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0"
             >
-              {copiedKey === source.key ? 'Copié !' : 'Copier'}
+              {copiedKey === source.key ? t('Copié !') : t('Copier')}
             </button>
           </div>
         )

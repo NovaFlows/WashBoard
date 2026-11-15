@@ -21,7 +21,7 @@ type Props = {
 
 export default function FeuilleJourV2({ jour, plages, onAjouter, onRetirer, onClose }: Props) {
   const t = useT()
-  const nomJour = NOMS_JOURS[jour]
+  const nomJour = t(NOMS_JOURS[jour])
   const duJour = plagesDuJour(plages, jour)
 
   return (

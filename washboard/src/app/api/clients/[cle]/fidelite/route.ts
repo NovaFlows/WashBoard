@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/apiError'
 import { fideliteActive, phraseCarte } from '@/lib/fidelite'
 import { assurerCarte, cleFideliteDepuisCrm, etatDuClient, lireCarte } from '@/lib/fideliteServeur'
+import { getT } from '@/lib/i18n/serveur'
 
 // La carte de fidélité d'un client, vue et ajustée par SON laveur depuis la fiche client
 // (lib/fidelite.ts). Le laveur est identifié par sa session ; les lectures et l'écriture
@@ -41,7 +42,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!c) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   if (!c.reglages) return NextResponse.json({ active: false })
   const reglages = c.reglages
-  return reponse(c.washerId, c.cle, reglages.tampons, reglages.tampon_par_vehicule, e => phraseCarte(e, reglages))
+  const tr = await getT()
+  return reponse(c.washerId, c.cle, reglages.tampons, reglages.tampon_par_vehicule, e => phraseCarte(e, reglages, tr))
 }
 
 /** Ajoute (`delta: 1`) ou retire (`delta: -1`) un tampon à la main. */
@@ -62,5 +64,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .eq('washer_id', c.washerId).eq('cle', c.cle)
   if (error) return errorResponse('fidelite.ajuster', error, { washerId: c.washerId })
   logger.info('fidelite.ajustee', { washerId: c.washerId, delta })
-  return reponse(c.washerId, c.cle, reglages.tampons, reglages.tampon_par_vehicule, e => phraseCarte(e, reglages))
+  const tr = await getT()
+  return reponse(c.washerId, c.cle, reglages.tampons, reglages.tampon_par_vehicule, e => phraseCarte(e, reglages, tr))
 }

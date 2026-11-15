@@ -156,13 +156,13 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
           />
         </Bloc>
 
-        <Bloc titre={societe ? 'Raison sociale' : t('Votre nom légal')}>
+        <Bloc titre={societe ? t('Raison sociale') : t('Votre nom légal')}>
           <input
             type="text"
             value={nomLegal}
             onChange={e => { setNomLegal(e.target.value); setErreur(null) }}
-            placeholder={societe ? 'AutoNettoyage' : 'Jean Dupont'}
-            aria-label={societe ? 'Raison sociale' : t('Nom légal')}
+            placeholder={societe ? t('AutoNettoyage') : t('Jean Dupont')}
+            aria-label={societe ? t('Raison sociale') : t('Nom légal')}
             className={CHAMP}
           />
           <p className={`mt-2 text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>

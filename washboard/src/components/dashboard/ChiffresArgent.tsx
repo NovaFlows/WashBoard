@@ -279,7 +279,7 @@ export default function ChiffresArgent({
       </span>
       {serie && ecart !== null && (
         <span className={`text-[13.5px] ${corps}`} style={{ color: ecart >= 0 ? 'var(--v2-color-vert)' : 'var(--v2-color-rouge)' }}>
-          {ecart >= 0 ? '+' : ''}{ecart} % {libelleComparaison(periode.type)}
+          {ecart >= 0 ? '+' : ''}{ecart} % {t(libelleComparaison(periode.type))}
         </span>
       )}
     </div>

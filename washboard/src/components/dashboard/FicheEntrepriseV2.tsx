@@ -90,7 +90,7 @@ function FeuilleAjouterContactV2({
       onClose={onClose}
       pied={choisi ? (
         <button type="button" onClick={() => void soumettre()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
-          {enCours ? 'Rattachement…' : 'Rattacher'}
+          {enCours ? t('Rattachement…') : t('Rattacher')}
         </button>
       ) : undefined}
     >
@@ -208,7 +208,7 @@ function FeuilleSiteV2({
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
-          {enCours ? 'Enregistrement…' : 'Enregistrer'}
+          {enCours ? t('Enregistrement…') : t('Enregistrer')}
         </button>
       }
     >
@@ -273,7 +273,7 @@ function FeuilleInfosEntrepriseV2({
       onClose={onClose}
       pied={
         <button type="button" onClick={() => void enregistrer()} disabled={enCours} className={`${BOUTON} w-full text-[color:var(--v2-color-sur-accent)]`} style={{ background: 'var(--v2-color-accent)', ...PRESSION }}>
-          {enCours ? 'Enregistrement…' : 'Enregistrer'}
+          {enCours ? t('Enregistrement…') : t('Enregistrer')}
         </button>
       }
     >

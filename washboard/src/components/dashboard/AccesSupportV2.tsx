@@ -60,7 +60,7 @@ export default function AccesSupportV2() {
           }`}
           style={ouvert ? PRESSION : { background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          {occupe ? 'Un instant…' : ouvert ? t('Fermer l’accès maintenant') : t('Ouvrir l’accès pour 1 heure')}
+          {occupe ? t('Un instant…') : ouvert ? t('Fermer l’accès maintenant') : t('Ouvrir l’accès pour 1 heure')}
         </button>
       )}
 

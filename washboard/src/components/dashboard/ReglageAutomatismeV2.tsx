@@ -143,7 +143,7 @@ export function Pied({
         className={`${BOUTON} flex-[1.4] text-white`}
         style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
       >
-        {enCours ? 'Enregistrement…' : libelle}
+        {enCours ? t('Enregistrement…') : libelle}
       </button>
     </div>
   )

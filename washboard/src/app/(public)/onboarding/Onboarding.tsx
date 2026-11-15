@@ -352,7 +352,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
         <div className="flex items-center gap-3">
           <Vignette logoUrl={logoUrl} nom={nom} />
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold">{nom || 'Ton entreprise'}</p>
+            <p className="text-[15px] font-semibold">{nom || t('Ton entreprise')}</p>
             <p className="break-all text-xs text-[color:var(--v2-color-accent)]">{t('{DOMAINE}/book/{v1}', { DOMAINE, v1: candidat || '…' })}</p>
           </div>
         </div>
@@ -426,7 +426,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
               {disponibilite === 'actuel' && t('C’est ton lien actuel. Tu pourras le changer plus tard dans tes réglages.')}
               {disponibilite === 'invalide' && PHRASE_SLUG_INVALIDE}
               {disponibilite === 'verification' && <span className="inline-flex items-center gap-1.5"><Spinner />{t('Vérification…')}</span>}
-              {disponibilite === 'libre' && 'Disponible'}
+              {disponibilite === 'libre' && t('Disponible')}
               {disponibilite === 'pris' && t('Ce lien est déjà utilisé. Choisis-en un autre.')}
               {disponibilite === 'erreur' && verification?.message}
             </p>
@@ -560,7 +560,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
 
             <BarreActions>
               <BoutonPrincipal type="submit" disabled={!obligatoiresOk} className={brille ? 'wb-entree-brille' : ''}>
-                {obligatoiresOk ? 'Continuer' : t('Continuer · {nbRepondues} sur {length}', { nbRepondues, length: QUESTIONS_OBLIGATOIRES.length })}
+                {obligatoiresOk ? t('Continuer') : t('Continuer · {nbRepondues} sur {length}', { nbRepondues, length: QUESTIONS_OBLIGATOIRES.length })}
               </BoutonPrincipal>
             </BarreActions>
           </form>
@@ -625,14 +625,14 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
               <div className="flex items-center gap-3.5">
                 <Vignette logoUrl={logoUrl} nom={nom} />
                 <div className="min-w-0">
-                  <p className="text-[15px] font-semibold">{nom || 'Ton entreprise'}</p>
+                  <p className="text-[15px] font-semibold">{nom || t('Ton entreprise')}</p>
                   <p className="text-xs text-[color:var(--v2-color-gris)]">{t('Ta page de réservation')}</p>
                 </div>
               </div>
               <div className="flex items-center justify-between gap-2.5 border-t border-[color:var(--v2-filet)] pt-3 text-[13px]">
                 <span className="min-w-0 select-all break-all text-[color:var(--v2-color-accent)]">{lienComplet}</span>
                 <button type="button" onClick={copierLien} className="wb-entree-bouton shrink-0 rounded-[10px] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-fond)] px-3 py-[7px] text-[13px] font-semibold">
-                  {copie ? t('Copié') : 'Copier'}
+                  {copie ? t('Copié') : t('Copier')}
                 </button>
               </div>
             </div>

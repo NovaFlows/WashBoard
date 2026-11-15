@@ -346,7 +346,7 @@ export default function LegacyStepSlot({
                 className={'min-h-11 rounded-xl border text-sm font-semibold transition-colors ' + (lieu === l ? 'text-white border-transparent' : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300')}
                 style={lieu === l ? { backgroundColor: accent } : undefined}
               >
-                {l === 'domicile' ? 'À domicile' : 'En centre auto'}
+                {l === 'domicile' ? tr('À domicile') : tr('En centre auto')}
               </button>
             ))}
           </div>

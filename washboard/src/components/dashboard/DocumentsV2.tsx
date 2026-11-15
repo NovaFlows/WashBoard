@@ -337,7 +337,7 @@ function FicheDocumentBureauV2({
             </button>
           )}
           <button type="button" onClick={onEnvoyer} disabled={occupe} className={secondaire} style={PRESSION}>
-            {d.envoye_le ? 'Renvoyer par email' : tr('Envoyer par email')}
+            {d.envoye_le ? tr('Renvoyer par email') : tr('Envoyer par email')}
           </button>
 
           {devis && d.statut !== 'transforme' && (

@@ -65,7 +65,7 @@ export default function FeuilleGoogleAgendaV2({
         }`}
         style={connecte ? PRESSION : { background: 'var(--v2-color-accent)', ...PRESSION }}
       >
-        {connecte ? t('Reconnecter le compte') : 'Connecter mon Google Agenda'}
+        {connecte ? t('Reconnecter le compte') : t('Connecter mon Google Agenda')}
       </a>
       {connecte && (
         <p className={`mt-2.5 text-[13px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>

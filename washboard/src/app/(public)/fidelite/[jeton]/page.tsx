@@ -75,7 +75,7 @@ export default async function CarteFidelite({ params, searchParams }: { params: 
                 legende={scenario === 'tampon' ? (complete ? t('Carte complète · récompense débloquée') : t('+{nouveaux} tampon{v1} · {surLaCarte} sur {requis}', { nouveaux, v1: nouveaux > 1 ? 's' : '', surLaCarte, requis: etat.requis })) : null}
               />
             </div>
-            <p className="mt-2 text-[16px] leading-snug">{phraseCarte(etat, reglages)}</p>
+            <p className="mt-2 text-[16px] leading-snug">{phraseCarte(etat, reglages, t)}</p>
             <p className="mt-2 text-[13px] leading-snug text-[#6B6B76] dark:text-[#9A9AA4]">{t('{v0}. Réservez avec le même numéro de téléphone et le même email pour qu’il compte. Touchez la carte pour la retourner.', { v0: reglages.tampon_par_vehicule ? t('Un tampon par véhicule lavé') : t('Un tampon par prestation terminée') })}</p>
           </>
         ) : (

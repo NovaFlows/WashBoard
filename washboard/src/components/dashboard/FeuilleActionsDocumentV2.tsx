@@ -112,7 +112,7 @@ export default function FeuilleActionsDocumentV2({
           </button>
         )}
         <button type="button" onClick={onEnvoyer} disabled={occupe} className={secondaire} style={PRESSION}>
-          {d.envoye_le ? 'Renvoyer par email' : t('Envoyer par email')}
+          {d.envoye_le ? t('Renvoyer par email') : t('Envoyer par email')}
         </button>
 
         {devis && d.statut !== 'transforme' && (

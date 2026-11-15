@@ -320,7 +320,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
               </div>
               {formErr && <p className="text-xs text-red-500">{formErr}</p>}
               <button type="submit" disabled={saving} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
-                {saving ? 'Ajout...' : tr('+ Ajouter')}
+                {saving ? tr('Ajout...') : tr('+ Ajouter')}
               </button>
             </form>
           </div>
@@ -383,7 +383,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               {showRecForm ? <path d="M18 6 6 18M6 6l12 12"/> : <><path d="M12 5v14"/><path d="M5 12h14"/></>}
             </svg>
-            {showRecForm ? 'Annuler' : 'Ajouter'}
+            {showRecForm ? tr('Annuler') : tr('Ajouter')}
           </button>
         </div>
 
@@ -414,7 +414,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
               </div>
               {recErr && <p className="text-xs text-red-500">{recErr}</p>}
               <button type="submit" disabled={savingRec} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors">
-                {savingRec ? 'Ajout...' : tr('+ Ajouter ce frais récurrent')}
+                {savingRec ? tr('Ajout...') : tr('+ Ajouter ce frais récurrent')}
               </button>
             </form>
           </div>
@@ -435,7 +435,7 @@ export default function ComptaDashboard({ initialRevenue }: Props) {
                 <button
                   onClick={() => toggleRecurring(r.id, !r.active)}
                   disabled={togglingRec === r.id}
-                  title={r.active ? tr('Désactiver') : 'Activer'}
+                  title={r.active ? tr('Désactiver') : tr('Activer')}
                   className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${r.active ? 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30' : 'text-slate-300 dark:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

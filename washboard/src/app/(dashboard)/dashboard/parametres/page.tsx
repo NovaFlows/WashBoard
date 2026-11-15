@@ -6,6 +6,7 @@ import ParametresFormV2 from '@/components/dashboard/ParametresFormV2'
 import { EnteteParametres } from '@/components/dashboard/EnteteParametres'
 import { resumeHorairesCourt } from '@/lib/horaires'
 import { logger } from '@/lib/logger'
+import { getT } from '@/lib/i18n/serveur'
 
 export default async function ParametresPage() {
   const supabase = await createClient()
@@ -32,7 +33,7 @@ export default async function ParametresPage() {
       <ParametresFormV2
         washer={washer}
         servicesCount={services.error ? undefined : (services.count ?? 0)}
-        resumeHoraires={availabilities.error ? undefined : resumeHorairesCourt(availabilities.data ?? [])}
+        resumeHoraires={availabilities.error ? undefined : resumeHorairesCourt(availabilities.data ?? [], await getT())}
       />
     </DashboardShell>
   )

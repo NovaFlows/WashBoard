@@ -74,7 +74,7 @@ export default function FeuilleNotificationsV2({ onClose }: { onClose: () => voi
             }`}
             style={actif ? PRESSION : { background: 'var(--v2-color-accent)', ...PRESSION }}
           >
-            {occupe ? 'Un instant…' : actif ? t('Désactiver sur cet appareil') : t('Activer les notifications')}
+            {occupe ? t('Un instant…') : actif ? t('Désactiver sur cet appareil') : t('Activer les notifications')}
           </button>
         </>
       )}

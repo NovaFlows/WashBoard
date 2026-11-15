@@ -249,7 +249,7 @@ export default function DepensesV2() {
                     className={`min-h-9 text-[13px] ${corpsFort} disabled:opacity-50`}
                     style={{ color: 'var(--v2-color-accent)' }}
                   >
-                    {r.active ? 'Mettre en pause' : 'Reprendre'}
+                    {r.active ? t('Mettre en pause') : t('Reprendre')}
                   </button>
                   <button
                     type="button"

@@ -259,7 +259,7 @@ export default function VerifierEmail({ email, finTelephone, lienInvalide }: {
                 disabled={suppression || !motDePasse}
                 className="wb-entree-bouton min-h-[50px] w-full rounded-[var(--v2-radius-bouton)] bg-[color:var(--v2-color-rouge)] text-base font-semibold text-white disabled:opacity-35"
               >
-                {suppression ? 'Suppression…' : 'Supprimer et recommencer'}
+                {suppression ? t('Suppression…') : t('Supprimer et recommencer')}
               </button>
               <button
                 type="button"

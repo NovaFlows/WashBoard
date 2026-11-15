@@ -94,7 +94,7 @@ export default function FeuilleCategorieV2({ categorie, services, onEnregistrer,
           className={`${BOUTON} flex-[1.4] text-white`}
           style={{ background: 'var(--v2-color-accent)', ...PRESSION }}
         >
-          {enCours ? 'Enregistrement…' : 'Enregistrer'}
+          {enCours ? tr('Enregistrement…') : tr('Enregistrer')}
         </button>
       </div>
     </div>

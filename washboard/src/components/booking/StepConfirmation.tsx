@@ -140,7 +140,7 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
           <Row label={t('Frais de déplacement')} value={`+${form.travel_fee}€`} />
         )}
         {remise > 0 && (
-          <Row label={nomPromotion ? `Promotion ${nomPromotion}` : 'Promotion'} value={`−${formatPrice(remise)}`} />
+          <Row label={nomPromotion ? `Promotion ${nomPromotion}` : t('Promotion')} value={`−${formatPrice(remise)}`} />
         )}
         {((form.travel_fee != null && form.travel_fee > 0) || remise > 0) && (
           <div className="flex justify-between text-sm gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
@@ -154,7 +154,7 @@ export default function StepConfirmation({ washerName, bookingId, jeton, form, s
             value={`${date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })}`}
           />
         )}
-        {form.address && <Row label={form.lieu === 'centre' ? 'En centre auto' : 'Adresse'} value={form.address} right />}
+        {form.address && <Row label={form.lieu === 'centre' ? t('En centre auto') : t('Adresse')} value={form.address} right />}
         {form.notes && <Row label={t('Note')} value={form.notes} right />}
       </div>
 

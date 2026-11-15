@@ -1,3 +1,4 @@
+import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 // Logique de la feuille « Créneaux intelligents » de la PWA (refonte 2026,
 // `FeuilleCreneauxV2`, ouverte depuis l'écran « Prestations et prix »).
 // Fonctions pures ; la feuille ne contient que de la présentation et de l'état.
@@ -90,11 +91,8 @@ export function lireProximite(saisie: string): number | null {
 }
 
 /** La définition exacte de « proche », en une phrase (voir l'en-tête). */
-export function phraseProche(minutes: number): string {
-  return (
-    `Un créneau est concerné quand votre client est à moins de ${minutes} min de voiture ` +
-    `d’un rendez-vous du même jour, et qu’il tombe dans l’heure et demie avant ce rendez-vous ou après.`
-  )
+export function phraseProche(minutes: number, t: Traducteur = sansTraduction): string {
+  return t('Un créneau est concerné quand votre client est à moins de {minutes} min de voiture d’un rendez-vous du même jour, et qu’il tombe dans l’heure et demie avant ce rendez-vous ou après.', { minutes })
 }
 
 // ── Exemple vivant ─────────────────────────────────────────────────────────
@@ -110,18 +108,23 @@ export function exempleRemise(
   prestation: PrestationExemple | null,
   type: TypeRemise,
   saisieValeur: string,
+  t: Traducteur = sansTraduction,
 ): string | null {
   const valeur = lireNombre(saisieValeur)
   if (valeur === null || valeur < 0) return null
   const base = prestation?.prix ?? 80
   const remise = smartDiscountAmount(base, { type, value: valeur })
   const paye = smartPrice(base, { type, value: valeur })
-  const sujet = prestation ? `Sur « ${prestation.nom} » à ${euros(base)}` : `Exemple : un lavage à ${euros(base)}`
+  const prix = euros(base)
   if (remise <= 0) {
-    return `${sujet}, le prix ne change pas : le créneau est seulement mis en avant (★).`
+    return prestation
+      ? t('Sur « {nom} » à {prix}, le prix ne change pas : le créneau est seulement mis en avant (★).', { nom: prestation.nom, prix })
+      : t('Exemple : un lavage à {prix}, le prix ne change pas : le créneau est seulement mis en avant (★).', { prix })
   }
   const perdu = base - paye
-  return `${sujet}, votre client paie ${euros(paye)} : vous encaissez ${euros(perdu)} de moins.`
+  return prestation
+    ? t('Sur « {nom} » à {prix}, votre client paie {paye} : vous encaissez {perdu} de moins.', { nom: prestation.nom, prix, paye: euros(paye), perdu: euros(perdu) })
+    : t('Exemple : un lavage à {prix}, votre client paie {paye} : vous encaissez {perdu} de moins.', { prix, paye: euros(paye), perdu: euros(perdu) })
 }
 
 /** La prestation qui sert d'exemple : la première au prix réel (> 0). Une
