@@ -131,7 +131,7 @@ export default function FacturePDF({ numero, emiseLe, contenu, logo, t = sansTra
           </View>
           <View style={s.bloc}>
             <Text style={s.etiquette}>{t('Prestation')}</Text>
-            <Text>{prestation.nature}</Text>
+            <Text>{t(prestation.nature)}</Text>
             {/* Un devis chiffre un travail qui n'a pas encore de date : le dire vaut mieux
                 que d'imprimer la date du jour, que le client lirait comme un rendez-vous. */}
             <Text>{prestation.date ? quandPrestation(prestation.date) : t('Date à convenir')}</Text>
