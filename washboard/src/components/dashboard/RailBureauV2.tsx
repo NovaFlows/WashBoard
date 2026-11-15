@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { LogOut } from 'lucide-react'
 import { useT } from '@/components/i18n/I18nProvider'
+import SelecteurLangue from '@/components/i18n/SelecteurLangue'
 
 // Rail de navigation — passe « châssis bureau » (2026-10-05, Alexandre, 2026-10-03). Ce que
 // deviennent, sur grand écran, les 5 destinations de BarreBasV2.tsx + « Documents » épinglé :
@@ -275,7 +276,7 @@ export function RailBureauV2({ washerName, isPwa, offreLabel, offreCouleur }: Pr
                 <span className="max-[1023px]:hidden">{t('Déconnexion')}</span>
               </button>
             </form>
-            <ThemeToggle nav />
+            <span className="flex items-center"><SelecteurLangue direction="haut" /><ThemeToggle nav /></span>
           </div>
         )}
       </div>

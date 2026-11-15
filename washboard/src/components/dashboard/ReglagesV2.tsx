@@ -16,7 +16,9 @@ import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard
 import { SetupProgressBar } from '@/components/dashboard/SetupProgressBar'
 import type { SetupProgress } from '@/lib/setupProgress'
 import { useDesignMobile } from '@/hooks/useDesignMobile'
-import { useT } from '@/components/i18n/I18nProvider'
+import { useT, useLangue } from '@/components/i18n/I18nProvider'
+import { useRouter } from 'next/navigation'
+import { LANGUES, memoriserLangue, NOMS_LANGUES } from '@/lib/i18n/langues'
 
 // « Réglages » — ce qui règle l'APPLICATION, pas l'entreprise (Alexandre, 2026-09-27 :
 // « réglage apparaît dans Mon compte, mais juste Réglages, et quand on clique dessus on voit
@@ -53,6 +55,9 @@ export default function ReglagesV2({ liste, progress }: Props) {
   // Arrivée par un lien du guide (`#notifications`) : la feuille s'ouvre d'office. Lu au
   // montage, l'ancre n'existant pas au rendu serveur.
   const [feuilleNotifications, setFeuilleNotifications] = useState(false)
+  const langue = useLangue()
+  const router = useRouter()
+  const [langueOuverte, setLangueOuverte] = useState(false)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- ancre lue au montage
     if (window.location.hash === '#notifications') setFeuilleNotifications(true)
@@ -98,6 +103,21 @@ export default function ReglagesV2({ liste, progress }: Props) {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             chevron={false}
           />
+          <Ligne
+            label={t('Langue')}
+            valeur={NOMS_LANGUES[langue]}
+            onClick={() => setLangueOuverte(o => !o)}
+            chevron={false}
+          />
+          {langueOuverte && LANGUES.map(l => (
+            <Ligne
+              key={l}
+              label={NOMS_LANGUES[l]}
+              valeur={l === langue ? '✓' : undefined}
+              onClick={() => { setLangueOuverte(false); if (l !== langue) { memoriserLangue(l); router.refresh() } }}
+              chevron={false}
+            />
+          ))}
           <Ligne
             label={t('Notifications')}
             valeur={notifications.texte ? t(notifications.texte) : undefined}
