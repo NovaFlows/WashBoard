@@ -22,6 +22,7 @@ import { PLAN_LABELS, PLAN_COULEURS, PLAN_PRICES, PLAN_CARDS, type Plan } from '
 import type { JourSemaine } from '@/lib/semaineAccueil'
 import { adresseAvecLieu } from '@/lib/centreAuto'
 import { useLocale, useT } from '@/components/i18n/I18nProvider'
+import ParrainageAccueilV2 from '@/components/dashboard/ParrainageAccueilV2'
 
 // « Aujourd'hui », présentation v2 — réservée à la PWA installée en mode
 // standalone (voir Accueil.tsx, le point de branchement ; décision
@@ -412,6 +413,8 @@ export default function AccueilV2({
           {journeeCommencee ? t('Tout est fait pour aujourd’hui.') : t('Aucun rendez-vous à venir.')}
         </p>
       )}
+
+      <ParrainageAccueilV2 />
 
       {reste.length > 0 && (
         <section className="mt-6">

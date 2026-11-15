@@ -213,7 +213,7 @@ export async function filleulsDuParrain(admin: Admin, parrainId: string, now: Da
     const f = (l.washers as unknown as { name: string; subscription_status: string | null; trial_ends_at: string | null } | null)
     return {
       nom: f?.name ?? 'Compte supprimé',
-      statut: f ? statutFilleul(f, now) : 'inscrit',
+      statut: f ? statutFilleul(f, now) : 'essai_termine',
       inscritLe: l.cree_le as string,
       recompenseLe: l.recompense_forme && l.recompense_forme !== 'aucune' ? (l.recompense_le as string | null) : null,
     }

@@ -326,7 +326,7 @@ describe('POST /api/auth/signup — code parrain', () => {
     parrainage.trouver.mockResolvedValue(null)
     const { res, body } = await inscrire({ code_parrain: 'BELLAUTO-ZZZZ' })
     expect(res.status).toBe(400)
-    expect(body.error).toMatch(/code parrain/)
+    expect(body.error).toMatch(/Ce code n’existe pas/)
     expect(comptesCrees).toHaveLength(0)
   })
 

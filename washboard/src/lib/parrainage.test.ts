@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   normaliserCode, genererCode, finEssaiFilleul, statutFilleul, recompenseParrain, lienParrainage,
+  carteParrainageVisible, dateRetourCarte,
 } from './parrainage'
 import { planEffectif, doitChoisirFormule, hasFeature } from './plan'
 
@@ -39,10 +40,10 @@ describe('finEssaiFilleul', () => {
 
 describe('statutFilleul', () => {
   it('abonné, en essai ou simplement inscrit', () => {
-    expect(statutFilleul({ subscription_status: 'active' }, NOW)).toBe('abonne')
+    expect(statutFilleul({ subscription_status: 'active' }, NOW)).toBe('client')
     expect(statutFilleul({ subscription_status: 'trial', trial_ends_at: '2026-12-01T00:00:00Z' }, NOW)).toBe('essai')
-    expect(statutFilleul({ subscription_status: 'trial', trial_ends_at: '2026-11-01T00:00:00Z' }, NOW)).toBe('inscrit')
-    expect(statutFilleul({ subscription_status: 'expired' }, NOW)).toBe('inscrit')
+    expect(statutFilleul({ subscription_status: 'trial', trial_ends_at: '2026-11-01T00:00:00Z' }, NOW)).toBe('essai_termine')
+    expect(statutFilleul({ subscription_status: 'expired' }, NOW)).toBe('essai_termine')
   })
 })
 
@@ -113,5 +114,30 @@ describe('phraseRecompense', () => {
       .toBe('Votre prochain paiement est repoussé au 5 janvier. Vous profitez de l’offre Pro jusqu’au 20 décembre.')
     expect(phraseRecompense({ forme: 'essai', colonnes: { trial_ends_at: '2026-12-25T12:00:00Z' } })).toBe('Votre essai gratuit est prolongé jusqu’au 25 décembre.')
     expect(phraseRecompense({ forme: 'pro_offert', colonnes: { pro_offert_jusqu_au: '2026-12-20T12:00:00Z' } })).toBe('Vous profitez de l’offre Pro jusqu’au 20 décembre.')
+  })
+})
+
+describe('carte de rappel', () => {
+  const base = { grandfathered: false, createdAt: '2026-11-01T00:00:00Z', revoirLe: null, aDesFilleuls: false, aUneReservation: false }
+  const NOW_C = new Date('2026-11-20T10:00:00Z')
+  it('visible après 7 jours de compte, ou dès la première réservation', () => {
+    expect(carteParrainageVisible(base, NOW_C)).toBe(true)
+    expect(carteParrainageVisible({ ...base, createdAt: '2026-11-18T00:00:00Z' }, NOW_C)).toBe(false)
+    expect(carteParrainageVisible({ ...base, createdAt: '2026-11-18T00:00:00Z', aUneReservation: true }, NOW_C)).toBe(true)
+  })
+  it('cachée pour un client historique, un parrain qui a déjà un filleul, ou avant sa date de retour', () => {
+    expect(carteParrainageVisible({ ...base, grandfathered: true }, NOW_C)).toBe(false)
+    expect(carteParrainageVisible({ ...base, aDesFilleuls: true }, NOW_C)).toBe(false)
+    expect(carteParrainageVisible({ ...base, revoirLe: '2026-12-01T00:00:00Z' }, NOW_C)).toBe(false)
+    expect(carteParrainageVisible({ ...base, revoirLe: '2026-11-19T00:00:00Z' }, NOW_C)).toBe(true)
+  })
+  it('revient entre 14 et 28 jours plus tard', () => {
+    expect(dateRetourCarte(NOW_C, () => 0)).toBe('2026-12-04T10:00:00.000Z')
+    expect(dateRetourCarte(NOW_C, max => max - 1)).toBe('2026-12-18T10:00:00.000Z')
+    for (let i = 0; i < 50; i++) {
+      const j = (new Date(dateRetourCarte(NOW_C)).getTime() - NOW_C.getTime()) / 86_400_000
+      expect(j).toBeGreaterThanOrEqual(14)
+      expect(j).toBeLessThanOrEqual(28)
+    }
   })
 })

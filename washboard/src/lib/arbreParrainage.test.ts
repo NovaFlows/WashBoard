@@ -41,3 +41,12 @@ describe('construireArbre', () => {
     expect(construireArbre([ligne('1', laveur('Bell'), null as never)], NOW).total).toBe(0)
   })
 })
+
+describe('signaux jugés normaux', () => {
+  it('une ligne marquée « C’est normal » ne remonte plus', () => {
+    const bell = laveur('Bell', { cgv_acceptees_ip: '1.2.3.4' })
+    const arbre = construireArbre([ligne('1', bell, laveur('Faux'), { ip_inscription: '1.2.3.4', signal_ok_le: '2026-12-01T00:00:00Z' })], NOW)
+    expect(arbre.racines[0].filleuls[0].signaux).toEqual([])
+    expect(arbre.racines[0].filleuls[0].ligneId).toBe('1')
+  })
+})

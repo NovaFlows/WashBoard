@@ -19,6 +19,8 @@ export type LigneParrainage = {
   ip_inscription: string | null
   recompense_le: string | null
   recompense_forme: string | null
+  /** L’équipe a regardé les signaux de cette ligne et les a jugés normaux. */
+  signal_ok_le?: string | null
   parrain: Laveur | null
   filleul: Laveur | null
 }
@@ -32,7 +34,7 @@ export type Noeud = {
   plan: string | null
   /** Mois gagnés par ce laveur en tant que parrain. */
   moisGagnes: number
-  filleuls: (Noeud & { inscritLe: string; recompenseLe: string | null; signaux: Signal[] })[]
+  filleuls: (Noeud & { ligneId: string; inscritLe: string; recompenseLe: string | null; signaux: Signal[] })[]
 }
 
 export const SEUIL_RECOMPENSES_30_JOURS = 3
@@ -73,7 +75,7 @@ export function construireArbre(lignes: LigneParrainage[], now: Date = new Date(
         const a = siretNet(w.facture_siret), b = siretNet(l.filleul!.facture_siret)
         if (a && a === b) signaux.push('meme_siret')
         if (l.recompense_le && recompensesRecentes(w.id, l.recompense_le) > SEUIL_RECOMPENSES_30_JOURS) signaux.push('recompenses_rapprochees')
-        return { ...noeud(l.filleul!, suite), inscritLe: l.cree_le, recompenseLe: l.recompense_le, signaux }
+        return { ...noeud(l.filleul!, suite), ligneId: l.id, inscritLe: l.cree_le, recompenseLe: l.recompense_le, signaux: l.signal_ok_le ? [] : signaux }
       }),
     }
   }

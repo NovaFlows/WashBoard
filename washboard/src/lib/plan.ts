@@ -451,10 +451,21 @@ export function planEffectif(
   if (forcee) return forcee
   if (finEssaiSimuleeEnDev()) return 'decouverte'
 
-  const base: Plan = suitRetourGratuit(w) && essaiTermineSansFormule(w, now) ? 'decouverte' : washerPlan(w)
+  const base = planPaye(w, now)
   // Mois gagné par parrainage : au moins le Pro, sans jamais faire descendre un Business.
   if (proOffertActif(w, now) && RANK[base] < RANK.pro) return 'pro'
   return base
+}
+
+/** L’offre que le laveur a (ou paie), sans le Pro offert par parrainage. */
+export function planPaye(w: AbonnementInfo | null | undefined, now: Date = new Date()): Plan {
+  return suitRetourGratuit(w) && essaiTermineSansFormule(w, now) ? 'decouverte' : washerPlan(w)
+}
+
+/** Date de fin du Pro offert quand il élève l’offre du laveur, sinon null. */
+export function proOffertEnCours(w: AbonnementInfo | null | undefined, now: Date = new Date()): string | null {
+  if (!proOffertActif(w, now) || RANK[planPaye(w, now)] >= RANK.pro) return null
+  return w?.pro_offert_jusqu_au ?? null
 }
 
 /** Vrai quand il faut demander au laveur de choisir sa formule : son essai est

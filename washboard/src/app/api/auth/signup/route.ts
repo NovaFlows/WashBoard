@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Vérification du code parrain impossible. Réessaie dans un instant.' }, { status: 503 })
     }
     if (!trouve) {
-      return NextResponse.json({ error: 'Ce code parrain n’existe pas. Vérifie-le ou laisse le champ vide.' }, { status: 400 })
+      return NextResponse.json({ error: 'Ce code n’existe pas. Corrige-le ou laisse le champ vide.' }, { status: 400 })
     }
     parrain = trouve
   }

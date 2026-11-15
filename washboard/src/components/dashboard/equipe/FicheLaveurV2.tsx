@@ -14,6 +14,8 @@ import { EQUIPE } from '@/lib/responsables'
 import { resumerOnboarding } from '@/lib/ficheOnboarding'
 import EcranEquipe, { Carte, Initiales, LigneInfo, Point, Section } from './EcranEquipe'
 import ChoixDate, { dateJour } from './ChoixDate'
+import BlocAbonnementFiche from './BlocAbonnementFiche'
+import type { ParrainageFiche } from '@/lib/ficheLaveurDonnees'
 
 // Fiche d'un laveur, espace équipe (2026-11-05). On y arrive surtout en touchant la
 // notification « nouvel inscrit » : d'abord de quoi appeler et quoi dire, ensuite le
@@ -332,7 +334,8 @@ function FeuilleOptions({ nomLaveur, slug, onClose }: { nomLaveur: string; slug:
 
 // ── La fiche ─────────────────────────────────────────────────────────────────
 
-export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, responsable, maintenant }: {
+export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, responsable, maintenant, parrainage = null }: {
+  parrainage?: ParrainageFiche | null
   donnees: DonneesLaveur
   topo: Topo
   appels: Appel[]
@@ -427,6 +430,8 @@ export default function FicheLaveurV2({ donnees, topo, appels, suiviActif, respo
           </button>
         ))}
       </div>
+
+      <BlocAbonnementFiche washer={w} parrainage={parrainage} />
 
       <Section titre="À dire à l’appel">
         <Carte className="p-4">

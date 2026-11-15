@@ -5,7 +5,6 @@
 // - Quand le filleul devient abonné payant, le parrain gagne 1 mois, au minimum en Pro
 //   (voir `recompenseParrain`). Une seule récompense par filleul, pas de plafond.
 
-import { randomInt } from 'crypto'
 import { JOURS_ESSAI, ajouterMois, proOffertActif, washerPlan, type Plan } from '@/lib/plan'
 
 export { proOffertActif }
@@ -37,7 +36,15 @@ function racineDuNom(nom: string): string {
   return racine.length >= 2 ? racine : 'WASH'
 }
 
-export function genererCode(nom: string, tirer: (max: number) => number = randomInt): string {
+/** Tirage uniforme sur [0, max) : Web Crypto, disponible côté serveur comme dans le navigateur. */
+function tirerAuHasard(max: number): number {
+  const plafond = Math.floor(0x100000000 / max) * max
+  const a = new Uint32Array(1)
+  do globalThis.crypto.getRandomValues(a); while (a[0] >= plafond)
+  return a[0] % max
+}
+
+export function genererCode(nom: string, tirer: (max: number) => number = tirerAuHasard): string {
   let suffixe = ''
   for (let i = 0; i < LONGUEUR_ALEATOIRE; i++) suffixe += ALPHABET[tirer(ALPHABET.length)]
   return `${racineDuNom(nom)}-${suffixe}`
@@ -58,14 +65,14 @@ export type CompteParrainage = {
   pro_offert_jusqu_au?: string | null
 }
 
-export type StatutFilleul = 'inscrit' | 'essai' | 'abonne'
+export type StatutFilleul = 'essai' | 'client' | 'essai_termine'
 
 /** Les trois seuls états que le parrain voit de son filleul. */
 export function statutFilleul(w: CompteParrainage, now: Date = new Date()): StatutFilleul {
-  if (w.subscription_status === 'active' || w.subscription_status === 'past_due') return 'abonne'
+  if (w.subscription_status === 'active' || w.subscription_status === 'past_due') return 'client'
   const fin = w.trial_ends_at ? new Date(w.trial_ends_at).getTime() : NaN
   if (w.subscription_status === 'trial' && fin > now.getTime()) return 'essai'
-  return 'inscrit'
+  return 'essai_termine'
 }
 
 export type FormeRecompense =
@@ -141,4 +148,30 @@ export function phraseRecompense(r: Recompense): string {
     case 'aucune':
       return ''
   }
+}
+
+const JOUR_MS = 24 * 60 * 60 * 1000
+export const JOURS_AVANT_CARTE = 7
+export const RETOUR_CARTE_JOURS = { min: 14, max: 28 } as const
+
+/** La carte de rappel de l'accueil : jamais pour un client historique ni pour qui parraine déjà,
+ *  pas avant la première réservation reçue (ou 7 jours de compte), pas avant sa date de retour. */
+export function carteParrainageVisible(c: {
+  grandfathered?: boolean | null
+  createdAt?: string | null
+  revoirLe?: string | null
+  aDesFilleuls: boolean
+  aUneReservation: boolean
+}, now: Date = new Date()): boolean {
+  if (c.grandfathered || c.aDesFilleuls) return false
+  if (c.revoirLe && new Date(c.revoirLe).getTime() > now.getTime()) return false
+  if (c.aUneReservation) return true
+  const cree = c.createdAt ? new Date(c.createdAt).getTime() : NaN
+  return Number.isFinite(cree) && now.getTime() - cree >= JOURS_AVANT_CARTE * JOUR_MS
+}
+
+/** Carte fermée : elle revient à une date tirée au hasard entre 2 et 4 semaines plus tard. */
+export function dateRetourCarte(now: Date = new Date(), tirer: (max: number) => number = tirerAuHasard): string {
+  const jours = RETOUR_CARTE_JOURS.min + tirer(RETOUR_CARTE_JOURS.max - RETOUR_CARTE_JOURS.min + 1)
+  return new Date(now.getTime() + jours * JOUR_MS).toISOString()
 }

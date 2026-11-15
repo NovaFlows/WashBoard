@@ -7,6 +7,8 @@ import { logger } from '@/lib/logger'
 import { estExpediteurApprouve } from '@/lib/expediteurs'
 import type { DonneesLaveur, WasherFiche } from '@/lib/ficheLaveur'
 import { relanceDue, tableAbsente, type Appel } from '@/lib/suiviAppels'
+import { statutFilleul, type CompteParrainage } from '@/lib/parrainage'
+import { construireArbre, type LigneParrainage } from '@/lib/arbreParrainage'
 
 // Lectures de l'espace équipe (fiches laveurs). Service-role : l'équipe voit
 // tous les comptes, ce que la RLS refuse — d'où la garde `exigerEquipe` en
@@ -184,4 +186,50 @@ export async function chargerResumeEquipe(now: Date = new Date()) {
     expediteursEnAttente: expediteurs.error ? null : (expediteurs.data ?? []).filter(e => !e.sms_sender || !estExpediteurApprouve(e.sms_sender)).length,
     aRelancer: appels.actif ? aRelancer : null,
   }
+}
+
+export type ParrainageFiche = {
+  parrain: { id: string; nom: string } | null
+  filleuls: number
+  clients: number
+  recompenseDonnee: boolean
+}
+
+/** Parrainage vu depuis la fiche : son parrain, et ce que lui a rapporté. `null` si illisible. */
+export async function chargerParrainageFiche(washerId: string): Promise<ParrainageFiche | null> {
+  const admin = createAdminClient()
+  const [enHaut, enBas] = await Promise.all([
+    admin.from('parrainages').select('recompense_le, parrain:washers!parrainages_parrain_id_fkey(id, name)').eq('filleul_id', washerId).maybeSingle(),
+    admin.from('parrainages').select('filleul:washers!parrainages_filleul_id_fkey(subscription_status, trial_ends_at)').eq('parrain_id', washerId),
+  ])
+  if (enHaut.error || enBas.error) {
+    logger.warn('equipe.fiche.parrainage_read_failed', { washerId }, enHaut.error ?? enBas.error)
+    return null
+  }
+  const un = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null)
+  const parrain = un(enHaut.data?.parrain as { id: string; name: string } | { id: string; name: string }[] | null)
+  const filleuls = (enBas.data ?? []).map(l => un(l.filleul as CompteParrainage | CompteParrainage[] | null)).filter((f): f is CompteParrainage => !!f)
+  return {
+    parrain: parrain ? { id: parrain.id, nom: parrain.name } : null,
+    filleuls: filleuls.length,
+    clients: filleuls.filter(f => statutFilleul(f) === 'client').length,
+    recompenseDonnee: !!enHaut.data?.recompense_le,
+  }
+}
+
+/** Toutes les lignes de parrainage, assemblées en arbre avec les signaux. `null` si illisible. */
+export async function chargerArbreParrainages(now: Date = new Date()) {
+  const admin = createAdminClient()
+  const colonnesLaveur = 'id, name, plan, grandfathered, subscription_status, trial_ends_at, cgv_acceptees_ip, facture_siret'
+  const { data, error } = await admin
+    .from('parrainages')
+    .select(`id, cree_le, ip_inscription, recompense_le, recompense_forme, signal_ok_le,
+      parrain:washers!parrainages_parrain_id_fkey(${colonnesLaveur}),
+      filleul:washers!parrainages_filleul_id_fkey(${colonnesLaveur})`)
+    .order('cree_le', { ascending: true })
+  if (error) {
+    logger.error('support.parrainages.lecture', {}, error)
+    return null
+  }
+  return construireArbre((data ?? []) as unknown as LigneParrainage[], now)
 }
