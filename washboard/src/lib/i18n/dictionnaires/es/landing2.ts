@@ -77,7 +77,7 @@ export const landing2: Dictionnaire = {
   'Acompte à la réservation': 'Depósito al reservar',
   'Promotions avec compte à rebours': 'Promociones con cuenta atrás',
   'Pour remplir son planning sans y penser.': 'Para llenar tu agenda sin pensar en ello.',
-  'Tout le Découverte': 'Todo lo de Découverte',
+  'Tout le Découverte': 'Todo lo de Descubrimiento',
   '15 réservations par mois': '15 reservas al mes',
   'Catalogue de prestations illimité': 'Catálogo de servicios ilimitado',
   'Page de réservation personnalisée (logo, couleurs)': 'Página de reserva personalizada (logo, colores)',
