@@ -10,7 +10,7 @@ import { logoCarte } from '@/lib/fideliteServeur'
 // allumé dans la barre du bas. Les réglages sont chargés par l'écran
 // (`GET /api/washer/fidelite`).
 const COLONNES =
-  'id, name, slug, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, created_at, subscription_ends_at, brand_color, logo_url, profile_updated_at'
+  'id, name, slug, trial_ends_at, subscription_status, plan, grandfathered, pro_offert_jusqu_au, stripe_subscription_id, cancels_at, created_at, subscription_ends_at, brand_color, logo_url, profile_updated_at'
 
 export default async function FidelitePage() {
   const supabase = await createClient()

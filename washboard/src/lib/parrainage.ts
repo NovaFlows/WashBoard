@@ -111,7 +111,9 @@ export function recompenseParrain(w: CompteParrainage, now: Date = new Date()): 
     if (RANG[plan] < RANG.pro) colonnes.pro_offert_jusqu_au = prolongerPro(w, now)
     const fin = w.subscription_ends_at ? new Date(w.subscription_ends_at) : null
     if (!fin || Number.isNaN(fin.getTime())) return { forme: 'abonnement_a_la_main', colonnes }
-    colonnes.subscription_ends_at = ajouterMois(fin, 1).toISOString()
+    // Fin payée déjà passée (paiement arrêté, statut pas encore changé) : le mois part d'aujourd'hui,
+    // sinon il tomberait dans le passé et ne donnerait rien.
+    colonnes.subscription_ends_at = ajouterMois(fin.getTime() > now.getTime() ? fin : now, 1).toISOString()
     return { forme: 'abonnement', colonnes }
   }
 

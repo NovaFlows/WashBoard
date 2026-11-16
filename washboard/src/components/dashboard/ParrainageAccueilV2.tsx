@@ -103,12 +103,23 @@ function FenetreCelebration({ celebration, onFermer }: { celebration: Celebratio
   const t = useT()
   const toile = useRef<HTMLCanvasElement>(null)
   const bouton = useRef<HTMLButtonElement>(null)
+  const boite = useRef<HTMLDivElement>(null)
   const fermer = useRef(onFermer)
   useEffect(() => { fermer.current = onFermer }, [onFermer])
 
   useEffect(() => {
     bouton.current?.focus()
-    const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') fermer.current() }
+    // Fenêtre modale : Tab et Maj+Tab tournent entre ses deux boutons, sans retomber sur l'accueil.
+    const echap = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { fermer.current(); return }
+      if (e.key !== 'Tab' || !boite.current) return
+      const cibles = [...boite.current.querySelectorAll<HTMLElement>('button, a[href]')]
+      if (cibles.length === 0) return
+      const i = cibles.indexOf(document.activeElement as HTMLElement)
+      const suivant = e.shiftKey ? (i <= 0 ? cibles.length - 1 : i - 1) : (i === -1 || i === cibles.length - 1 ? 0 : i + 1)
+      e.preventDefault()
+      cibles[suivant].focus()
+    }
     window.addEventListener('keydown', echap)
     const cv = toile.current
     const arret = cv && !animationsReduites() ? lancerConfettis(cv) : undefined
@@ -118,7 +129,7 @@ function FenetreCelebration({ celebration, onFermer }: { celebration: Celebratio
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/35 px-4" role="dialog" aria-modal="true" aria-labelledby="celebration-titre">
       <canvas ref={toile} className="pointer-events-none fixed inset-0 h-full w-full" aria-hidden />
-      <div className={`relative w-full max-w-[380px] rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] px-5 pb-5 pt-6 text-center text-[color:var(--v2-color-encre)] ${police}`}>
+      <div ref={boite} className={`relative w-full max-w-[380px] rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] px-5 pb-5 pt-6 text-center text-[color:var(--v2-color-encre)] ${police}`}>
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[color:var(--v2-color-gris)]">{t('Parrainage')}</p>
         <h2 id="celebration-titre" className={`mt-2 text-[21px] leading-tight ${titre}`}>
           {t('{filleul} est devenu client', { filleul: celebration.filleul })}

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   normaliserCode, genererCode, finEssaiFilleul, statutFilleul, recompenseParrain, lienParrainage,
-  carteParrainageVisible, dateRetourCarte,
+  carteParrainageVisible, dateRetourCarte, phraseRecompense,
 } from './parrainage'
 import { planEffectif, doitChoisirFormule, hasFeature } from './plan'
 
@@ -60,6 +60,13 @@ describe('recompenseParrain', () => {
       const r = recompenseParrain({ plan, subscription_status: 'active', subscription_ends_at: '2026-12-05T00:00:00.000Z' }, NOW)
       expect(r).toEqual({ forme: 'abonnement', colonnes: { subscription_ends_at: '2027-01-05T00:00:00.000Z' } })
     }
+  })
+  it('abonné dont la fin payée est déjà passée : le mois part d’aujourd’hui, jamais dans le passé', () => {
+    const r = recompenseParrain({ plan: 'pro', subscription_status: 'active', subscription_ends_at: '2026-10-02T00:00:00.000Z' }, NOW)
+    expect(r).toEqual({ forme: 'abonnement', colonnes: { subscription_ends_at: '2026-12-20T10:00:00.000Z' } })
+    const starter = recompenseParrain({ plan: 'starter', subscription_status: 'active', subscription_ends_at: '2026-10-02T00:00:00.000Z' }, NOW)
+    expect(starter.colonnes.subscription_ends_at).toBe('2026-12-20T10:00:00.000Z')
+    expect(phraseRecompense(r)).toBe('Votre prochain paiement est repoussé au 20 décembre.')
   })
   it('abonné sans date de fin connue : l’équipe reporte le paiement à la main', () => {
     expect(recompenseParrain({ plan: 'pro', subscription_status: 'active' }, NOW)).toEqual({ forme: 'abonnement_a_la_main', colonnes: {} })

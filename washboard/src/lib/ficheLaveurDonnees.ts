@@ -32,7 +32,7 @@ export async function exigerEquipe() {
   return { user, washer }
 }
 
-const COLONNES_WASHER = 'id, user_id, name, slug, phone, created_at, plan, grandfathered, subscription_status, trial_ends_at, subscription_ends_at, cancels_at, zone_config, base_address, logo_url, google_review_url, website_url, sms_sender, sms_sender_statut, pwa_installee_le, derniere_connexion_le, onboarding_complete_at, acquisition_source, profil_activite, facture_nom_legal, telephone_verifie_le, is_preview'
+const COLONNES_WASHER = 'id, user_id, name, slug, phone, created_at, plan, grandfathered, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, cancels_at, zone_config, base_address, logo_url, google_review_url, website_url, sms_sender, sms_sender_statut, pwa_installee_le, derniere_connexion_le, onboarding_complete_at, acquisition_source, profil_activite, facture_nom_legal, telephone_verifie_le, is_preview'
 
 /** Lit toutes les pages d'une requête : PostgREST plafonne à 1 000 lignes,
  *  et les visites de tous les laveurs dépassent vite ce plafond. */
@@ -193,6 +193,8 @@ export type ParrainageFiche = {
   filleuls: number
   clients: number
   recompenseDonnee: boolean
+  /** Mois gagnés par ce parrain alors que son abonnement n'a pas de date de fin : à reporter à la main. */
+  aReporterALaMain: number
 }
 
 /** Parrainage vu depuis la fiche : son parrain, et ce que lui a rapporté. `null` si illisible. */
@@ -200,7 +202,7 @@ export async function chargerParrainageFiche(washerId: string): Promise<Parraina
   const admin = createAdminClient()
   const [enHaut, enBas] = await Promise.all([
     admin.from('parrainages').select('recompense_le, parrain:washers!parrainages_parrain_id_fkey(id, name)').eq('filleul_id', washerId).maybeSingle(),
-    admin.from('parrainages').select('filleul:washers!parrainages_filleul_id_fkey(subscription_status, trial_ends_at)').eq('parrain_id', washerId),
+    admin.from('parrainages').select('recompense_forme, filleul:washers!parrainages_filleul_id_fkey(subscription_status, trial_ends_at)').eq('parrain_id', washerId),
   ])
   if (enHaut.error || enBas.error) {
     logger.warn('equipe.fiche.parrainage_read_failed', { washerId }, enHaut.error ?? enBas.error)
@@ -214,13 +216,14 @@ export async function chargerParrainageFiche(washerId: string): Promise<Parraina
     filleuls: filleuls.length,
     clients: filleuls.filter(f => statutFilleul(f) === 'client').length,
     recompenseDonnee: !!enHaut.data?.recompense_le,
+    aReporterALaMain: (enBas.data ?? []).filter(l => l.recompense_forme === 'abonnement_a_la_main').length,
   }
 }
 
 /** Toutes les lignes de parrainage, assemblées en arbre avec les signaux. `null` si illisible. */
 export async function chargerArbreParrainages(now: Date = new Date()) {
   const admin = createAdminClient()
-  const colonnesLaveur = 'id, name, plan, grandfathered, subscription_status, trial_ends_at, cgv_acceptees_ip, facture_siret'
+  const colonnesLaveur = 'id, name, plan, grandfathered, subscription_status, trial_ends_at, pro_offert_jusqu_au, cgv_acceptees_ip, facture_siret'
   const { data, error } = await admin
     .from('parrainages')
     .select(`id, cree_le, ip_inscription, recompense_le, recompense_forme, signal_ok_le,

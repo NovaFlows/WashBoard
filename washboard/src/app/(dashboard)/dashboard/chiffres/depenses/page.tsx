@@ -16,7 +16,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 // vérification de session — d'où la liste de colonnes minimale (jamais `*` : la fiche laveur
 // porte des jetons Google et des identifiants Stripe).
 const COLONNES =
-  'id, name, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, created_at, slug, subscription_ends_at'
+  'id, name, trial_ends_at, subscription_status, plan, grandfathered, pro_offert_jusqu_au, stripe_subscription_id, cancels_at, created_at, slug, subscription_ends_at'
 
 export default async function DepensesPage() {
   const supabase = await createClient()

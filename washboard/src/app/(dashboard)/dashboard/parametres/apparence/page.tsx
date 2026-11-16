@@ -28,7 +28,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 // confondent donc pas.
 const COLONNES =
   'id, name, slug, logo_url, brand_color, background_theme, welcome_message, website_url, google_place_id, booking_page_mode, ' +
-  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at'
+  'trial_ends_at, subscription_status, plan, grandfathered, pro_offert_jusqu_au, stripe_subscription_id, cancels_at'
 
 export default async function ApparencePage() {
   const supabase = await createClient()

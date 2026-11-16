@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Feuille, BOUTON, PRESSION, corps, corpsFort } from '@/components/dashboard/FeuilleV2'
-import { PLAN_LABELS, PLAN_PRICES, yearlyPrice, type Plan } from '@/lib/plan'
+import { PLAN_LABELS, PLAN_PRICES, proOffertActif, yearlyPrice, type Plan } from '@/lib/plan'
 import type { ParrainageFiche } from '@/lib/ficheLaveurDonnees'
 import { dateCourte } from '@/lib/ficheLaveur'
 import { Carte, LigneInfo, Section } from './EcranEquipe'
@@ -17,6 +17,7 @@ type Compte = {
   subscription_status?: string | null
   trial_ends_at?: string | null
   subscription_ends_at?: string | null
+  pro_offert_jusqu_au?: string | null
 }
 
 function Constat({ ton, children }: { ton: 'vert' | 'ambre' | 'rouge'; children: React.ReactNode }) {
@@ -41,6 +42,17 @@ function statutAbonnement(w: Compte): string {
   }
 }
 
+/** Ce que le parrain a réellement reçu, selon la forme de la récompense. */
+function ConstatRecompense({ parrain, forme }: { parrain: string; forme?: string }) {
+  if (forme === 'abonnement_a_la_main') {
+    return <Constat ton="ambre">{`${parrain} a gagné un mois offert, mais son abonnement n’a pas de date de fin : reportez son prochain paiement d’un mois à la main.`}</Constat>
+  }
+  if (forme === 'aucune') {
+    return <Constat ton="ambre">{`Pas de mois offert pour ${parrain} : client historique ou compte fermé.`}</Constat>
+  }
+  return <Constat ton="vert">{`${parrain} a reçu son mois offert.`}</Constat>
+}
+
 /** Abonnement et parrainage du laveur, avec le bouton « Paiement reçu ». */
 export default function BlocAbonnementFiche({ washer: w, parrainage }: { washer: Compte; parrainage: ParrainageFiche | null }) {
   const [ouverte, setOuverte] = useState(false)
@@ -53,6 +65,7 @@ export default function BlocAbonnementFiche({ washer: w, parrainage }: { washer:
           <LigneInfo libelle="Statut">{statutAbonnement(w)}</LigneInfo>
           {payeJusquAu && <LigneInfo libelle="Payé jusqu’au">{dateCourte(payeJusquAu)}</LigneInfo>}
           {!payeJusquAu && w.subscription_status === 'trial' && w.trial_ends_at && <LigneInfo libelle="Essai jusqu’au">{dateCourte(w.trial_ends_at)}</LigneInfo>}
+          {proOffertActif(w) && <LigneInfo libelle="Pro offert jusqu’au">{dateCourte(w.pro_offert_jusqu_au!)}</LigneInfo>}
           {parrainage && (
             <>
               <LigneInfo libelle="Parrainé par">
@@ -65,6 +78,11 @@ export default function BlocAbonnementFiche({ washer: w, parrainage }: { washer:
                   ? 'Personne'
                   : `${parrainage.filleuls} laveur${parrainage.filleuls > 1 ? 's' : ''}, dont ${parrainage.clients} client${parrainage.clients > 1 ? 's' : ''}`}
               </LigneInfo>
+              {parrainage.aReporterALaMain > 0 && (
+                <div className="py-2.5">
+                  <Constat ton="ambre">{`${parrainage.aReporterALaMain} mois offert${parrainage.aReporterALaMain > 1 ? 's' : ''} sans date de fin d’abonnement : son prochain paiement est à reporter à la main.`}</Constat>
+                </div>
+              )}
               {(parrainage.parrain || parrainage.filleuls > 0) && (
                 <div className="py-2.5">
                   <Link href={`/dashboard/support/parrainages?q=${encodeURIComponent(w.name)}`} className={`text-[13.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>
@@ -93,7 +111,7 @@ function depuisQuand(iso: string): string {
   return `il y a ${Math.round(minutes / 60)} h`
 }
 
-type Resultat = { payeJusquAu: string; parrainage: { statut: string; parrain?: string } | null }
+type Resultat = { payeJusquAu: string; parrainage: { statut: string; parrain?: string; forme?: string } | null }
 
 function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parrain: string | null; onClose: () => void }) {
   const router = useRouter()
@@ -142,7 +160,7 @@ function FeuillePaiement({ washer: w, parrain, onClose }: { washer: Compte; parr
         pied={<button type="button" onClick={onClose} className={`${BOUTON} w-full border border-[color:var(--v2-filet-fort)]`} style={PRESSION}>Fermer</button>}>
         <div className="space-y-3">
           <Constat ton="vert">{`${offre ? PLAN_LABELS[offre] : 'Abonnement'} actif, payé jusqu’au ${dateCourte(resultat.payeJusquAu)}.`}</Constat>
-          {p?.statut === 'recompense' && p.parrain && <Constat ton="vert">{`${p.parrain} a reçu son mois offert.`}</Constat>}
+          {p?.statut === 'recompense' && p.parrain && <ConstatRecompense parrain={p.parrain} forme={p.forme} />}
           {p?.statut === 'echec' && <Constat ton="ambre">Le mois offert du parrain n’a pas pu être appliqué. Il sera réessayé cette nuit.</Constat>}
         </div>
       </Feuille>
