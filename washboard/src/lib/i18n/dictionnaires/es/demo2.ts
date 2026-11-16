@@ -120,7 +120,7 @@ export const demo2: Dictionnaire = {
   'Après combien de temps sans rendez-vous ?': '¿Después de cuánto tiempo sin cita?',
   'Ce qui apparaît sur tes factures': 'Lo que aparece en tus facturas',
   'Profil enregistré. Tes prochaines factures le reprennent.': 'Perfil guardado. Tus próximas facturas lo usarán.',
-  'Découverte': 'Découverte',
+  'Découverte': 'Descubrimiento',
   'Illimité, créneaux groupés': 'Ilimitado, huecos agrupados',
   'dès 129 €/mois': 'desde 129 €/mes',
   'Pro · essai gratuit jusqu’au 14 novembre': 'Pro · prueba gratuita hasta el 14 de noviembre',

@@ -120,7 +120,7 @@ export const demo2: Dictionnaire = {
   'Après combien de temps sans rendez-vous ?': 'After how long without an appointment?',
   'Ce qui apparaît sur tes factures': 'What appears on your invoices',
   'Profil enregistré. Tes prochaines factures le reprennent.': 'Profile saved. Your next invoices will use it.',
-  'Découverte': 'Découverte',
+  'Découverte': 'Discovery',
   'Illimité, créneaux groupés': 'Unlimited, grouped slots',
   'dès 129 €/mois': 'from €129/month',
   'Pro · essai gratuit jusqu’au 14 novembre': 'Pro · free trial until 14 November',
