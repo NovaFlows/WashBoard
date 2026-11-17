@@ -21,6 +21,17 @@ export type TypeAcompte = (typeof TYPES_ACOMPTE)[number]
 
 /** Délais proposés pour payer l'acompte, en heures. `null` : pas d'annulation automatique. */
 export const DELAIS_PAIEMENT = [2, 12, 24, 48] as const
+/** Rallonges que le laveur peut accorder à un client qui n'a pas encore payé, en heures. */
+export const PROLONGATIONS_ACOMPTE = [12, 24, 48, 72] as const
+
+/** Nouvelle échéance : la rallonge s'ajoute à l'ancienne échéance si elle court encore, sinon
+ *  elle part de maintenant (réservation déjà annulée faute de paiement). */
+export function echeanceProlongee(echeance: string | Date | null | undefined, heures: number, maintenant: Date = new Date()): string {
+  const ancienne = echeance ? new Date(echeance).getTime() : NaN
+  const depart = Number.isFinite(ancienne) && ancienne > maintenant.getTime() ? ancienne : maintenant.getTime()
+  return new Date(depart + heures * 3600_000).toISOString()
+}
+
 /** Délais proposés pour annuler en étant remboursé, en heures avant le rendez-vous. */
 export const DELAIS_REMBOURSEMENT = [24, 48, 72] as const
 

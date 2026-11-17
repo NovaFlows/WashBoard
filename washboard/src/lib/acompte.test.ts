@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ReglagesAcompteSchema, acompteActif, rappelAcompteDu, conditionsAcompte, echeanceAcompte, ibanValide, liensDePaiement, montantAcompte, moyensPaiement, versPublic, virementPour, weroPour } from './acompte'
+import { ReglagesAcompteSchema, acompteActif, rappelAcompteDu, conditionsAcompte, echeanceAcompte, echeanceProlongee, ibanValide, liensDePaiement, montantAcompte, moyensPaiement, versPublic, virementPour, weroPour } from './acompte'
 
 const base = { actif: true, type: 'pourcentage' as const, valeur: 30, liens: { sumup: 'https://sumup.me/eclat' }, delai_heures: 24, remboursable: true, remboursement_heures: 48 }
 
@@ -152,5 +152,18 @@ describe('rappel avant l’échéance', () => {
   it('par défaut, à l’instant présent', () => {
     const maintenant = Date.now()
     expect(rappelAcompteDu({ creeLe: new Date(maintenant - 20 * H), echeance: new Date(maintenant + 2 * H), rappelLe: null })).toBe(true)
+  })
+})
+
+describe('echeanceProlongee', () => {
+  const maintenant = new Date('2026-11-17T10:00:00Z')
+  it('ajoute la rallonge à une échéance qui court encore', () => {
+    expect(echeanceProlongee('2026-11-17T12:00:00Z', 24, maintenant)).toBe('2026-11-18T12:00:00.000Z')
+  })
+  it('repart de maintenant quand l’échéance est dépassée', () => {
+    expect(echeanceProlongee('2026-11-16T12:00:00Z', 12, maintenant)).toBe('2026-11-17T22:00:00.000Z')
+  })
+  it('repart de maintenant sans échéance', () => {
+    expect(echeanceProlongee(null, 48, maintenant)).toBe('2026-11-19T10:00:00.000Z')
   })
 })

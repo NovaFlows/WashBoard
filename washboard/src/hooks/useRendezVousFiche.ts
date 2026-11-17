@@ -213,9 +213,15 @@ export function useRendezVousFiche({
     setSelected(prev => prev?.id === id ? { ...prev, ...champs } : prev)
   }
 
+  /** Délai d'acompte prolongé (LigneAcompteV2) : le rendez-vous, rétabli s'il était annulé faute de paiement. */
+  function majAcompte(id: string, champs: { status: 'pending' | 'cancelled' | 'confirmed' | 'done'; acompte_echeance: string | null }) {
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, ...champs } : b))
+    setSelected(prev => prev?.id === id ? { ...prev, ...champs } : prev)
+  }
+
   return {
     selected, setSelected, openBooking,
-    updating, majPrix,
+    updating, majPrix, majAcompte,
     editNotes, setEditNotes, notesSaving, saveNotes,
     rescheduling, setRescheduling, startReschedule,
     editDate, setEditDate, editTime, setEditTime, rescheduleSaving, rescheduleErr, saveReschedule,

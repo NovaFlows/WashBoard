@@ -346,7 +346,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   // commentaire en tête de fichier et `useRendezVousFiche`.
   const {
     selected, setSelected, openBooking,
-    updating, majPrix,
+    updating, majPrix, majAcompte,
     editNotes, setEditNotes, notesSaving, saveNotes,
     rescheduling, setRescheduling, startReschedule,
     editDate, setEditDate, editTime, setEditTime, rescheduleSaving, rescheduleErr, saveReschedule,
@@ -723,6 +723,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                     factureMsg={factureMsg}
                     emettreFactureManuelle={emettreFactureManuelle}
                     majPrix={majPrix}
+          majAcompte={majAcompte}
                   />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2.5 px-6 text-center">
@@ -1238,6 +1239,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           factureMsg={factureMsg}
           emettreFactureManuelle={emettreFactureManuelle}
           majPrix={majPrix}
+          majAcompte={majAcompte}
         />
       )}
     </div>
@@ -1335,6 +1337,7 @@ function DetailRendezVous({
   facturationPrete,
   factureEnCours, factureMsg, emettreFactureManuelle,
   majPrix,
+  majAcompte,
 }: {
   booking: Booking
   onClose: () => void
@@ -1361,6 +1364,7 @@ function DetailRendezVous({
   factureMsg: { id: string; texte: string; completer: boolean } | null
   emettreFactureManuelle: (id: string) => void
   majPrix: (id: string, champs: { booked_price: number; remise_laveur: number }) => void
+  majAcompte: (id: string, champs: { status: 'pending' | 'cancelled' | 'confirmed' | 'done'; acompte_echeance: string | null }) => void
 }) {
   const loc = useLocale()
   const tr = useT()
@@ -1521,7 +1525,7 @@ function DetailRendezVous({
 
           <LigneRemiseV2 rdv={b} onMaj={champs => majPrix(b.id, champs)} />
 
-          <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
+          <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} onProlonge={champs => majAcompte(b.id, champs)} />
 
           <p className={`mt-4 text-[13.5px] ${corps} text-[color:var(--v2-color-encre)]`}>{adresseAvecLieu(b.address, b.lieu)}</p>
           {adresse && (
@@ -1817,6 +1821,7 @@ function FicheRdvBureauV2({
   facturationPrete,
   factureEnCours, factureMsg, emettreFactureManuelle,
   majPrix,
+  majAcompte,
 }: {
   booking: Booking
   updating: boolean
@@ -1842,6 +1847,7 @@ function FicheRdvBureauV2({
   factureMsg: { id: string; texte: string; completer: boolean } | null
   emettreFactureManuelle: (id: string) => void
   majPrix: (id: string, champs: { booked_price: number; remise_laveur: number }) => void
+  majAcompte: (id: string, champs: { status: 'pending' | 'cancelled' | 'confirmed' | 'done'; acompte_echeance: string | null }) => void
 }) {
   const loc = useLocale()
   const tr = useT()
@@ -2011,7 +2017,7 @@ function FicheRdvBureauV2({
 
         <LigneRemiseV2 rdv={b} onMaj={champs => majPrix(b.id, champs)} />
 
-          <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} />
+          <LigneAcompteV2 rdv={b} modifiable={b.status !== 'cancelled'} onProlonge={champs => majAcompte(b.id, champs)} />
 
         <div className="mt-4">
           <label htmlFor="rdv-notes-bureau" className={`mb-1.5 block text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
