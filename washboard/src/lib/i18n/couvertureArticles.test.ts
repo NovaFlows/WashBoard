@@ -10,9 +10,9 @@ import { enArticles } from './dictionnaires/articles/en'
 import { esArticles } from './dictionnaires/articles/es'
 import { deArticles } from './dictionnaires/articles/de'
 
-// Les articles du blog (src/app/blog/<slug>/page.tsx) se traduisent avec `getTArticle` : dictionnaire de
+// Les articles du blog (src/app/vitrine/[langue]/blog/<slug>/page.tsx) se traduisent avec `getTArticle` : dictionnaire de
 // l'appli + dictionnaire des articles. Chaque phrase passée à t() doit exister dans l'un des deux.
-const DOSSIER = join(process.cwd(), 'src', 'app', 'blog')
+const DOSSIER = join(process.cwd(), 'src', 'app', 'vitrine', '[langue]', 'blog')
 const pages = readdirSync(DOSSIER, { withFileTypes: true })
   .filter(d => d.isDirectory())
   .map(d => join(DOSSIER, d.name, 'page.tsx'))

@@ -1,10 +1,19 @@
 import { cookies, headers } from 'next/headers'
-import { COOKIE_LANGUE, LANGUES, LOCALES_INTL, detecterLangue, type Langue } from './langues'
+import { langue as langueDeLAdresse } from 'next/root-params'
+import { COOKIE_LANGUE, LANGUES, LOCALES_INTL, detecterLangue, estLangue, type Langue } from './langues'
 import { dictionnaireDe } from './dictionnaires'
 import { creerTraducteur, type Traducteur } from './traduire'
 
 /** Langue de la requête en cours (composants serveur, métadonnées). */
 export async function getLangue(): Promise<Langue> {
+  // Site public pré-calculé (app/vitrine/[langue]) : la langue est dans l'adresse interne, choisie
+  // par src/proxy.ts. Surtout ne pas lire cookies/en-têtes ici : la page ne serait plus statique.
+  try {
+    const l = await langueDeLAdresse()
+    if (estLangue(l)) return l
+  } catch {
+    // Route d'API, action serveur : pas de paramètre racine, on retombe sur la requête.
+  }
   try {
     const [jar, h] = await Promise.all([cookies(), headers()])
     return detecterLangue({

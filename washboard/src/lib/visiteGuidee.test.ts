@@ -128,7 +128,7 @@ describe('etapesPour', () => {
     for (const { route } of etapesPour(true)) {
       if (!route) continue
       const chemin = route.split('#')[0]
-      expect(existsSync(join(__dirname, '..', 'app', '(dashboard)', chemin, 'page.tsx')), route).toBe(true)
+      expect(existsSync(join(__dirname, '..', 'app', '(app)', '(dashboard)', chemin, 'page.tsx')), route).toBe(true)
     }
   })
 

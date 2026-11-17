@@ -26,6 +26,10 @@ const eslintConfig = defineConfig([
       // Décision assumée : patterns fetch-on-mount / sync DOM légitimes.
       // Conservé en avertissement (visible) sans bloquer le build / la CI.
       "react-hooks/set-state-in-effect": "warn",
+      // Règle du routeur « pages » : avec les adresses inconnues servies par une page attrape-tout
+      // (app/(app)/[...introuvable]), elle prend chaque lien interne pour une page et signale les <a>
+      // voulus (OAuth Google, rechargements complets). Next/Link reste la norme, revue à la main.
+      "@next/next/no-html-link-for-pages": "off",
       // Le préfixe `_` marque une valeur écartée exprès (déstructuration, paramètre d'API).
       "@typescript-eslint/no-unused-vars": ["warn", {
         varsIgnorePattern: "^_",
