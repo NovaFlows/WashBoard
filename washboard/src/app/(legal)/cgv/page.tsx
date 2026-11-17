@@ -10,7 +10,7 @@ export default function CGV() {
   return (
     <article className="lg">
       <h1>Conditions Générales de Vente</h1>
-      <p className="lg-maj">Dernière mise à jour : octobre 2026</p>
+      <p className="lg-maj">Dernière mise à jour : novembre 2026</p>
 
       <Section title="1. Objet">
         <p>
@@ -81,16 +81,95 @@ export default function CGV() {
 
       <Section title="4. Période d'essai">
         <p>
-          Tout nouveau Client bénéficie d&apos;une période d&apos;essai gratuite d&apos;<strong>un (1) mois</strong> à compter de la création
-          de son compte, sans engagement et sans carte bancaire requise.
+          Tout nouveau Client bénéficie d&apos;une période d&apos;essai gratuite de <strong>quatorze (14) jours</strong> à compter de la
+          création de son compte, sans engagement et sans carte bancaire requise. Les comptes créés avant la présente version
+          conservent la durée d&apos;essai et la date de fin qui leur avaient été indiquées.
         </p>
         <p>
-          À l&apos;issue de la période d&apos;essai, le compte est suspendu automatiquement si aucun abonnement payant n&apos;est souscrit.
-          Les données sont conservées pendant 30 jours supplémentaires, puis supprimées définitivement.
+          À l&apos;issue de la période d&apos;essai, si aucun abonnement payant n&apos;a été souscrit, le compte passe automatiquement
+          sur l&apos;offre gratuite Découverte, avec les fonctionnalités et limites propres à cette offre. Aucune somme n&apos;est due
+          et le Client peut souscrire une offre payante à tout moment.
+        </p>
+        <p>
+          Le Client inscrit avec un code de parrainage bénéficie d&apos;une période d&apos;essai plus longue, dans les conditions de
+          l&apos;article 5.
         </p>
       </Section>
 
-      <Section title="5. Modalités de paiement">
+      <Section title="5. Parrainage">
+        <h3>5.1 Principe</h3>
+        <p>
+          Tout Client disposant d&apos;un compte WashBoard (le « Parrain ») peut recommander WashBoard à un autre professionnel
+          (le « Filleul »). Chaque Parrain dispose d&apos;un code personnel, au format NOM-XXXX, et d&apos;un lien d&apos;inscription
+          qui le contient. Le nombre de Filleuls par Parrain n&apos;est pas plafonné.
+        </p>
+
+        <h3>5.2 Conditions</h3>
+        <ul>
+          <li>
+            Le code se saisit uniquement lors de l&apos;inscription du Filleul, ou en utilisant le lien d&apos;inscription du Parrain.
+            Il ne peut pas être ajouté après la création du compte.
+          </li>
+          <li>Un Filleul n&apos;a qu&apos;un seul Parrain.</li>
+          <li>
+            Il est interdit de se parrainer soi-même, y compris au moyen d&apos;un second compte ou d&apos;un compte créé pour
+            le compte d&apos;une même personne ou d&apos;une même activité.
+          </li>
+        </ul>
+
+        <h3>5.3 Avantage du Filleul</h3>
+        <p>
+          Le Filleul bénéficie de quatorze (14) jours d&apos;essai supplémentaires, soit <strong>vingt-huit (28) jours d&apos;essai
+          au total</strong> au lieu de quatorze (14). Les autres conditions de la période d&apos;essai (article 4) restent
+          inchangées.
+        </p>
+
+        <h3>5.4 Avantage du Parrain</h3>
+        <p>
+          Le Parrain reçoit <strong>un (1) mois offert</strong> lorsque son Filleul règle son premier paiement d&apos;une offre
+          payante (Starter, Pro ou Business, en abonnement mensuel ou annuel). Un seul mois est offert par Filleul, y compris
+          lorsque le Filleul paie à l&apos;année. Le mois est attribué une fois le paiement confirmé par WashBoard.
+        </p>
+        <p>Le mois offert prend la forme suivante, selon la situation du Parrain à ce moment :</p>
+        <ul>
+          <li>
+            <strong>Parrain en offre Découverte ou Starter :</strong> un mois en offre Pro, puis retour automatique à son
+            offre. Un Parrain Starter reste Starter ensuite, et son paiement suivant est décalé d&apos;un mois.
+          </li>
+          <li>
+            <strong>Parrain en offre Pro ou Business :</strong> un mois gratuit dans son offre ; sa prochaine échéance est décalée
+            d&apos;un mois.
+          </li>
+          <li>
+            <strong>Parrain en période d&apos;essai :</strong> son essai est prolongé d&apos;un mois.
+          </li>
+          <li>
+            <strong>Client conservant d&apos;anciens tarifs :</strong> aucun avantage pour le Parrain. Son Filleul garde en
+            revanche ses quatorze (14) jours d&apos;essai supplémentaires.
+          </li>
+        </ul>
+
+        <h3>5.5 Nature de l&apos;avantage</h3>
+        <p>
+          Les avantages du parrainage ne sont ni remboursables, ni convertibles en argent, ni cessibles. Ils ne donnent lieu
+          à aucun versement.
+        </p>
+
+        <h3>5.6 Fraude et abus</h3>
+        <p>
+          En cas de fraude ou d&apos;abus manifeste (faux comptes, auto-parrainage déguisé, détournement du code), WashBoard
+          peut refuser ou retirer l&apos;avantage concerné, annuler un mois déjà accordé et, le cas échéant, suspendre le
+          parrainage du compte. Pour détecter ces abus, WashBoard conserve certaines données liées à l&apos;inscription, comme
+          indiqué dans la politique de confidentialité.
+        </p>
+
+        <h3>5.7 Évolution du programme</h3>
+        <p>
+          WashBoard peut modifier ou arrêter le programme de parrainage à tout moment. Les avantages déjà acquis restent dus.
+        </p>
+      </Section>
+
+      <Section title="6. Modalités de paiement">
         <p>
           Le paiement s&apos;effectue par carte bancaire via Stripe, plateforme de paiement sécurisée certifiée PCI DSS.
           WashBoard ne stocke aucune donnée bancaire.
@@ -101,7 +180,7 @@ export default function CGV() {
         </p>
       </Section>
 
-      <Section title="6. Résiliation">
+      <Section title="7. Résiliation">
         <p>
           Le Client peut résilier son abonnement à tout moment, sans frais ni pénalité, depuis le portail de gestion
           accessible via la section <strong>Abonnement</strong> de son espace ou par email à novaflows.pro@gmail.com.
@@ -116,7 +195,7 @@ export default function CGV() {
         </p>
       </Section>
 
-      <Section title="7. Disponibilité du service">
+      <Section title="8. Disponibilité du service">
         <p>
           WashBoard s&apos;engage à mettre en œuvre tous les moyens raisonnables pour assurer la disponibilité du service
           24h/24 et 7j/7. Des interruptions ponctuelles pour maintenance ou raisons techniques peuvent survenir.
@@ -128,7 +207,7 @@ export default function CGV() {
         </p>
       </Section>
 
-      <Section title="8. Propriété des données">
+      <Section title="9. Propriété des données">
         <p>
           Les données saisies par le Client dans WashBoard (clients, réservations, prestations) lui appartiennent
           intégralement. WashBoard n&apos;exploite pas ces données à des fins commerciales.
@@ -140,7 +219,7 @@ export default function CGV() {
         </p>
       </Section>
 
-      <Section title="9. Responsabilité">
+      <Section title="10. Responsabilité">
         <p>
           La responsabilité de WashBoard est limitée aux dommages directs prouvés, dans la limite des sommes
           effectivement versées par le Client au cours des 3 derniers mois précédant le fait générateur.
@@ -148,7 +227,7 @@ export default function CGV() {
         </p>
       </Section>
 
-      <Section title="10. Modifications des CGV">
+      <Section title="11. Modifications des CGV">
         <p>
           WashBoard se réserve le droit de modifier les présentes CGV à tout moment. Le Client sera informé par
           email au moins 30 jours avant l&apos;entrée en vigueur des nouvelles conditions. La poursuite de l&apos;utilisation
@@ -156,7 +235,7 @@ export default function CGV() {
         </p>
       </Section>
 
-      <Section title="11. Droit applicable et litiges">
+      <Section title="12. Droit applicable et litiges">
         <p>
           Les présentes CGV sont soumises au droit français. En cas de litige, les parties s&apos;engagent à rechercher
           une solution amiable avant tout recours judiciaire. À défaut d&apos;accord, les tribunaux du ressort du siège

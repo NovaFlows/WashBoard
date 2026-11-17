@@ -5,8 +5,10 @@ import { logger } from '@/lib/logger'
 import { normalizePhone, normaliserMobile, isPhoneExemptFromUniqueness } from '@/lib/phone'
 import { rateLimit, cleanupRateLimit, clientIp } from '@/lib/rateLimit'
 import { envoyerCodeSms, estMobileFrancais, phraseMobileRequis } from '@/lib/codeSms'
-import { PLAN_ESSAI } from '@/lib/plan'
+import { PLAN_ESSAI, finEssaiInscription } from '@/lib/plan'
 import { generateSlug } from '@/lib/slug'
+import { normaliserCode, finEssaiFilleul } from '@/lib/parrainage'
+import { trouverParrain, rattacherFilleul, type Parrain } from '@/lib/parrainageServeur'
 
 // Route publique qui crée des comptes et des lignes en base. Sans plafond, une
 // boucle pouvait ouvrir des centaines d'essais gratuits — coût Supabase, base
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { name, email, password, phone, cgv_acceptees } = await request.json()
+  const { name, email, password, phone, cgv_acceptees, code_parrain } = await request.json()
 
   if (!name?.trim() || !email?.includes('@') || !password || password.length < 6) {
     return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
@@ -67,6 +69,22 @@ export async function POST(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
+
+  // Code parrain : facultatif, mais un code saisi doit exister. Vérifié avant de créer quoi que
+  // ce soit ; la durée d'essai est toujours calculée ici, jamais lue dans la requête.
+  let parrain: Parrain | null = null
+  let codeParrain: string | null = null
+  if (typeof code_parrain === 'string' && code_parrain.trim()) {
+    codeParrain = normaliserCode(code_parrain)
+    const trouve = codeParrain ? await trouverParrain(supabase, codeParrain) : null
+    if (trouve === 'erreur') {
+      return NextResponse.json({ error: 'Vérification du code parrain impossible. Réessaie dans un instant.' }, { status: 503 })
+    }
+    if (!trouve) {
+      return NextResponse.json({ error: 'Ce code n’existe pas. Corrige-le ou laisse le champ vide.' }, { status: 400 })
+    }
+    parrain = trouve
+  }
 
   // Unicité du numéro, vérifiée AVANT de créer l'utilisateur auth : sans cela on
   // créerait le compte auth puis on échouerait à l'insert, laissant un compte
@@ -148,7 +166,7 @@ export async function POST(request: NextRequest) {
   }
 
   const baseSlug = generateSlug(name.trim())
-  const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  const trialEndsAt = parrain ? finEssaiFilleul() : finEssaiInscription()
   // Date ET adresse IP de l'acceptation des CGV, posées au moment précis de
   // l'inscription — pas recalculées plus tard, qui prouverait seulement que
   // la case EST cochée aujourd'hui, pas qu'elle l'était à l'inscription.
@@ -160,8 +178,10 @@ export async function POST(request: NextRequest) {
   // solderait par un échec d'inscription devant un vrai prospect, sans qu'il
   // comprenne pourquoi. On retente simplement avec un autre suffixe.
   let washerError: { code?: string; message?: string } | null = null
+  let washerId: string | null = null
   for (let essai = 0; essai < 3; essai++) {
     const id = randomUUID()
+    washerId = id
     const { error } = await supabase
       .from('washers')
       .insert({
@@ -207,6 +227,10 @@ export async function POST(request: NextRequest) {
   }
 
   logger.info('signup.washer_created', { userId: authData.user.id })
+
+  if (parrain && codeParrain && washerId) {
+    await rattacherFilleul(supabase, { filleulId: washerId, parrainId: parrain.id, code: codeParrain, ip })
+  }
 
   // La reprise de l'aperçu prospect et la notification de l'équipe attendent
   // la confirmation (voir `api/auth/confirm-code`) : avant, le compte peut

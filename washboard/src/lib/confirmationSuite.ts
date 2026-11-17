@@ -3,6 +3,7 @@ import { logger } from '@/lib/logger'
 import { notifierEquipe } from '@/lib/push'
 import { reprendreApercu, annonceReprise, type ResultatReprise } from '@/lib/repriseApercu'
 import { FUSEAU } from '@/lib/dateUtils'
+import { annoncerInscriptionFilleul } from '@/lib/parrainageServeur'
 
 /** Reprise de l'aperçu prospect puis notification de l'équipe, une fois
  *  l'email confirmé — par lien (`app/auth/confirm/route.ts`, gardé pour les
@@ -53,12 +54,19 @@ export async function suiteConfirmation(userId: string, email: string) {
     ? new Date(fiche.trial_ends_at).toLocaleDateString('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long' })
     : '?'
   const annonce = annonceReprise(reprise)
+  let parrainNom: string | null = null
+  try {
+    parrainNom = await annoncerInscriptionFilleul(admin, { id: fiche.id, name: fiche.name })
+  } catch (e) {
+    logger.error('parrainage.annonce.exception', { washerId: fiche.id }, e)
+  }
   await notifierEquipe({
     title: annonce.titre,
     body: [
       `🏢 ${fiche.name}`,
       `📧 ${email}`,
       `⏳ Essai jusqu'au ${finEssai}`,
+      ...(parrainNom ? [`🤝 Parrainé par ${parrainNom}`] : []),
       ...annonce.lignes,
     ].join('\n'),
     // La fiche du nouvel inscrit, avec son topo complet (espace équipe).

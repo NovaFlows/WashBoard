@@ -39,7 +39,7 @@ export default async function ConfirmationPage({ params }: Props) {
   // et les emails, qui pointent vers /pdf) : refuser ne prive aucun client.
   const { data: laveur, error: errLaveur } = await supabase
     .from('washers')
-    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug')
+    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, slug')
     .eq('id', booking.washer_id)
     .single()
   if (errLaveur || !laveur) {

@@ -28,7 +28,7 @@ async function remplir(page: import('@playwright/test').Page, numero: string) {
 
 async function envoyer(page: import('@playwright/test').Page) {
   const requete = page.waitForRequest(r => new URL(r.url()).pathname === '/api/auth/signup')
-  await page.getByRole('button', { name: /Lancer mon mois gratuit/ }).last().click()
+  await page.getByRole('button', { name: /Lancer mes \d+ jours gratuits/ }).last().click()
   return (await requete).postDataJSON()
 }
 
@@ -78,7 +78,7 @@ test('un numéro invalide pour le pays choisi est refusé avant l’envoi, avec 
   await ouvrir(page)
   await choisirPays(page, 'Suisse')
   await remplir(page, '12')
-  await page.getByRole('button', { name: /Lancer mon mois gratuit/ }).last().click()
+  await page.getByRole('button', { name: /Lancer mes \d+ jours gratuits/ }).last().click()
   await expect(page.getByText(/invalide pour Suisse.*079 123 45 67/)).toBeVisible()
 })
 
@@ -102,6 +102,6 @@ test('Québec : un indicatif d’un autre endroit (Toronto, 416) est refusé', a
   await ouvrir(page)
   await choisirPays(page, 'Québec')
   await remplir(page, '416 234 5678')
-  await page.getByRole('button', { name: /Lancer mon mois gratuit/ }).last().click()
+  await page.getByRole('button', { name: /Lancer mes \d+ jours gratuits/ }).last().click()
   await expect(page.getByText(/invalide pour Québec/)).toBeVisible()
 })

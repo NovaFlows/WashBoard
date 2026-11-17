@@ -9,7 +9,7 @@ import { washerDuUtilisateur } from '@/lib/washerCourant'
 // pour que « Plus » reste allumé dans la barre du bas. Les réglages sont chargés par
 // l'écran (`GET /api/washer/acompte`).
 const COLONNES =
-  'id, name, slug, trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at, created_at, subscription_ends_at'
+  'id, name, slug, trial_ends_at, subscription_status, plan, grandfathered, pro_offert_jusqu_au, stripe_subscription_id, cancels_at, created_at, subscription_ends_at'
 
 export default async function AcomptePage() {
   const supabase = await createClient()

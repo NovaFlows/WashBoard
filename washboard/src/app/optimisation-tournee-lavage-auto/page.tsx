@@ -136,7 +136,7 @@ export default function Page() {
             l&apos;agenda rempli.
           </p>
           <div className="heros-cta">
-            <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
+            <Link href="/signup" className="btn btn-accent">Lancer mon essai gratuit</Link>
             <Link href="/logiciel-lavage-auto" className="pg-lien-doux">Voir le logiciel complet</Link>
           </div>
           <p className="rassure">Sans engagement · Sans carte bancaire</p>
@@ -248,10 +248,10 @@ export default function Page() {
         <div className="w">
           <h2 className="h2">Moins de trajets à vide, dès la première semaine</h2>
           <p className="chapo" style={{ marginInline: 'auto' }}>
-            Ta page de réservation en ligne en 10 minutes, et ton premier mois offert.
+            Ta page de réservation en ligne en 10 minutes, et 14 jours d’essai offerts.
           </p>
           <div className="heros-cta">
-            <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
+            <Link href="/signup" className="btn btn-accent">Lancer mon essai gratuit</Link>
           </div>
         </div>
       </section>

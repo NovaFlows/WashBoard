@@ -42,7 +42,7 @@ import { useT } from '@/components/i18n/I18nProvider'
 // donc `selection="reglages"` ET son propre fil d'Ariane « ‹ Réglages », exactement comme la
 // maquette (écrans 63/64 : la ligne surlignée à gauche reste « Réglages », un petit lien
 // « ‹ Réglages » apparaît en haut du panneau).
-export type ClePlus = 'profil' | 'liens' | 'prestations' | 'horaires' | 'apparence' | 'reglages' | 'abonnement' | null
+export type ClePlus = 'profil' | 'liens' | 'prestations' | 'horaires' | 'apparence' | 'reglages' | 'abonnement' | 'parrainage' | null
 
 export type ReglagesListeProps = {
   nom: string
@@ -187,6 +187,12 @@ export default function ListeReglagesV2({
         <TitreSection>{t('Mon compte')}</TitreSection>
         <CarteListe>
           <Ligne label={t('Abonnement')} valeur={planLabel} href="/dashboard/abonnement" selected={selection === 'abonnement'} />
+          <Ligne
+            label={t('Parrainage')}
+            sousLabel={grandfathered ? t('14 jours d’essai en plus pour vos collègues') : t('1 mois offert par collègue abonné')}
+            href="/dashboard/parrainage"
+            selected={selection === 'parrainage'}
+          />
           <Ligne
             label={t('Réglages')}
             signal={notifications.ton === 'ambre' || unreadSupportCount

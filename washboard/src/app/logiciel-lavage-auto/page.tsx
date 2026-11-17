@@ -40,7 +40,7 @@ import type { FaqItem } from '@/components/blog/Prose'
 
 const title = 'Logiciel de gestion pour laveur auto mobile | WashBoard'
 const description =
-  'Le logiciel pour laveur auto mobile : prix et durée par prestation, frais de déplacement automatiques, créneaux au temps de trajet réel, acompte, carte de fidélité, agenda et facturation. Un mois offert, sans carte bancaire.'
+  'Le logiciel pour laveur auto mobile : prix et durée par prestation, frais de déplacement automatiques, créneaux au temps de trajet réel, acompte, carte de fidélité, agenda et facturation. 14 jours offerts, sans carte bancaire.'
 const url = `${SITE_URL}/logiciel-lavage-auto`
 
 export const metadata: Metadata = {
@@ -272,7 +272,7 @@ export default function Page() {
         }}
         faq={faqItems}
         ctaTitre="Tu laves, WashBoard gère le reste."
-        ctaTexte="Ta page de réservation en ligne en 10 minutes, et ton premier mois offert."
+        ctaTexte="Ta page de réservation en ligne en 10 minutes, et 14 jours d’essai offerts."
       />
     </>
   )

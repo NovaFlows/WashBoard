@@ -9,7 +9,7 @@ export default function Confidentialite() {
   return (
     <article className="lg">
       <h1>Politique de confidentialité</h1>
-      <p className="lg-maj">Dernière mise à jour : octobre 2026</p>
+      <p className="lg-maj">Dernière mise à jour : novembre 2026</p>
 
       <Section title="1. Responsable du traitement">
         <p>
@@ -38,7 +38,10 @@ export default function Confidentialite() {
         </ul>
         <h3>2.3 Données de navigation</h3>
         <ul>
-          <li>Adresse IP (utilisée uniquement pour la protection anti-spam des formulaires)</li>
+          <li>
+            Adresse IP : utilisée pour la protection anti-spam des formulaires et, à l&apos;inscription
+            d&apos;un laveur, pour la prévention des abus du parrainage (voir §2.4)
+          </li>
           <li>
             Mesure d&apos;audience interne : nombre de visites, étapes franchies dans le
             formulaire, et origine du lien cliqué. Aucune donnée personnelle, aucun partage
@@ -49,6 +52,16 @@ export default function Confidentialite() {
             uniquement après votre accord : le Pixel Meta (voir §7)
           </li>
         </ul>
+        <h3>2.4 Données du parrainage (laveurs)</h3>
+        <ul>
+          <li>Code de parrainage personnel du laveur</li>
+          <li>Lien entre un parrain et son filleul (qui a parrainé qui, et à quelle date)</li>
+          <li>Adresse IP du filleul au moment de son inscription</li>
+          <li>Statut du filleul (essai en cours, abonnement payant ou non) et avantages accordés</li>
+        </ul>
+        <p>
+          Le parrain voit le nom et le statut de ses filleuls dans son espace.
+        </p>
       </Section>
 
       <Section title="3. Finalités du traitement">
@@ -65,6 +78,8 @@ export default function Confidentialite() {
               ["Envoi des emails de confirmation de réservation", 'Exécution du contrat'],
               ["Envoi des demandes d’avis Google aux clients", 'Intérêt légitime'],
               ["Protection anti-spam (rate-limiting par IP)", 'Intérêt légitime'],
+              ["Attribution des avantages du parrainage (lien parrain / filleul, statut du filleul)", 'Exécution du contrat'],
+              ["Prévention de la fraude au parrainage (adresse IP à l’inscription)", 'Intérêt légitime'],
               ["Facturation et gestion de l’abonnement", 'Obligation légale / contrat'],
               ["Suppression des comptes après résiliation (purge 30j)", 'Obligation légale / contrat'],
             ].map(([fin, base]) => (
@@ -83,6 +98,7 @@ export default function Confidentialite() {
           <li><strong>Après résiliation :</strong> 30 jours (délai de réactivation possible), puis suppression définitive</li>
           <li><strong>Données de réservation des clients finaux :</strong> conservées pendant la durée du contrat avec le laveur, puis supprimées avec le compte</li>
           <li><strong>Adresses IP (anti-spam) :</strong> non persistées — stockées en mémoire vive uniquement (supprimées au redémarrage du serveur)</li>
+          <li><strong>Données du parrainage :</strong> conservées pendant la durée de vie du compte concerné, puis supprimées avec lui selon les mêmes délais (30 jours après résiliation). L&apos;adresse IP d&apos;inscription du filleul, enregistrée uniquement pour détecter les abus, n&apos;est utilisée à aucune autre fin</li>
         </ul>
       </Section>
 

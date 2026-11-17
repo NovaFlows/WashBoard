@@ -162,7 +162,7 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     startupImage,
   },
-  description: "Le logiciel tout-en-un des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation. Essai gratuit d'un mois, sans carte bancaire.",
+  description: "Le logiciel tout-en-un des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation. Essai gratuit de 14 jours, sans carte bancaire.",
   // Nettoyée le 2026-09-26 : retrait des doublons "outil X" / "logiciel X"
   // qui décrivaient la même idée deux fois (ex. "outil gestion lavage auto"
   // et "logiciel lavage auto"), et de "detailing" seul — trop ambigu pris
@@ -184,12 +184,12 @@ export const metadata: Metadata = {
     url: "https://www.washboard.fr",
     siteName: "WashBoard",
     title: "Logiciel de lavage, nettoyage auto & detailing à domicile | WashBoard",
-    description: "Le logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation et suivi client. Un mois offert, sans carte bancaire.",
+    description: "Le logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation et suivi client. 14 jours offerts, sans carte bancaire.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Logiciel de lavage, nettoyage auto & detailing à domicile | WashBoard",
-    description: "Le logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation et suivi client. Un mois offert, sans carte bancaire.",
+    description: "Le logiciel de gestion des laveurs auto mobiles et du detailing : réservation en ligne, planning, facturation et suivi client. 14 jours offerts, sans carte bancaire.",
   },
   robots: {
     index: true,

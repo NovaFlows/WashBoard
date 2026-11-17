@@ -5,6 +5,7 @@ import { quotaPrestations, planEffectif } from '@/lib/plan'
 import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
 import { COOKIE_REPORT } from '@/lib/veilleReport'
 import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
+import { ProOffertFourni } from '@/components/dashboard/ProOffertContext'
 
 /** Enveloppe commune à tout le tableau de bord.
  *
@@ -35,10 +36,6 @@ import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
  *  contexte : une requête indexée de plus coûte moins cher que cette plomberie.
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  // « Plus tard » : on ne redirige plus de la visite. Lu en premier, pour ne
-  // même pas payer les requêtes quand la question a déjà été repoussée.
-  if ((await cookies()).get(COOKIE_REPORT)) return <>{children}</>
-
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -47,14 +44,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user.email_confirmed_at) redirect('/verifier-email')
 
+  // « Plus tard » : la question des prestations a déjà été repoussée, on ne lit que le Pro offert.
+  if ((await cookies()).get(COOKIE_REPORT)) {
+    const { data: fiche } = await supabase.from('washers').select('pro_offert_jusqu_au').eq('user_id', user.id).maybeSingle()
+    return <ProOffertFourni jusquAu={fiche?.pro_offert_jusqu_au ?? null}>{children}</ProOffertFourni>
+  }
+
   const { data: washer } = await supabase
     .from('washers')
-    .select('id, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au')
     .eq('user_id', user.id)
     .maybeSingle()
 
+  const envelopper = (contenu: React.ReactNode) => <ProOffertFourni jusquAu={washer?.pro_offert_jusqu_au ?? null}>{contenu}</ProOffertFourni>
   const plafond = quotaPrestations(washer)
-  if (!washer || plafond === null) return <>{children}</>
+  if (!washer || plafond === null) return envelopper(children)
 
   // La colonne `en_veille` est demandée EXPLICITEMENT : tant que la migration
   // 005 n'a pas tourné, cette lecture échoue, on n'a rien, et on ne redirige
@@ -69,12 +73,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Migration en attente ou vraie panne : dans les deux cas on laisse passer.
   // Interrompre la navigation sur une lecture ratée serait pire que le
   // problème qu'on cherche à signaler.
-  if (error) return <>{children}</>
+  if (error) return envelopper(children)
 
   const actives = (services ?? []).filter(estVisibleParLesClients)
   const aRanger = aMettreEnVeille(actives.length, plafond)
 
-  return (
+  return envelopper(
     <>
       {children}
       {aRanger > 0 && (

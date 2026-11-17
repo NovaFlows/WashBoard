@@ -218,6 +218,9 @@ export default function TableauEquipe({ laveurs, resume, email, maintenant, pros
           href="/dashboard/support/laveurs?filtre=rappeler"
         />
       </div>
+      <div className="-mt-3 flex justify-end">
+        <Link href="/dashboard/support/parrainages" className={`text-[13.5px] ${corpsFort}`} style={{ color: 'var(--v2-color-accent)' }}>Arbre des parrainages</Link>
+      </div>
 
       <div className="grid grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start gap-6">
         <div className="space-y-6">

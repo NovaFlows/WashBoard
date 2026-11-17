@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import AbonnementV2 from '@/components/dashboard/AbonnementV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
-import { planEffectif, doitChoisirFormule, accesComplet, quotaReservations, quotaPrestations, debutPeriodeQuota, debutSoumisAuPlafond, libelleRemiseAZero } from '@/lib/plan'
+import { planEffectif, planPaye, proOffertEnCours, doitChoisirFormule, accesComplet, quotaReservations, quotaPrestations, debutPeriodeQuota, debutSoumisAuPlafond, libelleRemiseAZero } from '@/lib/plan'
 import { infosFacturationManquantes } from '@/lib/facture'
 import { logger } from '@/lib/logger'
 
@@ -59,7 +59,8 @@ export default async function AbonnementPage() {
         subscriptionStatus={washer.subscription_status ?? 'trial'}
         trialEndsAt={washer.trial_ends_at ?? null}
         subscriptionEndsAt={washer.subscription_ends_at ?? null}
-        plan={planEffectif(washer)}
+        plan={proOffertEnCours(washer) ? planPaye(washer) : planEffectif(washer)}
+        proOffertJusquAu={proOffertEnCours(washer)}
         doitChoisir={doitChoisirFormule(washer)}
         grandfathered={accesComplet(washer)}
         plafondReservations={plafondReservations}

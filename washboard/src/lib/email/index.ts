@@ -573,14 +573,14 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
     return resend.emails.send({
       from: 'WashBoard <noreply@washboard.fr>',
       to,
-      subject: `Votre mois d'essai est terminé — quelle formule vous va ?`,
+      subject: `Votre essai est terminé — quelle formule vous va ?`,
       html: page({
-        titre: 'Votre mois d&apos;essai est terminé',
+        titre: 'Votre essai gratuit est terminé',
         entete: enteteWashBoard(url),
         contenu: `
-${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre mois d&apos;essai est terminé', sousTitre: 'Rien ne s&apos;arrête — à vous de choisir la suite' })}
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre essai gratuit est terminé', sousTitre: 'Rien ne s&apos;arrête — à vous de choisir la suite' })}
 ${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
-${paragraphe(`Vous avez essayé WashBoard pendant un mois, avec tout le produit. Votre page de
+${paragraphe(`Vous avez essayé WashBoard avec tout le produit. Votre page de
 réservation, votre agenda et vos clients sont toujours là — nous ne coupons rien.`, { marge: '0 0 20px' })}
 ${encadre(`En attendant votre choix, votre compte est passé sur l&apos;offre Découverte :
 gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.`, 'neutre', '0 0 20px')}
@@ -1058,6 +1058,35 @@ ${titre({ texte: titreCarte })}
 ${paragraphe(escapeHtml(phrase), { marge: '20px 0 22px', style: 'line-height:1.5;' })}
 ${bouton(complete ? 'Voir ma carte' : nouveaux > 1 ? 'Voir mes tampons' : 'Voir mon tampon', escapeHtml(url), 'sombre', '0')}`,
       pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}.`,
+    }),
+  })
+}
+
+/** Au parrain, quand un filleul devient abonné (lib/parrainageServeur.ts, `recompenserParrain`). */
+export async function sendParrainageRecompense({ to, washerName, filleulName, phrase, appUrl }: {
+  to: string
+  washerName: string
+  filleulName: string
+  /** Ce qui a été appliqué, en clair : « Votre prochain paiement est repoussé au 5 janvier. » */
+  phrase: string
+  appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `${filleulName} est devenu client : votre mois est offert`,
+    html: page({
+      titre: 'Votre mois est offert',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre mois est offert', sousTitre: 'Merci de faire connaître WashBoard' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`<strong>${escapeHtml(filleulName)}</strong>, que vous avez parrainé, vient de s&apos;abonner. ${escapeHtml(phrase)}`, { marge: '0 0 20px' })}
+${bouton('Parrainer un autre collègue', `${url}/dashboard/parrainage`, 'accent', '0')}
+${paragraphe('Chaque collègue qui s&apos;abonne avec votre code vous offre un mois de plus.', { ton: 'petit', marge: '16px 0 0' })}`,
+      pied: QUESTIONS,
     }),
   })
 }

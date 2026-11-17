@@ -43,7 +43,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   // permanent (exception légale « facture déjà émise », voir la route PDF).
   const { data: laveur, error: errLaveur } = await admin
     .from('washers')
-    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug')
+    .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, slug')
     .eq('id', washerId)
     .single()
   if (errLaveur || !laveur) {

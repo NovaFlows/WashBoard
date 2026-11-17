@@ -42,7 +42,7 @@ import type { FaqItem } from '@/components/blog/Prose'
 
 const title = 'Logiciel de facturation pour laveur auto mobile | WashBoard'
 const description =
-  'Facture conforme pour laveur auto mobile : SIRET, TVA ou franchise, numérotation continue, créée à la fin de chaque rendez-vous et envoyée à tes clients pros. Un mois offert, sans carte bancaire.'
+  'Facture conforme pour laveur auto mobile : SIRET, TVA ou franchise, numérotation continue, créée à la fin de chaque rendez-vous et envoyée à tes clients pros. 14 jours offerts, sans carte bancaire.'
 const url = `${SITE_URL}/facturation-laveur-auto`
 
 export const metadata: Metadata = {
@@ -193,7 +193,7 @@ export default function Page() {
         fonctionnalites={fonctionnalites}
         faq={faqItems}
         ctaTitre="Tu laves, la facture suit."
-        ctaTexte="Ta page de réservation en ligne en 10 minutes, et ton premier mois offert."
+        ctaTexte="Ta page de réservation en ligne en 10 minutes, et 14 jours d’essai offerts."
       />
     </>
   )

@@ -162,7 +162,7 @@ export default function Page() {
             catégories d&apos;outils, honnêtement, poste par poste.
           </p>
           <div className="heros-cta">
-            <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
+            <Link href="/signup" className="btn btn-accent">Lancer mon essai gratuit</Link>
             <Link href="/booking" className="pg-lien-doux">ou prendre un appel</Link>
           </div>
           <p className="rassure">Sans engagement · Sans carte bancaire</p>
@@ -273,7 +273,7 @@ export default function Page() {
             l&apos;année, sans carte bancaire en mensuel.
           </p>
           <div className="heros-cta">
-            <Link href="/signup" className="btn btn-accent">Lancer mon mois gratuit</Link>
+            <Link href="/signup" className="btn btn-accent">Lancer mon essai gratuit</Link>
           </div>
           <p className="rassure">Sans engagement · Sans carte bancaire</p>
         </div>

@@ -68,8 +68,9 @@ export function isCardRegistered(
   return !!subscriptionId && status === 'trial'
 }
 
+// Fuseau fixé : le serveur (UTC) et le navigateur (Paris) doivent écrire le même jour.
 export function formatDateFR(date: string | Date, locale = 'fr-FR'): string {
-  return new Date(date).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(date).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })
 }
 
 // Détermine si l'on peut différer la facturation à la fin de l'essai.

@@ -48,6 +48,7 @@ export default function AccueilEquipeV2({ resume, email, laveurs, maintenant, pr
           <Ligne label="Tous les laveurs" valeur={resume.total != null ? String(resume.total) : undefined} href="/dashboard/support/laveurs" />
           <Ligne label="À rappeler" valeur={nombre(resume.aRelancer, 'relance due', 'relances dues') ?? (resume.aRelancer === null ? 'Suivi à activer' : 'Personne')} href="/dashboard/support/laveurs?filtre=rappeler" />
           <Ligne label="Nouveaux inscrits" valeur={nombre(resume.nouveaux, 'cette semaine', 'cette semaine') ?? 'Aucun cette semaine'} href="/dashboard/support/laveurs?filtre=nouveaux" />
+          <Ligne label="Parrainages" href="/dashboard/support/parrainages" />
         </CarteListe>
       </Section>
 

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
   const { data: washer, error: errWasher } = await supabase
     .from('washers')
-    .select('id, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au')
     .eq('user_id', user.id).single()
 
   if (errWasher) logger.error('campagnes.washer.read_failed', {}, errWasher)

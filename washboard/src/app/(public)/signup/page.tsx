@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { normaliserMobile, PAYS_TELEPHONE, telephoneDuPays, type PaysTelephone } from '@/lib/phone'
@@ -12,6 +12,10 @@ import {
   BarreActions, BoutonPrincipal, CadreEntree, Champ, Erreur, GaucheAccueil, GroupeChamps, Guide, LIEN_DISCRET, SAISIE, TitreEntree,
 } from '@/components/entree/Entree'
 import { trans } from '@/lib/i18n/trans'
+import { JOURS_BONUS_FILLEUL, normaliserCode } from '@/lib/parrainage'
+import { JOURS_ESSAI } from '@/lib/plan'
+
+type VerifCode = { etat: 'vide' | 'verif' | 'indispo' | 'faux' } | { etat: 'ok'; parrain: string }
 
 export default function SignupPage() {
   const t = useT()
@@ -31,6 +35,44 @@ export default function SignupPage() {
   const [cgvAcceptees, setCgvAcceptees] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [codeParrain, setCodeParrain] = useState('')
+  const [verif, setVerif] = useState<VerifCode>({ etat: 'vide' })
+  const derniereVerif = useRef(0)
+  const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  async function verifierCode(brut: string) {
+    const n = ++derniereVerif.current
+    if (!brut.trim()) { setVerif({ etat: 'vide' }); return }
+    const code = normaliserCode(brut)
+    if (!code) { setVerif({ etat: 'faux' }); return }
+    setVerif({ etat: 'verif' })
+    try {
+      const res = await fetch(`/api/parrainage/verifier?code=${encodeURIComponent(code)}`)
+      const json = await res.json().catch(() => null)
+      if (n !== derniereVerif.current) return
+      if (!res.ok || !json) setVerif({ etat: 'indispo' })
+      else setVerif(json.valide ? { etat: 'ok', parrain: json.parrain } : { etat: 'faux' })
+    } catch {
+      if (n === derniereVerif.current) setVerif({ etat: 'indispo' })
+    }
+  }
+
+  function saisirCode(valeur: string) {
+    setCodeParrain(valeur)
+    if (minuteur.current) clearTimeout(minuteur.current)
+    if (!valeur.trim()) { derniereVerif.current++; setVerif({ etat: 'vide' }); return }
+    setVerif({ etat: 'verif' })
+    if (normaliserCode(valeur)) minuteur.current = setTimeout(() => verifierCode(valeur), 400)
+  }
+
+  // Lien du parrain : /signup?parrain=CODE remplit le champ.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('parrain')
+    if (code) { setCodeParrain(code); verifierCode(code) }
+    return () => { if (minuteur.current) clearTimeout(minuteur.current) }
+  }, [])
+
+  const joursEssai = verif.etat === 'ok' ? JOURS_ESSAI + JOURS_BONUS_FILLEUL : JOURS_ESSAI
   const router = useRouter()
 
   async function handleSignup(e: React.FormEvent) {
@@ -45,6 +87,7 @@ export default function SignupPage() {
     if (!normaliserMobile(telephone)) { setError(t('Il faut un numéro de mobile (ex. {exemple}) : le code de confirmation arrive par SMS.', { exemple: choixPays.exemple })); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
     if (password.length < 6) { setError(t('Le mot de passe doit contenir au moins 6 caractères')); return }
+    if (codeParrain.trim() && verif.etat === 'faux') { setError(t('Ce code n’existe pas. Corrige-le ou laisse le champ vide.')); return }
     if (!cgvAcceptees) { setError(t('Merci d’accepter les CGV pour continuer')); return }
     setLoading(true)
     // Sans ce try, un serveur injoignable faisait rejeter le fetch en silence :
@@ -54,7 +97,7 @@ export default function SignupPage() {
       res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, phone: telephone, cgv_acceptees: cgvAcceptees }),
+        body: JSON.stringify({ name, email, password, phone: telephone, cgv_acceptees: cgvAcceptees, code_parrain: codeParrain.trim() }),
       })
     } catch {
       setError(t('Connexion impossible. Vérifie ta connexion internet et réessaie.'))
@@ -81,7 +124,7 @@ export default function SignupPage() {
       <form onSubmit={handleSignup} noValidate className="flex flex-col gap-5">
         <div>
           <Guide gens={['ryan']} texte={t('Bienvenue ! On s’occupe de l’organisation, toi des voitures.')} />
-          <TitreEntree titre={t('Crée ton espace laveur')} sousTitre={t('1 mois gratuit, sans carte bancaire.')} />
+          <TitreEntree titre={t('Crée ton espace laveur')} sousTitre={t('14 jours gratuits, sans carte bancaire.')} />
         </div>
 
         <GroupeChamps>
@@ -102,6 +145,22 @@ export default function SignupPage() {
           </Champ>
           <Champ id="confirm" label={t('Confirmer le mot de passe')}>
             <PasswordInput id="confirm" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••" autoComplete="new-password" className={SAISIE} />
+          </Champ>
+          <Champ id="code-parrain" label={t('Code parrain (facultatif)')} aide={<AideCode verif={verif} />}>
+            <input
+              id="code-parrain"
+              type="text"
+              value={codeParrain}
+              onChange={e => saisirCode(e.target.value)}
+              onBlur={() => { if (minuteur.current) clearTimeout(minuteur.current); if (verif.etat !== 'ok') verifierCode(codeParrain) }}
+              placeholder={t('Ex. NOM-AB12')}
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              maxLength={20}
+              aria-invalid={verif.etat === 'faux'}
+              className={`${SAISIE} uppercase`}
+            />
           </Champ>
         </GroupeChamps>
 
@@ -125,7 +184,7 @@ export default function SignupPage() {
         {error && <Erreur texte={error} />}
 
         <BarreActions>
-          <BoutonPrincipal type="submit" chargement={loading} libelleChargement={t('Création du compte…')}>{t('Lancer mon mois gratuit')}</BoutonPrincipal>
+          <BoutonPrincipal type="submit" chargement={loading} libelleChargement={t('Création du compte…')}>{t('Lancer mes {n} jours gratuits', { n: joursEssai })}</BoutonPrincipal>
           <Link href="/login" className={`${LIEN_DISCRET} flex items-center justify-center`}>
             {t('Déjà un compte ?')}{t(' ')}<b className="font-semibold text-[color:var(--v2-color-encre)]">{t('Se connecter')}</b>
           </Link>
@@ -133,4 +192,18 @@ export default function SignupPage() {
       </form>
     </CadreEntree>
   )
+}
+
+function AideCode({ verif }: { verif: VerifCode }) {
+  const t = useT()
+  if (verif.etat === 'ok') {
+    return <span role="status" className="font-semibold text-[color:var(--v2-color-vert)]">{t('Code de {parrain} : 2 semaines offertes, 28 jours d’essai', { parrain: verif.parrain })}</span>
+  }
+  if (verif.etat === 'faux') {
+    return <span role="alert" className="font-semibold text-[color:var(--v2-color-rouge)]">{t('Ce code n’existe pas. Corrige-le ou laisse le champ vide.')}</span>
+  }
+  if (verif.etat === 'indispo') {
+    return <span role="status">{t('Vérification impossible pour le moment : le code sera vérifié à l’inscription.')}</span>
+  }
+  return <span>{t('Ton parrain verra le nom de ton entreprise et l’avancement de ton inscription.')}</span>
 }

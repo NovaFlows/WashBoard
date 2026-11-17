@@ -64,7 +64,7 @@ export const landing2: Dictionnaire = {
   'Sans carte bancaire, sans limite de durée': 'No credit card, no time limit',
   'Soit {prix} € par an, {offre}': 'That is €{prix} a year, {offre}',
   'Commencer gratuitement': 'Start for free',
-  'Un mois d’essai avec tout débloqué, sans carte bancaire. Sans choix de formule, ton compte passe tout seul sur Découverte : on ne coupe rien.': 'A one-month trial with everything unlocked, no credit card. If you don\'t pick a plan, your account moves to Découverte by itself: nothing is cut off.',
+  '14 jours d’essai avec tout débloqué, sans carte bancaire. Sans choix de formule, ton compte passe tout seul sur Découverte : on ne coupe rien.': 'A 14-day trial with everything unlocked, no credit card. If you don\'t pick a plan, your account moves to Découverte by itself: nothing is cut off.',
   'Tout-en-un': 'All-in-one',
   'Le logiciel des pros du lavage auto et du detailing.': 'The software for car-wash and detailing pros.',
   'Et aussi :': 'And also:',

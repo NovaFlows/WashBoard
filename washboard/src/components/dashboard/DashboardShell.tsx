@@ -10,6 +10,7 @@ import VisiteGuidee from './VisiteGuidee'
 import type { VisitesAFaire } from '@/lib/visiteGuidee'
 import { SupportBadgesContext } from './SupportBadgesContext'
 import { OffreContext } from './OffreContext'
+import { useProOffert } from './ProOffertContext'
 import { PLAN_LABELS, PLAN_COULEURS, planEffectif, doitChoisirFormule, accesComplet, hasFeature, type Plan, type Feature } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
@@ -522,8 +523,10 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   const t = useT()
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
+  const proOffertJusquAu = useProOffert()
   const fiche = {
     plan, grandfathered, slug,
+    pro_offert_jusqu_au: proOffertJusquAu,
     created_at: createdAt,
     subscription_status: subscriptionStatus,
     trial_ends_at: trialEndsAt,
@@ -535,7 +538,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   const offreCourante = useMemo(
     () => ({ offre: offreEffective, peut: (f: Feature) => hasFeature(fiche, f) }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [offreEffective, plan, grandfathered, slug, createdAt, subscriptionStatus, trialEndsAt, subscriptionEndsAt],
+    [offreEffective, plan, grandfathered, slug, createdAt, subscriptionStatus, trialEndsAt, subscriptionEndsAt, proOffertJusquAu],
   )
   const choisirFormule = doitChoisirFormule(fiche)
   // Design mobile (téléphone, installé ou dans le navigateur) : décide du châssis.

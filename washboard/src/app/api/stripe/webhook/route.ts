@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger'
 import { notifierEquipe } from '@/lib/push'
 import { formatEuros } from '@/lib/plan'
 import type Stripe from 'stripe'
+import { recompenserParrain } from '@/lib/parrainageServeur'
 
 export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest) => {
   const body = await req.text()
@@ -141,6 +142,24 @@ export const POST = withErrorHandling('stripe.webhook', async (req: NextRequest)
         cancels_at:             null,
       }).eq('stripe_subscription_id', sub.id)
       if (error) { logger.error('stripe.webhook.subscription_deleted.db', { subId: sub.id }, error); dbError = error }
+      break
+    }
+
+    // Premier vrai paiement d'un filleul : son parrain gagne son mois (une seule fois, verrou
+    // dans recompenserParrain). Une facture à 0 € (essai) ne compte pas. À activer dans Stripe
+    // (événement « invoice.paid » du webhook) le jour où Stripe passe en service.
+    case 'invoice.paid': {
+      const invoice = event.data.object as Stripe.Invoice
+      if (!invoice.amount_paid) break
+      const sub = invoice.parent?.subscription_details?.subscription
+      const subId = typeof sub === 'string' ? sub : (sub?.id ?? null)
+      if (!subId) break
+      const { data: laveur, error } = await admin
+        .from('washers').select('id, name').eq('stripe_subscription_id', subId).maybeSingle()
+      if (error) { logger.error('stripe.webhook.invoice_paid.db', { subId }, error); dbError = error; break }
+      if (!laveur) break
+      const r = await recompenserParrain(admin, { id: laveur.id, name: laveur.name }, 'stripe')
+      if (r.statut === 'echec') dbError = 'parrainage'
       break
     }
 

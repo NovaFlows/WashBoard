@@ -467,7 +467,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                   className="inline-block px-6 py-3 text-white text-sm font-semibold rounded-xl transition-opacity hover:opacity-90"
                   style={{ backgroundColor: accent }}
                 >
-                  {t('Activer ma page — 1 mois offert')}
+                  {t('Activer ma page — 14 jours offerts')}
                 </a>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">{t('Sans carte bancaire')}</p>
                 <button

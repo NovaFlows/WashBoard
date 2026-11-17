@@ -17,7 +17,7 @@ export async function GET() {
 
   const { data: washer, error: errWasher } = await supabase
     .from('washers')
-    .select('id, name, review_enabled, google_review_url, review_delay_hours, review_channel, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at')
+    .select('id, name, review_enabled, google_review_url, review_delay_hours, review_channel, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au')
     .eq('user_id', user.id)
     .single()
 

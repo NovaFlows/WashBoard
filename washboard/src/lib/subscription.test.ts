@@ -65,6 +65,10 @@ describe('formatDateFR', () => {
   it('accepte un objet Date', () => {
     expect(formatDateFR(new Date('2026-01-01T12:00:00Z'))).toMatch(/1.*janvier.*2026/)
   })
+  it('écrit le jour de Paris, quel que soit le fuseau du serveur', () => {
+    expect(formatDateFR('2026-12-16T23:30:00.000Z')).toBe('17 décembre 2026')
+    expect(formatDateFR('2026-07-20T22:30:00.000Z')).toBe('21 juillet 2026')
+  })
 })
 
 describe('computeTrialEnd', () => {
