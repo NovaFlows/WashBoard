@@ -233,6 +233,11 @@ export const libelleIdentifiant = (pays: PaysFacturation): string =>
   pays === 'BE' ? 'numéro d’entreprise (BCE)' : pays === 'CH' ? 'numéro IDE (CHE)'
     : pays === 'LU' ? 'numéro RCS ou matricule' : pays === 'QC' ? 'NEQ'
       : pays === 'DE' ? 'Steuernummer ou USt-IdNr.' : pays === 'ES' ? 'NIF / CIF' : 'SIRET'
+/** Le taux à présélectionner : celui déjà enregistré s'il existe dans le pays du laveur, sinon le taux
+ *  normal du pays. La base garde 20 par défaut (taux français) : sans ce contrôle, un laveur allemand ou
+ *  espagnol voyait « 20 % » sélectionné avant d'avoir choisi quoi que ce soit. */
+export const tauxInitial = (enregistre: number | null | undefined, pays: PaysFacturation): number =>
+  enregistre != null && tauxTvaPour(pays).includes(Number(enregistre)) ? Number(enregistre) : tauxTvaNormal(pays)
 /** Le taux de TVA normal du pays : celui qu'on propose et qu'on applique par défaut. */
 export const tauxTvaNormal = (pays: PaysFacturation): number => tauxTvaPour(pays)[0]
 
