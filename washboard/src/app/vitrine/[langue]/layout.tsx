@@ -39,10 +39,17 @@ export default async function RacineVitrine({ children }: Readonly<{ children: R
       className={`${CLASSES_POLICES} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Vrai script bloquant : `next/script` beforeInteractive ne passe qu'après le premier
+            affichage, d'où un flash blanc en mode sombre. `text/plain` côté navigateur : React
+            ne le réexécute pas et n'avertit pas (guide « preventing flash before hydration »). */}
+        <script
+          type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }}
+        />
+      </head>
       <body className="min-h-full flex flex-col overflow-x-hidden">
-        <Script id="wb-theme" strategy="beforeInteractive">
-          {THEME_SCRIPT}
-        </Script>
         <Script id="wb-pwa-detect" strategy="beforeInteractive">
           {PWA_DETECT_SCRIPT}
         </Script>
