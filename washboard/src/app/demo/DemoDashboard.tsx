@@ -436,7 +436,7 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
             resumeHoraires="Lun.–ven. 8h–18h · sam. 9h–13h"
           />
         ) : ecranPlus === 'profil' ? (
-          <ProfilV2 washer={plus.profil.washer} email={plus.profil.email} peutEquipe={plus.profil.peutEquipe} />
+          <ProfilV2 washer={pourLeNavigateur(plus.profil.washer)} email={plus.profil.email} peutEquipe={plus.profil.peutEquipe} />
         ) : ecranPlus === 'liens' ? (
           <MesLiensV2 slug={plus.slug} liste={plus.listeBase} />
         ) : ecranPlus === 'prestations' ? (
