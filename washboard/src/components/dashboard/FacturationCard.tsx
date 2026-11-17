@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileText } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
-import type { Washer } from '@/types'
+import type { WasherNavigateur } from '@/lib/washerNavigateur'
 import {
   paysDuProfil, reglesPays, identifiantValidePour, tauxInitial, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, siretValide,
   type RegimeTva, type StatutJuridique,
@@ -54,7 +54,7 @@ function Choix<T extends string>({ nom, valeur, options, onChange }: {
 /** Informations portées sur les factures du laveur à ses clients. Tant
  *  qu'elles sont incomplètes, aucune facture n'est émise : le client reçoit
  *  un récapitulatif, qui ne se présente pas comme une facture. */
-export function FacturationCard({ washer }: { washer: Washer }) {
+export function FacturationCard({ washer }: { washer: WasherNavigateur }) {
   const tr = useT()
   const router = useRouter()
   const [statut, setStatut] = useState<StatutJuridique>(washer.facture_statut ?? 'ei')

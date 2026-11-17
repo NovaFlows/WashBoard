@@ -1,5 +1,5 @@
 import IdentiteForm from '@/components/dashboard/admin/IdentiteForm'
-import type { Washer } from '@/types'
+import type { WasherNavigateur } from '@/lib/washerNavigateur'
 import LegacyBookingPage from '@/components/booking/LegacyBookingPage'
 import ApparenceV2 from '@/components/dashboard/ApparenceV2'
 import { notFound } from 'next/navigation'
@@ -34,7 +34,7 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     bandeau_actif: true, bandeau_texte: 'Offrez un lavage à votre moitié', bandeau_couleur: '#C2185B', bandeau_compteur: true,
   } : null
   if (mode === 'onboarding') return <Onboarding slug="eclat-mobile" nom="Éclat Mobile" etapeInitiale={([1, 2, 3, 4, 5, 6] as const).find(n => String(n) === etape) ?? 1} />
-  if (mode === 'settings-web') return <IdentiteForm washer={{ id: 'demo', name: 'Brillance Mobile', slug: 'test-config-15d2', booking_page_mode: 'default', brand_color: '#7c3aed', welcome_message: 'Bienvenue chez Brillance Mobile', plan: 'business', zone_config: null } as Washer} />
+  if (mode === 'settings-web') return <IdentiteForm washer={{ id: 'demo', name: 'Brillance Mobile', slug: 'test-config-15d2', booking_page_mode: 'default', brand_color: '#7c3aed', welcome_message: 'Bienvenue chez Brillance Mobile', plan: 'business', zone_config: null, google_agenda_connecte: false } as WasherNavigateur} />
   if (mode === 'settings') return <ApparenceV2 nom="Brillance Mobile" slug="test-config-15d2" initial={{ pageMode: 'default', logoUrl: null, couleur: '#7c3aed', fond: null, message: 'Bienvenue chez Brillance Mobile', site: null, avisGoogle: null }} liste={{ nom: 'Brillance Mobile', slug: 'test-config-15d2', brandColor: '#7c3aed', plan: 'business', grandfathered: false }} />
   const washerId = '00000000-0000-4000-8000-000000000001'
   const category: ServiceCategory = { id: 'cars', washer_id: washerId, name: 'Voitures', display_order: 0,
@@ -94,7 +94,7 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
     <BookingHero name="Brillance Mobile" message="Lavage auto à domicile par Karim, à Lyon et alentours. Trois questions et c’est réservé." accent="#2563eb" personalized whatsappHref="https://wa.me/33000000000" />
     <main className="relative max-w-lg mx-auto -mt-6 rounded-t-[28px] bg-[#f6f5f3] dark:bg-zinc-950 px-3.5 pt-3.5 pb-[calc(180px+env(safe-area-inset-bottom,0px))]">
       {/* ?centre=1 : centre auto et domicile (avec frais de déplacement) ; ?centre=2 : centre seulement. */}
-      <BookingForm washer={{ id: washerId, name: 'Brillance Mobile', base_address: centre ? '12 rue Mercière, 69002 Lyon' : null, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: centre ? [{ max_minutes: 30, fee: 10 }] : [], clients_pro: true, facturation_prete: true,
+      <BookingForm washer={{ id: washerId, name: 'Brillance Mobile', adresse_de_base_renseignee: !!centre, team_size: 1, travel_fee_mode: 'base', travel_fee_tiers: centre ? [{ max_minutes: 30, fee: 10 }] : [], clients_pro: true, facturation_prete: true,
         centre_auto: centrePublic, plusieurs_prestations: multi === '1', silhouettes_couleur: teinte === '1' }}
         services={prestations} categories={[category]} availabilities={Array.from({ length: 7 }, (_, i) => ({ id: String(i), washer_id: washerId, day_of_week: i, start_time: '09:00', end_time: '18:00' }))}
         // ?scenario=plage-bloquee : « Autre activité » le dimanche 4 octobre 2026 de 9h à 12h.

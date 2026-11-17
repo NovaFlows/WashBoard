@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Washer } from '@/types'
+import type { WasherNavigateur } from '@/lib/washerNavigateur'
 import Link from 'next/link'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import TrafficSourceLinks from '@/components/dashboard/TrafficSourceLinks'
@@ -50,7 +50,7 @@ import {
 // mot de passe, notifications, accès support, zone de danger...).
 
 type Props = {
-  washer: Washer
+  washer: WasherNavigateur
   email: string
 }
 
@@ -99,7 +99,7 @@ export default function ParametresFormV1({ washer, email }: Props) {
 }
 
 /* ── Onglet Général ── */
-function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
+function GeneralTab({ washer, email }: { washer: WasherNavigateur; email: string }) {
   const router = useRouter()
   const [name, setName] = useState(washer.name)
   const [teamSize, setTeamSize] = useState(String(washer.team_size ?? 1))
@@ -744,7 +744,7 @@ function GeneralTab({ washer, email }: { washer: Washer; email: string }) {
 }
 
 /* ── Zone de danger : désactivation / suppression de compte ── */
-function DangerZone({ washer }: { washer: Washer }) {
+function DangerZone({ washer }: { washer: WasherNavigateur }) {
   const router = useRouter()
   const status = washer.account_status ?? 'active'
   const [busy, setBusy]               = useState(false)
@@ -891,7 +891,7 @@ const LIEUX_A_METTRE_A_JOUR = [
   'Instagram', 'Facebook', 'Fiche Google', 'Site internet', 'Cartes de visite', 'QR codes',
 ]
 
-function ClientTab({ washer }: { washer: Washer }) {
+function ClientTab({ washer }: { washer: WasherNavigateur }) {
   const router = useRouter()
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   // Sans `https://`, qui n'apprend rien et mange une ligne entière sur mobile.

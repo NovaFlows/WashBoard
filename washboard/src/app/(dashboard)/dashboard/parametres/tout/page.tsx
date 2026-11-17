@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { pourLeNavigateur } from '@/lib/washerNavigateur'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
@@ -37,7 +38,7 @@ export default async function TousLesReglagesPage() {
   const washer = await washerDuUtilisateur(supabase, user.id, 'parametres-tout')
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} abonnementStripe={!!washer.stripe_subscription_id} cancelsAt={washer.cancels_at ?? null}>
       <ToutLesReglages>
       <div className="mb-6">
         <Link
@@ -52,7 +53,7 @@ export default async function TousLesReglagesPage() {
         <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('Tous les réglages')}</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('Gérez vos informations et votre page client')}</p>
       </div>
-      <ParametresFormV1 washer={washer} email={user.email ?? ''} />
+      <ParametresFormV1 washer={pourLeNavigateur(washer)} email={user.email ?? ''} />
       </ToutLesReglages>
     </DashboardShell>
   )

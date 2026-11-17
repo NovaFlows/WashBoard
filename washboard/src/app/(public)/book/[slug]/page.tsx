@@ -319,7 +319,7 @@ export default async function BookingPage({ params }: Props) {
           washer={{
             id: washer.id,
             name: washer.name,
-            base_address: washer.base_address ?? null,
+            adresse_de_base_renseignee: !!washer.base_address,
             team_size: washer.team_size ?? null,
             travel_fee_mode: washer.travel_fee_mode ?? 'base',
             travel_fee_tiers: washer.travel_fee_tiers ?? null,

@@ -52,7 +52,7 @@ export default async function AbonnementPage() {
       subscriptionStatus={washer.subscription_status}
       plan={washer.plan}
       grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug}
-      stripeSubscriptionId={washer.stripe_subscription_id ?? null}
+      abonnementStripe={!!washer.stripe_subscription_id}
       cancelsAt={washer.cancels_at ?? null}
     >
       <AbonnementV2

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { pourLeNavigateur } from '@/lib/washerNavigateur'
 import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ParametresFormV2 from '@/components/dashboard/ParametresFormV2'
@@ -27,11 +28,11 @@ export default async function ParametresPage() {
   if (availabilities.error) logger.warn('parametres.availabilities_count_failed', { washerId: washer.id }, availabilities.error)
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} abonnementStripe={!!washer.stripe_subscription_id} cancelsAt={washer.cancels_at ?? null}>
       <EnteteParametres />
       {/* `undefined` si la lecture a échoué : ligne affichée sans nombre plutôt qu'un zéro inventé. */}
       <ParametresFormV2
-        washer={washer}
+        washer={pourLeNavigateur(washer)}
         servicesCount={services.error ? undefined : (services.count ?? 0)}
         resumeHoraires={availabilities.error ? undefined : resumeHorairesCourt(availabilities.data ?? [], await getT())}
       />
