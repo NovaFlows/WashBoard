@@ -215,7 +215,7 @@ export default function AbonnementV2({
         </div>
       </section>
 
-      <BlocParrainageOffre grandfathered={grandfathered} />
+      <BlocParrainageOffre />
 
       {/* ── Ce qu'il me reste ──────────────────────────────────────────────── */}
       {(plafondReservations !== null || plafondPrestations !== null) && (

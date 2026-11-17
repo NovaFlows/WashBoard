@@ -85,8 +85,10 @@ describe('recompenseParrain', () => {
     const r = recompenseParrain({ plan: 'decouverte', subscription_status: 'trial', trial_ends_at: '2026-10-01T00:00:00Z', pro_offert_jusqu_au: '2026-12-20T10:00:00.000Z' }, NOW)
     expect(r.colonnes.pro_offert_jusqu_au).toBe('2027-01-20T10:00:00.000Z')
   })
-  it('client historique : rien', () => {
-    expect(recompenseParrain({ grandfathered: true, plan: 'pro', subscription_status: 'active' }, NOW)).toEqual({ forme: 'aucune', colonnes: {} })
+  it('client historique : gagne comme les autres', () => {
+    const r = recompenseParrain({ grandfathered: true, plan: 'pro', subscription_status: 'active', subscription_ends_at: '2026-12-15T00:00:00Z' }, NOW)
+    expect(r.forme).toBe('abonnement')
+    expect(r.colonnes.subscription_ends_at).toBe('2027-01-15T00:00:00.000Z')
   })
 })
 
@@ -125,15 +127,14 @@ describe('phraseRecompense', () => {
 })
 
 describe('carte de rappel', () => {
-  const base = { grandfathered: false, createdAt: '2026-11-01T00:00:00Z', revoirLe: null, aDesFilleuls: false, aUneReservation: false }
+  const base = { createdAt: '2026-11-01T00:00:00Z', revoirLe: null, aDesFilleuls: false, aUneReservation: false }
   const NOW_C = new Date('2026-11-20T10:00:00Z')
   it('visible après 7 jours de compte, ou dès la première réservation', () => {
     expect(carteParrainageVisible(base, NOW_C)).toBe(true)
     expect(carteParrainageVisible({ ...base, createdAt: '2026-11-18T00:00:00Z' }, NOW_C)).toBe(false)
     expect(carteParrainageVisible({ ...base, createdAt: '2026-11-18T00:00:00Z', aUneReservation: true }, NOW_C)).toBe(true)
   })
-  it('cachée pour un client historique, un parrain qui a déjà un filleul, ou avant sa date de retour', () => {
-    expect(carteParrainageVisible({ ...base, grandfathered: true }, NOW_C)).toBe(false)
+  it('cachée pour un parrain qui a déjà un filleul, ou avant sa date de retour', () => {
     expect(carteParrainageVisible({ ...base, aDesFilleuls: true }, NOW_C)).toBe(false)
     expect(carteParrainageVisible({ ...base, revoirLe: '2026-12-01T00:00:00Z' }, NOW_C)).toBe(false)
     expect(carteParrainageVisible({ ...base, revoirLe: '2026-11-19T00:00:00Z' }, NOW_C)).toBe(true)

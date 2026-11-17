@@ -43,7 +43,7 @@ const poster = (corps: unknown) => POST(new Request('https://x/api', { method: '
 
 beforeEach(() => {
   etat.user = { id: 'u1' }
-  etat.laveur = { id: 'w1', grandfathered: false, created_at: '2026-01-01T00:00:00Z', parrainage_carte_revoir_le: null }
+  etat.laveur = { id: 'w1', created_at: '2026-01-01T00:00:00Z', parrainage_carte_revoir_le: null }
   etat.filleuls = 0
   etat.reservations = 0
   etat.aFeter = []

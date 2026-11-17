@@ -23,7 +23,6 @@ export default async function ParrainagePage() {
       cancelsAt={washer.cancels_at ?? null}
     >
       <ParrainageV2
-        grandfathered={!!washer.grandfathered}
         liste={{
           nom: washer.name,
           slug: washer.slug,

@@ -14,7 +14,7 @@ async function laveurConnecte() {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('washers')
-    .select('id, grandfathered, created_at, parrainage_carte_revoir_le')
+    .select('id, created_at, parrainage_carte_revoir_le')
     .eq('user_id', user.id)
     .maybeSingle()
   if (error) logger.error('parrainage.accueil.laveur', { userId: user.id }, error)
@@ -29,17 +29,15 @@ export async function GET() {
   const [filleuls, reservation, aFeter] = await Promise.all([
     admin.from('parrainages').select('id', { count: 'exact', head: true }).eq('parrain_id', laveur.id),
     admin.from('bookings').select('id', { count: 'exact', head: true }).eq('washer_id', laveur.id).limit(1),
-    laveur.grandfathered
-      ? Promise.resolve({ data: [], error: null })
-      : admin
-        .from('parrainages')
-        .select('id, recompense_forme, recompense_detail, filleul:washers!parrainages_filleul_id_fkey(name)')
-        .eq('parrain_id', laveur.id)
-        .not('recompense_le', 'is', null)
-        .is('celebre_le', null)
-        .neq('recompense_forme', 'aucune')
-        .order('recompense_le', { ascending: false })
-        .limit(1),
+    admin
+      .from('parrainages')
+      .select('id, recompense_forme, recompense_detail, filleul:washers!parrainages_filleul_id_fkey(name)')
+      .eq('parrain_id', laveur.id)
+      .not('recompense_le', 'is', null)
+      .is('celebre_le', null)
+      .neq('recompense_forme', 'aucune')
+      .order('recompense_le', { ascending: false })
+      .limit(1),
   ])
   if (filleuls.error || reservation.error || aFeter.error) {
     logger.warn('parrainage.accueil.lecture', { washerId: laveur.id }, filleuls.error ?? reservation.error ?? aFeter.error)
@@ -53,7 +51,6 @@ export async function GET() {
     : null
 
   const carte = carteParrainageVisible({
-    grandfathered: laveur.grandfathered,
     createdAt: laveur.created_at,
     revoirLe: laveur.parrainage_carte_revoir_le,
     aDesFilleuls: (filleuls.count ?? 0) > 0,

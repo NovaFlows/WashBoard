@@ -82,7 +82,7 @@ export function BoutonsPartage({ lien, compact = false }: { lien: string; compac
   )
 }
 
-export default function ParrainageV2({ grandfathered, liste }: { grandfathered: boolean; liste: ReglagesListeProps }) {
+export default function ParrainageV2({ liste }: { liste: ReglagesListeProps }) {
   const t = useT()
   const loc = useLocale()
   const grandEcran = useGrandEcran()
@@ -106,9 +106,7 @@ export default function ParrainageV2({ grandfathered, liste }: { grandfathered: 
     <p className={`flex items-start gap-2 text-[13.5px] leading-snug ${corps}`}>
       <Gift size={17} className="mt-px shrink-0 text-[color:var(--v2-color-accent)]" aria-hidden />
       <span>
-        {grandfathered
-          ? t('Votre collègue a 2 semaines d’essai en plus.')
-          : <>{t('Votre collègue a')} <b className={corpsFort}>{t('2 semaines d’essai en plus')}</b>{t('. Vous, 1 mois offert dès qu’il s’abonne.')}</>}
+        <>{t('Votre collègue a')} <b className={corpsFort}>{t('2 semaines d’essai en plus')}</b>{t('. Vous, 1 mois offert dès qu’il s’abonne.')}</>
       </span>
     </p>
   )
@@ -141,7 +139,7 @@ export default function ParrainageV2({ grandfathered, liste }: { grandfathered: 
           {[
             t('Vous envoyez votre lien.'),
             t('Votre collègue s’inscrit : 14 jours d’essai en plus pour lui.'),
-            grandfathered ? t('Il profite de 28 jours pour tout essayer.') : t('Il s’abonne : votre mois est offert.'),
+            t('Il s’abonne : votre mois est offert.'),
           ].map((etape, i) => (
             <li key={etape} className={`flex items-center gap-3 text-[14px] ${corps}`}>
               <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--v2-filet)] text-[13px] ${corpsFort}`}>{i + 1}</span>
@@ -165,12 +163,10 @@ export default function ParrainageV2({ grandfathered, liste }: { grandfathered: 
             <p className={`text-[26px] leading-none ${hero}`}>{filleuls.length}</p>
             <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{filleuls.length > 1 ? t('filleuls') : t('filleul')}</p>
           </div>
-          {!grandfathered && (
-            <div className={`${CARTE} px-4 py-3`}>
-              <p className={`text-[26px] leading-none ${hero}`}>{donnees.moisGagnes}</p>
-              <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{donnees.moisGagnes > 1 ? t('mois gagnés') : t('mois gagné')}</p>
-            </div>
-          )}
+          <div className={`${CARTE} px-4 py-3`}>
+            <p className={`text-[26px] leading-none ${hero}`}>{donnees.moisGagnes}</p>
+            <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>{donnees.moisGagnes > 1 ? t('mois gagnés') : t('mois gagné')}</p>
+          </div>
         </div>
         <section>
           <h2 className={`mb-2 text-[14px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Vos filleuls')}</h2>
@@ -186,7 +182,7 @@ export default function ParrainageV2({ grandfathered, liste }: { grandfathered: 
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: st.couleur }} aria-hidden />
                       {t(st.libelle)}
                     </span>
-                    {f.recompenseLe && !grandfathered && (
+                    {f.recompenseLe && (
                       <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>{t('1 mois offert')}</span>
                     )}
                   </span>
@@ -209,9 +205,7 @@ export default function ParrainageV2({ grandfathered, liste }: { grandfathered: 
       <div>
         <h1 className={grandEcran ? `text-[20px] ${titre}` : `text-[21px] ${titre}`}>{t('Parrainage')}</h1>
         <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
-          {grandfathered
-            ? t('Un collègue s’inscrit avec votre code : il gagne 2 semaines d’essai.')
-            : t('Un collègue s’inscrit avec votre code, vous y gagnez tous les deux.')}
+          {t('Un collègue s’inscrit avec votre code, vous y gagnez tous les deux.')}
         </p>
       </div>
       {erreur ? (
@@ -243,7 +237,7 @@ export default function ParrainageV2({ grandfathered, liste }: { grandfathered: 
 }
 
 /** Résumé dans « Mon offre » : le code, le bouton pour copier, et le lien vers l'écran complet. */
-export function BlocParrainageOffre({ grandfathered }: { grandfathered: boolean }) {
+export function BlocParrainageOffre() {
   const t = useT()
   const [donnees, setDonnees] = useState<DonneesParrainage | null>(null)
   useEffect(() => {
@@ -263,9 +257,7 @@ export function BlocParrainageOffre({ grandfathered }: { grandfathered: boolean 
           <Gift size={13} aria-hidden />{t('Parrainage')}
         </p>
         <p className={`mt-1 text-[14px] leading-snug ${corps}`}>
-          {grandfathered
-            ? t('Parrainez un collègue : il gagne 2 semaines d’essai en plus.')
-            : t('Parrainez un collègue : 1 mois offert dès qu’il s’abonne.')}
+          {t('Parrainez un collègue : 1 mois offert dès qu’il s’abonne.')}
         </p>
       </div>
       <div className="flex items-center gap-3">
@@ -276,12 +268,10 @@ export function BlocParrainageOffre({ grandfathered }: { grandfathered: boolean 
         <span className="text-[color:var(--v2-color-gris)]">
           {n === 0
             ? t('Aucun filleul pour l’instant')
-            : grandfathered
-              ? (n > 1 ? t('{n} filleuls', { n }) : t('1 filleul'))
-              : t('{filleuls} · {mois}', {
-                filleuls: n > 1 ? t('{n} filleuls', { n }) : t('1 filleul'),
-                mois: donnees.moisGagnes > 1 ? t('{m} mois gagnés', { m: donnees.moisGagnes }) : t('{m} mois gagné', { m: donnees.moisGagnes }),
-              })}
+            : t('{filleuls} · {mois}', {
+              filleuls: n > 1 ? t('{n} filleuls', { n }) : t('1 filleul'),
+              mois: donnees.moisGagnes > 1 ? t('{m} mois gagnés', { m: donnees.moisGagnes }) : t('{m} mois gagné', { m: donnees.moisGagnes }),
+            })}
         </span>
         <span className={corpsFort} style={{ color: 'var(--v2-color-accent)' }}>{t('Voir')}</span>
       </a>

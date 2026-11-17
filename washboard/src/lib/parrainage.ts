@@ -101,10 +101,8 @@ function prolongerPro(w: CompteParrainage, now: Date): string {
  *  - Abonné Pro ou Business : son prochain paiement recule d'un mois.
  *  - En essai Pro : l'essai dure un mois de plus.
  *  - Découverte (essai fini, rien payé, ou abonnement arrêté) : 1 mois de Pro.
- *  - Client historique : rien. */
+ *  Les clients historiques gagnent comme les autres (décision d'Alexandre, 2026-11-17). */
 export function recompenseParrain(w: CompteParrainage, now: Date = new Date()): Recompense {
-  if (w.grandfathered) return { forme: 'aucune', colonnes: {} }
-
   const plan = washerPlan(w)
   if (w.subscription_status === 'active' || w.subscription_status === 'past_due') {
     const colonnes: Recompense['colonnes'] = {}
@@ -156,16 +154,15 @@ const JOUR_MS = 24 * 60 * 60 * 1000
 export const JOURS_AVANT_CARTE = 7
 export const RETOUR_CARTE_JOURS = { min: 14, max: 28 } as const
 
-/** La carte de rappel de l'accueil : jamais pour un client historique ni pour qui parraine déjà,
+/** La carte de rappel de l'accueil : jamais pour qui parraine déjà,
  *  pas avant la première réservation reçue (ou 7 jours de compte), pas avant sa date de retour. */
 export function carteParrainageVisible(c: {
-  grandfathered?: boolean | null
   createdAt?: string | null
   revoirLe?: string | null
   aDesFilleuls: boolean
   aUneReservation: boolean
 }, now: Date = new Date()): boolean {
-  if (c.grandfathered || c.aDesFilleuls) return false
+  if (c.aDesFilleuls) return false
   if (c.revoirLe && new Date(c.revoirLe).getTime() > now.getTime()) return false
   if (c.aUneReservation) return true
   const cree = c.createdAt ? new Date(c.createdAt).getTime() : NaN
