@@ -29,6 +29,7 @@ import { OffreVerrouilleeV2 } from '@/components/dashboard/OffreVerrouilleeV2'
 import type { Depense, DepenseRecurrente } from '@/lib/depenses'
 import type { SupportThread } from '@/lib/support'
 import type { Document as DocumentDonnees } from '@/lib/documents'
+import { pourLeNavigateur } from '@/lib/washerNavigateur'
 import type {
   jeuDeDonneesDemo, jeuDeDonneesAgendaDemo, jeuDeDonneesMessagesDemo, jeuDeDonneesPublicitesDemo,
   jeuDeDonneesChiffresDemo, jeuDeDonneesDepensesDemo, jeuDeDonneesPlusDemo, jeuDeDonneesDocumentsDemo,
@@ -430,12 +431,12 @@ export default function DemoDashboard({ donnees, accueil, agenda, messages, publ
       ) : ecran === 'plus' ? (
         ecranPlus === 'liste' ? (
           <ParametresFormV2
-            washer={plus.profil.washer}
+            washer={pourLeNavigateur(plus.profil.washer)}
             servicesCount={plus.prestations.services.length}
             resumeHoraires="Lun.–ven. 8h–18h · sam. 9h–13h"
           />
         ) : ecranPlus === 'profil' ? (
-          <ProfilV2 washer={plus.profil.washer} email={plus.profil.email} peutEquipe={plus.profil.peutEquipe} />
+          <ProfilV2 washer={pourLeNavigateur(plus.profil.washer)} email={plus.profil.email} peutEquipe={plus.profil.peutEquipe} />
         ) : ecranPlus === 'liens' ? (
           <MesLiensV2 slug={plus.slug} liste={plus.listeBase} />
         ) : ecranPlus === 'prestations' ? (

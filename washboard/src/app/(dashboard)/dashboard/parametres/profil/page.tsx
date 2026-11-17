@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import ProfilV2 from '@/components/dashboard/ProfilV2'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { pourLeNavigateur } from '@/lib/washerNavigateur'
 import { hasFeature } from '@/lib/plan'
 import type { Washer } from '@/types'
 
@@ -39,9 +40,9 @@ export default async function ProfilPage() {
   const { data: ficheCentre } = await supabase.from('washers').select('centre_auto').eq('id', washer.id).maybeSingle()
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} abonnementStripe={!!washer.stripe_subscription_id} cancelsAt={washer.cancels_at ?? null}>
       <ProfilV2
-        washer={washer as Washer}
+        washer={pourLeNavigateur(washer as Washer)}
         email={user.email ?? ''}
         // Décidé côté serveur : le plan ne doit pas se deviner dans le navigateur.
         peutEquipe={hasFeature(washer, 'multi_laveurs')}

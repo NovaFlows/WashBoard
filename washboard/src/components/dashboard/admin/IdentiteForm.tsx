@@ -5,7 +5,8 @@ import { bookingPageMode } from '@/lib/bookingPageMode'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sun, Moon } from 'lucide-react'
-import type { Washer, ZoneConfig } from '@/types'
+import type { ZoneConfig } from '@/types'
+import type { WasherNavigateur } from '@/lib/washerNavigateur'
 import { DEPARTMENTS } from '@/lib/france-departments'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import { BG_THEME_PRESETS, PALETTE, isCustomTheme } from '@/lib/themes'
@@ -59,7 +60,7 @@ function ThemeButton({ theme, selected, onPick }: { theme: BgThemePreset; select
   )
 }
 
-export default function IdentiteForm({ washer }: { washer: Washer }) {
+export default function IdentiteForm({ washer }: { washer: WasherNavigateur }) {
   const router = useRouter()
   const [pageMode, setPageMode] = useState(() => bookingPageMode(washer.booking_page_mode))
   const [logoUrl, setLogoUrl] = useState(washer.logo_url ?? '')
@@ -872,11 +873,11 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
           <div>
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Google Agenda</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {washer.google_refresh_token
+              {washer.google_agenda_connecte
                 ? 'Compte connecté — les RDV confirmés sont automatiquement ajoutés à votre agenda.'
                 : 'Connectez votre compte pour synchroniser les RDV confirmés dans Google Agenda.'}
             </p>
-            {washer.google_refresh_token && (
+            {washer.google_agenda_connecte && (
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
                 Les RDV n&apos;apparaissent plus ? <a href="/api/auth/google-calendar" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">Reconnecter le compte</a>
               </p>
@@ -885,7 +886,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
           <a
             href="/api/auth/google-calendar"
             className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-              washer.google_refresh_token
+              washer.google_agenda_connecte
                 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
                 : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
             }`}
@@ -893,7 +894,7 @@ export default function IdentiteForm({ washer }: { washer: Washer }) {
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-7.5 13.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8.5c-1.93 0-3.5 1.57-3.5 3.5s1.57 3.5 3.5 3.5 3.5-1.57 3.5-3.5-1.57-3.5-3.5-3.5z"/>
             </svg>
-            {washer.google_refresh_token ? '✓ Connecté' : 'Connecter'}
+            {washer.google_agenda_connecte ? '✓ Connecté' : 'Connecter'}
           </a>
         </div>
       </div>

@@ -62,10 +62,10 @@ export function isAlreadySubscribed(args: {
 }
 
 export function isCardRegistered(
-  subscriptionId: string | null | undefined,
+  abonnementStripe: string | boolean | null | undefined,
   status: string | null | undefined,
 ): boolean {
-  return !!subscriptionId && status === 'trial'
+  return !!abonnementStripe && status === 'trial'
 }
 
 // Fuseau fixé : le serveur (UTC) et le navigateur (Paris) doivent écrire le même jour.

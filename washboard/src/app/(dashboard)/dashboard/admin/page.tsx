@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import AdminTabs from '@/components/dashboard/admin/AdminTabs'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { pourLeNavigateur } from '@/lib/washerNavigateur'
 import { logger } from '@/lib/logger'
 import Link from 'next/link'
 
@@ -36,7 +37,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} stripeSubscriptionId={washer.stripe_subscription_id ?? null} cancelsAt={washer.cancels_at ?? null}>
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} subscriptionEndsAt={washer.subscription_ends_at ?? null} createdAt={washer.created_at} slug={washer.slug} abonnementStripe={!!washer.stripe_subscription_id} cancelsAt={washer.cancels_at ?? null}>
       <div className="mb-6">
         <Link
           href="/dashboard/parametres"
@@ -52,7 +53,7 @@ export default async function AdminPage() {
           Configurez ce que vos clients voient sur votre page de réservation
         </p>
       </div>
-      <AdminTabs washer={washer} services={services ?? []} categories={categories ?? []} availabilities={availabilities ?? []} unavailabilities={unavailabilities ?? []} />
+      <AdminTabs washer={pourLeNavigateur(washer)} services={services ?? []} categories={categories ?? []} availabilities={availabilities ?? []} unavailabilities={unavailabilities ?? []} />
     </DashboardShell>
   )
 }

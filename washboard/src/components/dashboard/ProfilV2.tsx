@@ -27,7 +27,7 @@ import {
 import { infosFacturationManquantes } from '@/lib/facture'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
-import type { Washer } from '@/types'
+import type { WasherNavigateur } from '@/lib/washerNavigateur'
 import { useT } from '@/components/i18n/I18nProvider'
 
 // « Mon profil » — refonte 2026, destination NEUVE de « Plus » (Alexandre, 2026-09-26 : la
@@ -52,7 +52,7 @@ type Feuille =
   | 'nom' | 'telephone' | 'adresse' | 'deplacement' | 'centre' | 'equipe' | 'facturation' | 'email' | 'motDePasse'
   | 'pause' | 'suppression' | null
 
-export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null }: { washer: Washer; email: string; peutEquipe: boolean; centreAuto?: unknown }) {
+export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null }: { washer: WasherNavigateur; email: string; peutEquipe: boolean; centreAuto?: unknown }) {
   const t = useT()
   const router = useRouter()
   const grandEcran = useGrandEcran()
@@ -88,7 +88,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
   async function enregistrer(champs: ChampsProfil): Promise<string | null> {
     const r = await enregistrerProfil(champs)
     if (!r.ok) return r.message
-    setFiche(f => ({ ...f, ...champs }) as Washer)
+    setFiche(f => ({ ...f, ...champs }) as WasherNavigateur)
     router.refresh()
     return null
   }
@@ -109,7 +109,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
   async function reactiver(): Promise<string | null> {
     const r = await actionCompte('reactivate')
     if (!r.ok) return r.message
-    setFiche(f => ({ ...f, account_status: 'active', deletion_scheduled_at: null }) as Washer)
+    setFiche(f => ({ ...f, account_status: 'active', deletion_scheduled_at: null }) as WasherNavigateur)
     router.refresh()
     return null
   }
@@ -119,7 +119,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
       ...f,
       account_status: etat,
       deletion_scheduled_at: etat === 'pending_deletion' ? new Date().toISOString() : null,
-    }) as Washer)
+    }) as WasherNavigateur)
     router.refresh()
   }
 
@@ -229,7 +229,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
       {feuille === 'telephone' && (
         <FeuilleTelephoneV2
           telephone={fiche.phone ?? null}
-          onChange={tel => { setFiche(f => ({ ...f, phone: tel }) as Washer); router.refresh() }}
+          onChange={tel => { setFiche(f => ({ ...f, phone: tel }) as WasherNavigateur); router.refresh() }}
           onClose={fermer}
         />
       )}
