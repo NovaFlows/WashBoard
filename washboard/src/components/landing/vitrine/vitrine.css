@@ -32,6 +32,36 @@
   .wb-vitrine .scene-legende svg { display: none; }
 }
 
+/* ── Laveurs (bandeau de logos) ── */
+.wb-vitrine .laveurs { padding-block: 8px 56px; }
+.wb-vitrine .laveurs-titre { font-size: 14px; font-weight: 550; color: var(--gris); margin-bottom: 16px; }
+.wb-vitrine .laveurs-rang { display: flex; align-items: center; gap: 20px; }
+.wb-vitrine .defile { flex: 1; min-width: 0; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); }
+.wb-vitrine .defile-piste { display: flex; width: max-content; animation: wb-defile 42s linear infinite; }
+.wb-vitrine .defile:hover .defile-piste { animation-play-state: paused; }
+.wb-vitrine .defile-piste ul { display: flex; gap: 14px; padding-right: 14px; list-style: none; margin: 0; }
+.wb-vitrine .defile-piste li { flex: none; }
+.wb-vitrine .defile-piste img { display: block; height: 64px; width: auto; border-radius: 14px; background: #000; box-shadow: 0 0 0 1px var(--filet); }
+@keyframes wb-defile { to { transform: translateX(-50%); } }
+.wb-vitrine .laveurs-plus { flex: none; display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 18px; border-radius: 14px; border: 1px solid var(--filet); background: var(--surface); font-size: 15px; color: var(--gris); white-space: nowrap; }
+.wb-vitrine .laveurs-plus b { font-size: 22px; font-weight: 650; font-stretch: 112%; letter-spacing: -.03em; color: var(--encre); }
+.wb-vitrine .laveurs-plus .trois-points { display: flex; gap: 4px; }
+.wb-vitrine .laveurs-plus .trois-points i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.wb-vitrine .laveurs-plus .trois-points i:nth-child(2) { opacity: .6; }
+.wb-vitrine .laveurs-plus .trois-points i:nth-child(3) { opacity: .3; }
+@media (max-width: 640px) {
+  .wb-vitrine .laveurs { padding-block: 0 32px; }
+  .wb-vitrine .laveurs-rang { flex-direction: column; align-items: stretch; gap: 12px; }
+  .wb-vitrine .defile-piste img { height: 54px; border-radius: 12px; }
+  .wb-vitrine .laveurs-plus { align-self: center; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wb-vitrine .defile { -webkit-mask-image: none; mask-image: none; }
+  .wb-vitrine .defile-piste { animation: none; width: auto; }
+  .wb-vitrine .defile-piste ul { flex-wrap: wrap; padding-right: 0; }
+  .wb-vitrine .defile-piste ul[aria-hidden], .wb-vitrine .defile-piste li:nth-child(n + 6) { display: none; }
+}
+
 /* ── Douleurs ── */
 .wb-vitrine .douleurs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 48px; border-top: 1px solid var(--filet); }
 .wb-vitrine .douleur { padding: 26px 26px 0 0; }

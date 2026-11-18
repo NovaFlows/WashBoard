@@ -18,4 +18,7 @@ export const landing3: Dictionnaire = {
   'Un email au client 24 h puis 3 h avant, réglable. Moins d’oublis, moins de rendez-vous manqués.': 'Eine E-Mail an den Kunden 24 h und dann 3 h vorher, einstellbar. Weniger Vergessene, weniger verpasste Termine.',
   'Remise sur un rendez-vous': 'Rabatt auf einen Termin',
   'Centre auto ou à domicile': 'Autocenter oder zu Hause',
+  'Ils lavent déjà avec WashBoard': 'Sie waschen schon mit WashBoard',
+  'Logo d’un laveur WashBoard': 'Logo eines WashBoard-Autowäschers',
+  'laveurs': 'Autowäscher',
 }

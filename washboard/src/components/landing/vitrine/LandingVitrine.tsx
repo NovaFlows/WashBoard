@@ -9,6 +9,7 @@ import Fidelite from './Fidelite'
 import Final from './Final'
 import Heros from './Heros'
 import Journee from './Journee'
+import Laveurs from './Laveurs'
 import Navigation from './Navigation'
 import PiedDePage from './PiedDePage'
 import SectionDemo from './SectionDemo'
@@ -26,6 +27,7 @@ export default function LandingVitrine() {
         <Navigation />
         <main id="main-content">
           <Heros />
+          <Laveurs />
           <Douleurs />
           <Journee />
           <SectionDemo />
