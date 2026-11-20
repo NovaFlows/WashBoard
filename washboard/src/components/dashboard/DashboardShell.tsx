@@ -722,7 +722,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
                 réellement — voir son en-tête). Les écrans pas encore migrés en v2 (Aujourd'hui,
                 Agenda, Chiffres, Plus) héritent de cette largeur sans la demander : ils
                 s'étirent, visibles sur les captures de la passe — attendu, pas corrigé ici. */}
-            <main id="main-content" className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-[34px] pt-[26px] pb-10">
+            <main id="main-content" className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-[34px] pt-[26px] pb-10">
               {pageContent}
             </main>
           </div>
