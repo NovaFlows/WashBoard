@@ -15,6 +15,7 @@ import {
   resumeDescription, resumeOptions, resumePrixParType, retirerOrphelins, sansCategorieDe, typesOrphelins,
   type BrouillonOption, type FormulairePrestation,
 } from '@/lib/prestationForm'
+import { DESCRIPTION_OPTION_MAX } from '@/lib/optionsRubriques'
 import { useT } from '@/components/i18n/I18nProvider'
 
 // Édition d'une prestation, en feuille du bas — refonte 2026, réservée à la PWA
@@ -101,7 +102,8 @@ export default function FeuillePrestationV2({
   )
   const [choixCategorie, setChoixCategorie] = useState<string>(() => puces[0])
   const [categorieSaisie, setCategorieSaisie] = useState('')
-  const [brouillon, setBrouillon] = useState({ label: '', price: '', duration_minutes: '' })
+  const [brouillon, setBrouillon] = useState({ label: '', price: '', duration_minutes: '', description: '' })
+  const [optionDecrite, setOptionDecrite] = useState<string | null>(null)
 
   const manques = champsManquants(form)
   const phrasesManques = [
@@ -128,7 +130,7 @@ export default function FeuillePrestationV2({
     if (!puces.includes(opt.category)) setPuces(p => [...p, opt.category])
     setChoixCategorie(opt.category)
     setCategorieSaisie('')
-    setBrouillon({ label: '', price: '', duration_minutes: '' })
+    setBrouillon({ label: '', price: '', duration_minutes: '', description: '' })
   }
 
   async function enregistrer() {
@@ -363,22 +365,47 @@ export default function FeuillePrestationV2({
           {form.addons.length > 0 && (
             <ul className="mt-2 divide-y divide-[color:var(--v2-filet)]">
               {form.addons.map(a => (
-                <li key={a.id} className="flex items-center gap-2 py-1 pl-0">
-                  <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-[14.5px] ${corpsFort}`}>{a.label}</span>
-                    <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{a.category}</span>
-                  </span>
-                  <span className={`shrink-0 text-right text-[13.5px] ${corps} tabular-nums`}>
-                    +{a.price} €{a.duration_minutes ? <span className="text-[color:var(--v2-color-gris)]">{tr('· +{duration_minutes} min', { duration_minutes: a.duration_minutes })}</span> : null}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, addons: f.addons.filter(x => x.id !== a.id) }))}
-                    aria-label={tr('Retirer l’option {label}', { label: a.label })}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-gris)]"
-                  >
-                    <X size={18} strokeWidth={2} />
-                  </button>
+                <li key={a.id} className="py-1 pl-0">
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1">
+                      <span className={`block truncate text-[14.5px] ${corpsFort}`}>{a.label}</span>
+                      <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{a.category}</span>
+                    </span>
+                    <span className={`shrink-0 text-right text-[13.5px] ${corps} tabular-nums`}>
+                      +{a.price} €{a.duration_minutes ? <span className="text-[color:var(--v2-color-gris)]">{tr('· +{duration_minutes} min', { duration_minutes: a.duration_minutes })}</span> : null}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, addons: f.addons.filter(x => x.id !== a.id) }))}
+                      aria-label={tr('Retirer l’option {label}', { label: a.label })}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center text-[color:var(--v2-color-gris)]"
+                    >
+                      <X size={18} strokeWidth={2} />
+                    </button>
+                  </div>
+                  {optionDecrite === a.id ? (
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      autoFocus
+                      maxLength={DESCRIPTION_OPTION_MAX}
+                      aria-label={tr('Description de l’option {label}', { label: a.label })}
+                      placeholder={tr('Une phrase que votre client lit avant de choisir')}
+                      value={a.description ?? ''}
+                      onChange={e => setForm(f => ({ ...f, addons: f.addons.map(x => x.id === a.id ? { ...x, description: e.target.value } : x) }))}
+                      onBlur={() => setOptionDecrite(null)}
+                      className={`${CHAMP} mb-1`}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setOptionDecrite(a.id)}
+                      className={`-mt-1 flex min-h-11 w-full items-center text-left text-[13px] leading-snug ${a.description ? corps : corpsFort} ${a.description ? 'text-[color:var(--v2-color-gris)]' : ''}`}
+                      style={a.description ? undefined : { color: 'var(--v2-color-accent)' }}
+                    >
+                      {a.description || tr('+ Ajouter une description')}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -432,6 +459,16 @@ export default function FeuillePrestationV2({
               value={brouillon.label}
               onChange={e => majBrouillon('label', e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouterOption() } }}
+              className={CHAMP}
+            />
+            <input
+              type="text"
+              autoComplete="off"
+              maxLength={DESCRIPTION_OPTION_MAX}
+              aria-label={tr('Description de l’option (facultatif)')}
+              placeholder={tr('Description (facultatif) : ce que ça comprend')}
+              value={brouillon.description}
+              onChange={e => majBrouillon('description', e.target.value)}
               className={CHAMP}
             />
             <div className="flex items-center gap-2.5">

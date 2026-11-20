@@ -9,6 +9,7 @@ import CategoriesManager from './CategoriesManager'
 import { champsManquants, estReservable, estEnVeille, aMettreEnVeille, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX } from '@/lib/prestation'
 import { joursDureeIncompatible } from '@/lib/slots'
 import { formatDureeFr } from '@/lib/pricing'
+import { DESCRIPTION_OPTION_MAX } from '@/lib/optionsRubriques'
 
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 
@@ -36,7 +37,8 @@ type ServiceFormProps = {
 
 function ServiceForm({ form, categories, sansCategorie, availabilities, onChange, onSave, onCancel, loading, error }: ServiceFormProps) {
   const inputClass = "w-full border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-  const [draft, setDraft] = useState({ label: '', category: 'Suppléments intérieur', price: '', duration_minutes: '' })
+  const [draft, setDraft] = useState({ label: '', category: 'Suppléments intérieur', price: '', duration_minutes: '', description: '' })
+  const [optionDecrite, setOptionDecrite] = useState<string | null>(null)
 
   const selectedCategory = categories.find(c => c.id === form.category_id)
   const availableTypes = selectedCategory?.types ?? []
@@ -49,9 +51,10 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
       category: draft.category.trim() || 'Options',
       price: Number(draft.price),
       ...(draft.duration_minutes ? { duration_minutes: Number(draft.duration_minutes) } : {}),
+      ...(draft.description.trim() ? { description: draft.description.trim().slice(0, DESCRIPTION_OPTION_MAX) } : {}),
     }
     onChange({ ...form, addons: [...form.addons, addon] })
-    setDraft(d => ({ ...d, label: '', price: '', duration_minutes: '' }))
+    setDraft(d => ({ ...d, label: '', price: '', duration_minutes: '', description: '' }))
   }
 
   function removeAddon(id: string) {
@@ -287,16 +290,37 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
         {form.addons.length > 0 && (
           <div className="space-y-1.5 mb-3">
             {form.addons.map(addon => (
-              <div key={addon.id} className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
-                <span className="text-xs text-slate-400 shrink-0 w-32 truncate">{addon.category}</span>
-                <span className="flex-1 text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{addon.label}</span>
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 shrink-0">+{addon.price}€</span>
-                {addon.duration_minutes ? <span className="text-xs text-slate-400 shrink-0">+{addon.duration_minutes}min</span> : null}
-                <button
-                  type="button"
-                  onClick={() => removeAddon(addon.id)}
-                  className="text-red-400 hover:text-red-600 text-xs shrink-0 ml-1 transition-colors"
-                >✕</button>
+              <div key={addon.id} className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 shrink-0 w-32 truncate">{addon.category}</span>
+                  <span className="flex-1 text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{addon.label}</span>
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 shrink-0">+{addon.price}€</span>
+                  {addon.duration_minutes ? <span className="text-xs text-slate-400 shrink-0">+{addon.duration_minutes}min</span> : null}
+                  <button
+                    type="button"
+                    onClick={() => removeAddon(addon.id)}
+                    className="text-red-400 hover:text-red-600 text-xs shrink-0 ml-1 transition-colors"
+                  >✕</button>
+                </div>
+                {optionDecrite === addon.id ? (
+                  <input
+                    autoFocus
+                    maxLength={DESCRIPTION_OPTION_MAX}
+                    value={addon.description ?? ''}
+                    onChange={e => onChange({ ...form, addons: form.addons.map(a => a.id === addon.id ? { ...a, description: e.target.value } : a) })}
+                    onBlur={() => setOptionDecrite(null)}
+                    placeholder="Une phrase que votre client lit avant de choisir"
+                    className={inputClass + ' mt-1.5'}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setOptionDecrite(addon.id)}
+                    className={`mt-1 block text-left text-xs ${addon.description ? 'text-slate-500 dark:text-slate-400' : 'text-blue-600 dark:text-blue-400 font-medium'}`}
+                  >
+                    {addon.description || '+ Ajouter une description'}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -357,6 +381,14 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
             + Ajouter
           </button>
         </div>
+        <input
+          value={draft.description}
+          onChange={e => setDraft(d => ({ ...d, description: e.target.value }))}
+          maxLength={DESCRIPTION_OPTION_MAX}
+          placeholder="Description de l'option (facultatif) : ce que ça comprend"
+          className={inputClass + ' mt-2'}
+          onKeyDown={e => e.key === 'Enter' && addAddon()}
+        />
       </div>
 
       {manques.includes('duree_max') && (

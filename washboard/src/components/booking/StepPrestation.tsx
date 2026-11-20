@@ -10,6 +10,7 @@ import { silhouettePour } from '@/lib/silhouettesVehicules'
 import { nombreDeVehicules, sansChoixDeType } from '@/lib/prestation'
 import { appliquerPrestations, basculerPrestation, MAX_PRESTATIONS, prestationsChoisies, prestationsCompatibles } from '@/lib/plusieursPrestations'
 import MentionLieuAdapte from './MentionLieuAdapte'
+import OptionsEnRubriques from './OptionsEnRubriques'
 import SilhouetteVehicule3D, { ApparitionVehicule, prechargerSilhouettes } from './SilhouetteVehicule3D'
 import { useT } from '@/components/i18n/I18nProvider'
 
@@ -155,12 +156,21 @@ export default function StepPrestation({ services, categories, category, onCateg
           <p className="text-xs text-zinc-500 mb-2">{tr('En plus, si besoin')}</p>
           {vehicles.map((v, i) => <div key={`${v.type}-${i}`}>
             {vehicles.length > 1 && <p className="text-xs font-semibold mt-3 mb-1">{label(v.type)} {i + 1}</p>}
-            {s.addons.map(addon => <label key={addon.id} className="flex items-center gap-2.5 min-h-11 text-sm cursor-pointer">
-              <input type="checkbox" className="wb-booking-checkbox" checked={(v.addons ?? []).some(a => a.id === addon.id)} onChange={() => change(vehicles.map((item, index) => index !== i ? item : { ...item,
-                addons: (item.addons ?? []).some(a => a.id === addon.id) ? item.addons?.filter(a => a.id !== addon.id) : [...(item.addons ?? []), addon],
-              }))} />
-              <span className="flex-1">{addon.label}</span><span className="whitespace-nowrap">+{formatPrice(addon.price)}</span>
-            </label>)}
+            <OptionsEnRubriques
+              options={s.addons}
+              idBase={`rubrique-${s.id}-${i}`}
+              estChoisie={addon => (v.addons ?? []).some(a => a.id === addon.id)}
+              rendu={addon => <label className={`flex items-center gap-2.5 min-h-11 text-sm cursor-pointer ${addon.description ? 'py-2' : ''}`}>
+                <input type="checkbox" className="wb-booking-checkbox" checked={(v.addons ?? []).some(a => a.id === addon.id)} onChange={() => change(vehicles.map((item, index) => index !== i ? item : { ...item,
+                  addons: (item.addons ?? []).some(a => a.id === addon.id) ? item.addons?.filter(a => a.id !== addon.id) : [...(item.addons ?? []), addon],
+                }))} />
+                <span className="flex-1">
+                  {addon.label}
+                  {addon.description && <span className="block text-xs text-zinc-500 dark:text-zinc-400 leading-snug">{addon.description}</span>}
+                </span>
+                <span className="whitespace-nowrap">+{formatPrice(addon.price)}</span>
+              </label>}
+            />
           </div>)}
         </div>}
       </div>)}

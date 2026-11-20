@@ -1,3 +1,4 @@
+import { optionsAvecDescriptionsNettoyees } from '@/lib/optionsRubriques'
 import { identifiantsCentresAcceptables, identifiantsCentresValides } from '@/lib/centreAuto'
 import { heuresDebutAcceptables, heuresDebutValides } from '@/lib/heuresPrestation'
 import { NextRequest, NextResponse } from 'next/server'
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       duration_minutes: Number(duration_minutes),
       vehicle_types: vehicle_types ?? [],
       vehicle_price_overrides: vehicle_price_overrides ?? {},
-      addons: addons ?? [],
+      addons: Array.isArray(addons) ? optionsAvecDescriptionsNettoyees(addons) : [],
       ...(lieu_adapte === undefined ? {} : { lieu_adapte }),
       // Seulement quand il est posé : sans le SQL, la colonne n'existe pas encore.
       ...(lieu_restreint ? { lieu_restreint } : {}),

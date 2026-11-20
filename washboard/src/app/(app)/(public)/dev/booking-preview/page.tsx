@@ -25,8 +25,8 @@ import type { PromotionPublique } from '@/lib/promotion'
 const FIN_PROMO_EXEMPLE = new Date(Date.now() + 2.5 * 86400000).toISOString()
 
 /** Banc d'essai local : aucun accès à Supabase. Les API sont interceptées par le test navigateur. */
-export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string; centre?: string; prest?: string; multi?: string; teinte?: string }> }) {
-  const { mode, etape, promo, scenario, couleur, tampons, acompte, centre, prest, multi, teinte } = await searchParams
+export default async function BookingPreview({ searchParams }: { searchParams: Promise<{ mode?: string; etape?: string; promo?: string; scenario?: string; couleur?: string; tampons?: string; acompte?: string; centre?: string; prest?: string; options?: string; multi?: string; teinte?: string }> }) {
+  const { mode, etape, promo, scenario, couleur, tampons, acompte, centre, prest, options, multi, teinte } = await searchParams
   if (process.env.NODE_ENV !== 'development' || process.env.BOOKING_UI_PREVIEW !== '1') notFound()
   // `?promo=1` : une promotion d'exemple, finie dans deux jours et demi.
   const promotion: PromotionPublique | null = promo === '1' ? {
@@ -40,11 +40,17 @@ export default async function BookingPreview({ searchParams }: { searchParams: P
   const category: ServiceCategory = { id: 'cars', washer_id: washerId, name: 'Voitures', display_order: 0,
     types: [{ id: 'citadine', name: 'Citadine' }, { id: 'citadine_2p', name: 'Citadine 2p' }, { id: 'berline', name: 'Berline' }, { id: 'SUV', name: 'SUV' }, { id: 'monospace', name: 'Monospace' }, { id: '7places', name: '7 places' }, { id: 'utilitaire', name: 'Utilitaire' }, { id: '5d0c7f3e-2a41-4b8e-9c61-7e2f0a9b3d14', name: 'Moto' }, { id: '8a6e1b29-4c3d-4f5a-b7e8-1d2c3b4a5f60', name: 'Camion' }, { id: 'camping-car', name: 'Camping-car' }],
   }
+  // ?options=beaucoup : « Complet » propose quinze options en trois rubriques (dépliants), dont certaines décrites.
+  const optionsEnRubriques = [
+    ...['Shampoing des sièges', 'Poils d’animaux', 'Désodorisation', 'Nettoyage du coffre', 'Vitres intérieures renforcées'].map((label, i) => ({ id: `int${i}`, label, price: 15 + i * 5, duration_minutes: 15, category: 'Intérieur & habitable', ...(i < 2 ? { description: i === 0 ? 'Injection-extraction des sièges tissu ou cuir, séchage inclus' : 'Retrait des poils incrustés dans les tissus' } : {}) })),
+    ...['Boue épaisse', 'Traces de vomi', 'Sable et gravillons', 'Odeur de tabac', 'Insectes sur la carrosserie'].map((label, i) => ({ id: `sal${i}`, label, price: 20 + i * 5, duration_minutes: 20, category: 'Suppléments état & salissures' })),
+    ...['Cire de protection', 'Rénovation des phares', 'Traitement des plastiques', 'Céramique express', 'Nettoyage des jantes'].map((label, i) => ({ id: `pro${i}`, label, price: 25 + i * 10, duration_minutes: 30, category: 'Protections & finitions', ...(i === 0 ? { description: 'Hydrophobie et brillance pendant environ 3 mois' } : {}) })),
+  ]
   const services: Service[] = [
     { id: '00000000-0000-4000-8000-000000000011', name: 'Extérieur', description: 'Carrosserie, jantes, vitres, séchage sans traces', price: 35, duration_minutes: 60, addons: [] },
     { id: '00000000-0000-4000-8000-000000000012', name: 'Intérieur', description: 'Aspiration, plastiques, tapis, vitres intérieures', price: 45, duration_minutes: 75,
       addons: [{ id: 'seats', label: 'Shampoing des sièges', price: 30, duration_minutes: 30, category: 'Options' }, { id: 'pets', label: 'Poils d’animaux', price: 15, duration_minutes: 15, category: 'Options' }] },
-    { id: '00000000-0000-4000-8000-000000000013', name: 'Complet', description: 'Intérieur et extérieur en une seule visite', price: 75, duration_minutes: 120, addons: [] },
+    { id: '00000000-0000-4000-8000-000000000013', name: 'Complet', description: 'Intérieur et extérieur en une seule visite', price: 75, duration_minutes: 120, addons: options === 'beaucoup' ? optionsEnRubriques : [] },
   ].map(s => ({ ...s, washer_id: washerId, category_id: category.id, vehicle_types: category.types.map(t => t.id), vehicle_price_overrides: { SUV: s.price + 10 }, lieu_adapte: s.name !== 'Extérieur' }))
   // ?prest=1 : prestations limitées (Extérieur : déplacement seulement, 10 h et 14 h ; Intérieur :
   // centre seulement ; Complet : centre Sud seulement). ?centre=3 : deux centres, Nord et Sud.
