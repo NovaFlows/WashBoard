@@ -20,5 +20,5 @@ export const landing3: Dictionnaire = {
   'Centre auto ou à domicile': 'Car centre or at home',
   'Ils lavent déjà avec WashBoard': 'Already washing with WashBoard',
   'Logo d’un laveur WashBoard': 'Logo of a WashBoard washer',
-  'laveurs': 'washers',
+  'autres laveurs': 'other washers',
 }
