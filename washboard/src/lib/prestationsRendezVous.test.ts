@@ -111,6 +111,14 @@ describe('ajouterPrestation', () => {
     expect(v.colonnes.booked_price).toBe(220)
   })
 
+  it('prestation offerte (0 €) : nommée sur le rendez-vous, prix inchangé, durée comptée', () => {
+    const v = ajouterPrestation(rdvEnLigne(), prestation({ price: 0, vehicle_price_overrides: {} }), W)
+    if (!v.ok) throw new Error(v.erreur)
+    expect(v.ecart).toBe(0)
+    expect(v.colonnes.booked_price).toBe(160)
+    expect(v.colonnes.ends_at).toBe('2026-11-27T10:45:00.000Z')
+  })
+
   it('une prestation en veille reste ajoutable par le laveur', () => {
     expect(ajouterPrestation(rdvEnLigne(), prestation({ en_veille: true }), W).ok).toBe(true)
   })
