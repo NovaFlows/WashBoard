@@ -109,6 +109,20 @@ describe('chargerTousLesLaveurs', () => {
     expect(tous.map(d => d.washer.id)).toEqual(['w1', 'w3'])
     expect(tous.map(d => d.email)).toEqual(['w1@exemple.fr', null])
   })
+  it('lit toutes les visites au-delà d’une page (plusieurs lots en parallèle), sans trou ni doublon', async () => {
+    etat.tables.washers = [washer('w1')]
+    // 20 345 lignes : la première page, puis deux lots de 8 pages, dont une dernière page courte.
+    etat.tables.booking_funnel_events = Array.from({ length: 20345 }, (_, i) => ({ washer_id: 'w1', session_id: `s${i}`, step: 'vu', referrer_host: null, created_at: '2026-11-01T00:00:00Z' }))
+    const [laveur] = await chargerTousLesLaveurs()
+    expect(laveur.evenements).toHaveLength(20345)
+    expect(new Set(laveur.evenements.map(e => e.session_id)).size).toBe(20345)
+  })
+  it('une page pleine pile suivie d’une page vide : rien en trop', async () => {
+    etat.tables.washers = [washer('w1')]
+    etat.tables.booking_funnel_events = Array.from({ length: 1000 }, (_, i) => ({ washer_id: 'w1', session_id: `s${i}`, step: 'vu', referrer_host: null, created_at: '2026-11-01T00:00:00Z' }))
+    const [laveur] = await chargerTousLesLaveurs()
+    expect(laveur.evenements).toHaveLength(1000)
+  })
   it('aucun laveur réel : liste vide ; utilisateurs illisibles : erreur', async () => {
     etat.tables.washers = [washer('w2', { is_preview: true })]
     expect(await chargerTousLesLaveurs()).toEqual([])

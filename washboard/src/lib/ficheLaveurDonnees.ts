@@ -37,8 +37,7 @@ const COLONNES_WASHER = 'id, user_id, name, slug, phone, created_at, plan, grand
 /** Lit toutes les pages d'une requête : PostgREST plafonne à 1 000 lignes,
  *  et les visites de tous les laveurs dépassent vite ce plafond. */
 async function toutLire<T>(requete: (de: number, a: number) => PromiseLike<{ data: T[] | null; error: unknown }>, table: string): Promise<T[]> {
-  const lignes: T[] = []
-  for (let de = 0; ; de += 1000) {
+  const lire = async (de: number): Promise<T[]> => {
     const { data, error } = await requete(de, de + 999)
     if (error) {
       // Une fiche incomplète affichée comme « 0 réservation » mentirait :
@@ -46,10 +45,21 @@ async function toutLire<T>(requete: (de: number, a: number) => PromiseLike<{ dat
       logger.error('equipe.fiche.read_failed', { table }, error)
       throw error
     }
-    lignes.push(...(data ?? []))
-    if (!data || data.length < 1000) return lignes
+    return data ?? []
+  }
+  // Première page seule : la plupart des tables tiennent dedans. Si elle est pleine, les
+  // suivantes partent par lots en parallèle (les visites dépassent 13 000 lignes : lues une
+  // page après l'autre, l'ouverture de l'espace Équipe prenait plus de 6 secondes).
+  const lignes: T[] = await lire(0)
+  if (lignes.length < 1000) return lignes
+  for (let debut = 1000; ; debut += PAGES_EN_PARALLELE * 1000) {
+    const lot = await Promise.all(Array.from({ length: PAGES_EN_PARALLELE }, (_, i) => lire(debut + i * 1000)))
+    for (const page of lot) lignes.push(...page)
+    if (lot[lot.length - 1].length < 1000) return lignes
   }
 }
+
+const PAGES_EN_PARALLELE = 8
 
 async function lireLiees(admin: Admin, ids: string[], depuis: string | null) {
   const [prestations, horaires, reservations, evenements, abonnements] = await Promise.all([
