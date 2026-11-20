@@ -292,7 +292,14 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
             {form.addons.map(addon => (
               <div key={addon.id} className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 shrink-0 w-32 truncate">{addon.category}</span>
+                  <input
+                    list="addon-categories"
+                    value={addon.category}
+                    onChange={e => onChange({ ...form, addons: form.addons.map(a => a.id === addon.id ? { ...a, category: e.target.value } : a) })}
+                    onBlur={e => { if (!e.target.value.trim()) onChange({ ...form, addons: form.addons.map(a => a.id === addon.id ? { ...a, category: 'Options' } : a) }) }}
+                    aria-label={`Rubrique de l'option ${addon.label}`}
+                    className="text-xs text-slate-500 dark:text-slate-400 shrink-0 w-32 truncate bg-transparent border-b border-dashed border-slate-300 dark:border-slate-600 focus:outline-none focus:border-blue-500"
+                  />
                   <span className="flex-1 text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{addon.label}</span>
                   <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 shrink-0">+{addon.price}€</span>
                   {addon.duration_minutes ? <span className="text-xs text-slate-400 shrink-0">+{addon.duration_minutes}min</span> : null}
@@ -327,6 +334,7 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
         )}
 
         <datalist id="addon-categories">
+          {[...new Set(form.addons.map(a => a.category))].map(c => <option key={c} value={c} />)}
           <option value="Suppléments intérieur" />
           <option value="Suppléments extérieur" />
           <option value="Traitements spéciaux" />

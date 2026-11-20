@@ -11,7 +11,7 @@ import { identifiantsCentresValides } from '@/lib/centreAuto'
 import { HEURES_PROPOSEES, MAX_HEURES_DEBUT, heuresDebutValides, libelleHeure, resumeHeures } from '@/lib/heuresPrestation'
 import { champsManquants, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX, ERREUR_SANS_TYPE } from '@/lib/prestation'
 import {
-  basculerType, categoriesOptionProposees, changerCategorie, changerPrixType, nomDuType, nouvelleOption, phrasesDuree,
+  basculerType, categoriesOptionProposees, categorieOptionNormalisee, changerCategorie, changerPrixType, nomDuType, nouvelleOption, phrasesDuree,
   resumeDescription, resumeOptions, resumePrixParType, retirerOrphelins, sansCategorieDe, typesOrphelins,
   type BrouillonOption, type FormulairePrestation,
 } from '@/lib/prestationForm'
@@ -104,6 +104,15 @@ export default function FeuillePrestationV2({
   const [categorieSaisie, setCategorieSaisie] = useState('')
   const [brouillon, setBrouillon] = useState({ label: '', price: '', duration_minutes: '', description: '' })
   const [optionDecrite, setOptionDecrite] = useState<string | null>(null)
+  // Option dont on tape la nouvelle rubrique (choix « Nouvelle rubrique… » du menu).
+  const [optionRubrique, setOptionRubrique] = useState<{ id: string; saisie: string } | null>(null)
+
+  function changerRubrique(id: string, rubrique: string) {
+    const nom = categorieOptionNormalisee(rubrique, puces)
+    setForm(f => ({ ...f, addons: f.addons.map(x => x.id === id ? { ...x, category: nom } : x) }))
+    if (!puces.includes(nom)) setPuces(p => [...p, nom])
+    setOptionRubrique(null)
+  }
 
   const manques = champsManquants(form)
   const phrasesManques = [
@@ -369,7 +378,6 @@ export default function FeuillePrestationV2({
                   <div className="flex items-center gap-2">
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-[14.5px] ${corpsFort}`}>{a.label}</span>
-                      <span className={`block truncate text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>{a.category}</span>
                     </span>
                     <span className={`shrink-0 text-right text-[13.5px] ${corps} tabular-nums`}>
                       +{a.price} €{a.duration_minutes ? <span className="text-[color:var(--v2-color-gris)]">{tr('· +{duration_minutes} min', { duration_minutes: a.duration_minutes })}</span> : null}
@@ -383,6 +391,31 @@ export default function FeuillePrestationV2({
                       <X size={18} strokeWidth={2} />
                     </button>
                   </div>
+                  {optionRubrique?.id === a.id ? (
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      autoFocus
+                      aria-label={tr('Nom de la nouvelle rubrique')}
+                      placeholder={tr('Ex : Extras')}
+                      value={optionRubrique.saisie}
+                      onChange={e => setOptionRubrique({ id: a.id, saisie: e.target.value })}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); changerRubrique(a.id, optionRubrique.saisie) } }}
+                      onBlur={() => { if (optionRubrique.saisie.trim()) changerRubrique(a.id, optionRubrique.saisie); else setOptionRubrique(null) }}
+                      className={`${CHAMP} mb-1`}
+                    />
+                  ) : (
+                    <select
+                      aria-label={tr('Rubrique de l’option {label}', { label: a.label })}
+                      value={a.category}
+                      onChange={e => e.target.value === NOUVELLE ? setOptionRubrique({ id: a.id, saisie: '' }) : changerRubrique(a.id, e.target.value)}
+                      className={`${CHAMP} mb-1 !h-11 text-[13.5px]`}
+                    >
+                      {!puces.includes(a.category) && <option value={a.category}>{a.category}</option>}
+                      {puces.map(c => <option key={c} value={c}>{c}</option>)}
+                      <option value={NOUVELLE}>{tr('Nouvelle rubrique…')}</option>
+                    </select>
+                  )}
                   {optionDecrite === a.id ? (
                     <input
                       type="text"

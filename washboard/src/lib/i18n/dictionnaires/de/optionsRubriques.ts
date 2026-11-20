@@ -9,4 +9,6 @@ export const optionsRubriques: Dictionnaire = {
   '+ Ajouter une description': '+ Beschreibung hinzufügen',
   'Description de l’option (facultatif)': 'Beschreibung der Option (optional)',
   'Description (facultatif) : ce que ça comprend': 'Beschreibung (optional): was enthalten ist',
+  'Rubrique de l’option {label}': 'Rubrik der Option {label}',
+  'Nouvelle rubrique…': 'Neue Rubrik…',
 }
