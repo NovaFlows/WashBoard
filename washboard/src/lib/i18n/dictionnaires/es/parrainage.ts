@@ -63,4 +63,8 @@ export const parrainage: Dictionnaire = {
   '{m} mois gagné': '{m} mes ganado',
   'En essai': 'En prueba',
   'Essai terminé': 'Prueba terminada',
+  'Un autre laveur': 'Otro lavador',
+  'Recommandation': 'Recomendación',
+  'Démarchage': 'Contacto directo',
+  'IA (ChatGPT…)': 'IA (ChatGPT…)',
 }

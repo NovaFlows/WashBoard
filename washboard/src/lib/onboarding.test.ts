@@ -12,7 +12,7 @@ beforeEach(() => vi.clearAllMocks())
 
 describe('estSourceAcquisition', () => {
   it('accepte les neuf réponses proposées', () => {
-    expect(SOURCES_ACQUISITION.map(s => s.valeur)).toEqual(['instagram', 'tiktok', 'facebook', 'google', 'ia', 'recommandation', 'bouche_a_oreille', 'demarchage', 'autre'])
+    expect(SOURCES_ACQUISITION.map(s => s.valeur)).toEqual(['instagram', 'tiktok', 'facebook', 'google', 'ia', 'parrainage', 'recommandation', 'bouche_a_oreille', 'demarchage', 'autre'])
     for (const s of SOURCES_ACQUISITION) expect(estSourceAcquisition(s.valeur)).toBe(true)
   })
 

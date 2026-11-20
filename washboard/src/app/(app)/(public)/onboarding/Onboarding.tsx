@@ -586,7 +586,7 @@ export default function Onboarding({ slug, nom, etapeInitiale = 1 }: { slug: str
                       disabled={envoi}
                       className={`${PASTILLE} ${choisi ? PASTILLE_CHOISIE : PASTILLE_LIBRE} ${choisi && derniere === `source:${s.valeur}` ? 'wb-entree-pop' : ''}`}
                     >
-                      {s.libelle}
+                      {t(s.libelle)}
                     </button>
                   )
                 })}
