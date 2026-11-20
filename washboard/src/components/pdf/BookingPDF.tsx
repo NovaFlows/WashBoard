@@ -1,6 +1,8 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { adresseAvecLieu } from '@/lib/centreAuto'
+import { nomsPrestations } from '@/lib/detailRendezVous'
+import type { ServiceAddon } from '@/types'
 import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 
 const s = StyleSheet.create({
@@ -57,7 +59,8 @@ type Props = {
     billing_address: string | null
     services: { name: string } | null
     washers: { name: string; phone: string | null } | null
-    vehicles_detail?: { type: string; count: number; unit_price: number; label?: string; models?: string[] }[] | null
+    vehicles_detail?: { type: string; count: number; unit_price: number; label?: string; models?: string[]; addons?: ServiceAddon[] }[] | null
+    selected_addons?: ServiceAddon[] | null
   }
 }
 
@@ -145,7 +148,8 @@ export default function BookingPDF({ booking, t = sansTraduction, loc = 'fr-FR' 
           <View style={s.tableRow}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', marginBottom: 4 }}>
-                {service?.name ?? t('Lavage automobile')}
+                {/* Toutes les prestations, ajoutées comprises : le total les compte. */}
+                {service ? nomsPrestations(booking).join(' + ') : t('Lavage automobile')}
                 {!isMultiVehicle && count > 1 ? ` × ${count} ${t('véhicules')}` : ''}
               </Text>
               {!isMultiVehicle && count > 1 && (

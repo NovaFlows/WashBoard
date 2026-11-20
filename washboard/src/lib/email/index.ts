@@ -912,6 +912,44 @@ ${paragraphe('Rien à faire de votre côté : le nouveau prix est déjà pris en
   })
 }
 
+/** Prestation ajoutée ou retirée par le laveur sur une réservation prise en ligne
+ *  (lib/prestationsRendezVous.ts) : le client voit le nouveau prix avant le rendez-vous. */
+export async function sendPrestationModifiee({ to, clientName, washerName, prestation, ajout, scheduledAt, ancienPrix, nouveauPrix }: {
+  to: string
+  clientName: string
+  washerName: string
+  prestation: string
+  ajout: boolean
+  scheduledAt: string
+  ancienPrix: number
+  nouveauPrix: number
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const date = new Date(scheduledAt)
+  const jour = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heure = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const intitule = ajout ? 'Une prestation ajoutée à votre réservation' : 'Une prestation retirée de votre réservation'
+  const action = ajout ? 'a ajouté' : 'a retiré'
+  const lien = ajout ? 'à' : 'de'
+  return resend.emails.send({
+    from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
+    to,
+    subject: `${washerName} a mis à jour votre réservation`,
+    html: page({
+      titre: intitule,
+      entete: enteteLaveur(escapeHtml(washerName)),
+      contenu: `
+${titre({ texte: intitule })}
+${paragraphe(`Bonjour <strong>${escapeHtml(clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`<strong>${escapeHtml(washerName)}</strong> ${action} « ${escapeHtml(prestation)} » ${lien} votre réservation
+du ${jour} à ${heure}. Le prix passe de <strong>${formatEuros(ancienPrix)} €</strong>
+à <strong>${formatEuros(nouveauPrix)} €</strong>.`, { marge: '0 0 14px' })}
+${paragraphe(`Une question ? Contactez directement ${escapeHtml(washerName)}.`, { marge: '0' })}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}`,
+    }),
+  })
+}
+
 /** Rappel avant l'échéance de l'acompte, une seule fois (`api/cron/acomptes`, règle dans
  *  `rappelAcompteDu`). Les moyens de paiement sont ceux de « Demande reçue », relus dans les
  *  réglages actuels du laveur. */

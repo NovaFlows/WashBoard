@@ -36,6 +36,14 @@ describe('détail d’un rendez-vous', () => {
     expect(lignesDetailPrix(deux).map(l => [l.libelle, l.montant])).toEqual([['Lavage extérieur × 2', 80], ['Lavage complet × 2', 130]])
   })
 
+  it('même prestation à des prix différents selon le véhicule : la somme réelle, pas un seul prix', () => {
+    const mixte = { ...b, vehicles_detail: [
+      { type: 'citadine', count: 2, unit_price: 40, addons: [complet] },
+      { type: 'suv', count: 1, unit_price: 50, addons: [{ ...complet, price: 80 }] },
+    ], travel_fee: 0 }
+    expect(lignesDetailPrix(mixte).map(l => [l.libelle, l.montant])).toEqual([['Lavage extérieur × 3', 130], ['Lavage complet × 3', 65 * 2 + 80]])
+  })
+
   it('ancien format (options communes, sans véhicules détaillés) : options et déplacement seulement', () => {
     const ancien = { services: { name: 'Complet' }, vehicles_detail: null, selected_addons: [sable], travel_fee: 10 }
     expect(lignesDetailPrix(ancien).map(l => l.libelle)).toEqual(['Sable', 'Frais de déplacement'])
