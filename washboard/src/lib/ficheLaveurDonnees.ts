@@ -5,7 +5,7 @@ import { isSupportMember } from '@/lib/supportAccess'
 import { COMPTES_INTERNES_EXCLUS_DIFFUSION } from '@/lib/plan'
 import { logger } from '@/lib/logger'
 import { estExpediteurApprouve } from '@/lib/expediteurs'
-import type { DonneesLaveur, WasherFiche } from '@/lib/ficheLaveur'
+import { visitesParLaveur, type DonneesLaveur, type LigneVisites, type VisitesAgregees, type WasherFiche } from '@/lib/ficheLaveur'
 import { relanceDue, tableAbsente, type Appel } from '@/lib/suiviAppels'
 import { statutFilleul, type CompteParrainage } from '@/lib/parrainage'
 import { construireArbre, type LigneParrainage } from '@/lib/arbreParrainage'
@@ -61,23 +61,47 @@ async function toutLire<T>(requete: (de: number, a: number) => PromiseLike<{ dat
 
 const PAGES_EN_PARALLELE = 8
 
-async function lireLiees(admin: Admin, ids: string[], depuis: string | null) {
-  const [prestations, horaires, reservations, evenements, abonnements] = await Promise.all([
+/** Les visites de tous ces laveurs, comptées par la base (fonction SQL `equipe_visites`) : une
+ *  centaine de lignes au lieu de plusieurs milliers. `null` tant que la fonction n'existe pas
+ *  encore en base — l'appelant lit alors les visites une à une, plus lentement mais pareil. */
+async function lireVisitesAgregees(admin: Admin, ids: string[], depuis: string): Promise<Map<string, VisitesAgregees> | null> {
+  const lignes: LigneVisites[] = []
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await admin.rpc('equipe_visites', { p_ids: ids, p_depuis: depuis }).range(de, de + 999)
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') {
+        logger.warn('equipe.visites.fonction_absente', {})
+        return null
+      }
+      logger.error('equipe.fiche.read_failed', { table: 'equipe_visites' }, error)
+      throw error
+    }
+    const page = (data ?? []) as LigneVisites[]
+    lignes.push(...page)
+    if (page.length < 1000) return visitesParLaveur(lignes)
+  }
+}
+
+async function lireLiees(admin: Admin, ids: string[], depuis: string | null, compteesParLaBase = false) {
+  const lireBrutes = () => toutLire<DonneesLaveur['evenements'][number] & { washer_id: string }>((de, a) => {
+    let q = admin.from('booking_funnel_events').select('washer_id, session_id, step, referrer_host, created_at').in('washer_id', ids)
+    if (depuis) q = q.gte('created_at', depuis)
+    return q.order('created_at').range(de, a)
+  }, 'booking_funnel_events')
+  const brutes = compteesParLaBase && depuis ? null : lireBrutes()
+  const [visites, prestations, horaires, reservations, abonnements] = await Promise.all([
+    compteesParLaBase && depuis ? lireVisitesAgregees(admin, ids, depuis) : Promise.resolve(null),
     toutLire<{ washer_id: string; name: string; price: number | null; en_veille: boolean | null }>((de, a) =>
       admin.from('services').select('washer_id, name, price, en_veille').in('washer_id', ids).order('created_at').range(de, a), 'services'),
     toutLire<{ washer_id: string; day_of_week: number }>((de, a) =>
       admin.from('availabilities').select('washer_id, day_of_week').in('washer_id', ids).range(de, a), 'availabilities'),
     toutLire<DonneesLaveur['reservations'][number] & { washer_id: string }>((de, a) =>
       admin.from('bookings').select('washer_id, status, created_at, scheduled_at, booked_price, saisie_par_laveur, review_sms_sent_at').in('washer_id', ids).range(de, a), 'bookings'),
-    toutLire<DonneesLaveur['evenements'][number] & { washer_id: string }>((de, a) => {
-      let q = admin.from('booking_funnel_events').select('washer_id, session_id, step, referrer_host, created_at').in('washer_id', ids)
-      if (depuis) q = q.gte('created_at', depuis)
-      return q.order('created_at').range(de, a)
-    }, 'booking_funnel_events'),
     toutLire<{ washer_id: string }>((de, a) =>
       admin.from('push_subscriptions').select('washer_id').in('washer_id', ids).range(de, a), 'push_subscriptions'),
   ])
-  return { prestations, horaires, reservations, evenements, abonnements }
+  const evenements = brutes ? await brutes : visites ? [] : await lireBrutes()
+  return { prestations, horaires, reservations, evenements, abonnements, visites }
 }
 
 function assembler(w: WasherFiche, liees: Awaited<ReturnType<typeof lireLiees>>, utilisateur: { email?: string | null; last_sign_in_at?: string | null } | undefined): DonneesLaveur {
@@ -90,6 +114,7 @@ function assembler(w: WasherFiche, liees: Awaited<ReturnType<typeof lireLiees>>,
     joursOuverts: de(liees.horaires).map(h => h.day_of_week),
     reservations: de(liees.reservations),
     evenements: de(liees.evenements),
+    ...(liees.visites ? { visitesAgregees: liees.visites.get(w.id) ?? { total: 0, parEtape: {}, parHote: [] } } : {}),
     appareilsNotifies: de(liees.abonnements).length,
   }
 }
@@ -132,7 +157,7 @@ export async function chargerTousLesLaveurs(): Promise<DonneesLaveur[]> {
     if (data.users.length < 200) break
   }
 
-  const liees = await lireLiees(admin, reels.map(w => w.id), depuis)
+  const liees = await lireLiees(admin, reels.map(w => w.id), depuis, true)
   return reels.map(w => assembler(w, liees, w.user_id ? utilisateurs.get(w.user_id) : undefined))
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { analyserLaveur, sourceVisite, ilYa, dateHeure, type DonneesLaveur, type WasherFiche } from './ficheLaveur'
+import { analyserLaveur, sourceVisite, ilYa, dateHeure, visitesParLaveur, type DonneesLaveur, type WasherFiche } from './ficheLaveur'
 
 const NOW = new Date('2026-11-05T12:00:00Z')
 const ilYaJours = (j: number) => new Date(NOW.getTime() - j * 864e5).toISOString()
@@ -129,5 +129,40 @@ describe('cas limites', () => {
     expect(ilYa(new Date(NOW.getTime() - 10000).toISOString(), NOW)).toBe('à l’instant')
     expect(ilYa(new Date(NOW.getTime() - 3 * 36e5).toISOString(), NOW)).toBe('il y a 3 h')
     expect(dateHeure('2026-11-05T12:30:00Z')).toBe('5 nov., 13:30')
+  })
+})
+
+describe('visites comptées par la base', () => {
+  // Même visites, une fois en lignes brutes, une fois comptées comme le fait `equipe_visites` :
+  // l'analyse doit être identique.
+  const brutes = [
+    ...visites(10, 'prestation', 'l.instagram.com'), ...visites(4, 'creneau', 'l.instagram.com'), ...visites(1, 'confirmation', 'l.instagram.com'),
+    ...Array.from({ length: 6 }, (_, i) => ({ session_id: `d${i}`, step: 'prestation', referrer_host: null as string | null, created_at: ilYaJours(3) })),
+    ...Array.from({ length: 2 }, (_, i) => ({ session_id: `d${i}`, step: 'creneau', referrer_host: null as string | null, created_at: ilYaJours(3) })),
+  ]
+  const compter = (evs: typeof brutes) => {
+    const sess = (f: (e: (typeof brutes)[number]) => boolean) => new Set(evs.filter(f).map(e => e.session_id)).size
+    const etapes = [...new Set(evs.map(e => e.step))]
+    const hotes = [...new Set(evs.map(e => e.referrer_host))]
+    return visitesParLaveur([
+      { washer_id: 'w1', kind: 'total', step: null, referrer_host: null, sessions: sess(() => true) },
+      ...etapes.map(step => ({ washer_id: 'w1', kind: 'step' as const, step, referrer_host: null, sessions: sess(e => e.step === step) })),
+      ...hotes.map(h => ({ washer_id: 'w1', kind: 'host' as const, step: null, referrer_host: h, sessions: sess(e => e.referrer_host === h) })),
+    ]).get('w1')!
+  }
+  const base = { reservations: [], prestations: [{ name: 'Lavage', price: 30, en_veille: false }], joursOuverts: [1, 2] }
+
+  it('donne la même analyse que les visites brutes', () => {
+    const a = analyserLaveur(laveur({}, { ...base, evenements: brutes }), NOW)
+    const b = analyserLaveur(laveur({}, { ...base, evenements: [], visitesAgregees: compter(brutes) }), NOW)
+    expect(b.activite).toEqual(a.activite)
+    expect(b.pourquoi).toEqual(a.pourquoi)
+    expect(b.problemes).toEqual(a.problemes)
+  })
+
+  it('aucune visite comptée : « page jamais ouverte »', () => {
+    const t = analyserLaveur(laveur({}, { ...base, visitesAgregees: { total: 0, parEtape: {}, parHote: [] } }), NOW)
+    expect(t.activite.visites30).toBe(0)
+    expect(t.activite.lienReseaux).toMatch(/jamais été ouverte/)
   })
 })
