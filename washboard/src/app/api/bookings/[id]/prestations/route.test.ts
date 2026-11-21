@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // POST / DELETE /api/bookings/[id]/prestations : prestation du catalogue du laveur seulement,
@@ -127,10 +127,24 @@ describe('POST /api/bookings/[id]/prestations', () => {
     expect(sendPrestationModifiee).not.toHaveBeenCalled()
   })
 
-  it('réservation de test : pas d’email réel', async () => {
-    booking = { ...booking, client_name: '[E2E] Test' }
-    await ajout()
-    expect(sendPrestationModifiee).not.toHaveBeenCalled()
+  describe('réservation nommée « [E2E] »', () => {
+    // Vercel lance ces tests avec NODE_ENV=production : l'environnement est fixé ici.
+    afterEach(() => { vi.unstubAllEnvs() })
+
+    it('serveur de test : pas d’email réel', async () => {
+      vi.stubEnv('NODE_ENV', 'test')
+      booking = { ...booking, client_name: '[E2E] Test' }
+      await ajout()
+      expect(sendPrestationModifiee).not.toHaveBeenCalled()
+    })
+
+    it('en ligne : le client est prévenu comme les autres', async () => {
+      vi.stubEnv('NODE_ENV', 'production')
+      vi.stubEnv('E2E_CLEANUP_ENABLED', '')
+      booking = { ...booking, client_name: '[E2E] Test' }
+      await ajout()
+      expect(sendPrestationModifiee).toHaveBeenCalledOnce()
+    })
   })
 
   it('met à jour la fin de l’événement Google Agenda', async () => {
