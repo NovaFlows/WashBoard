@@ -27,6 +27,8 @@ async function tousLesEmails() {
     () => m.sendDocument({ ...client, genre: 'devis', numero: 'D-1', documentId: ID, montantTtc: 10, valableJusquau: '1er novembre', appUrl: 'https://app.test' }),
     () => m.sendDocument({ ...client, genre: 'facture', numero: 'F-2', documentId: ID, montantTtc: 10, appUrl: 'https://app.test' }),
     () => m.sendAnnulationAcompte({ ...client, scheduledAt: QUAND }),
+    () => m.sendPrestationModifiee({ ...client, washerPhone: '06', prestation: 'Lavage intérieur', ajout: true, scheduledAt: QUAND, address: '1 rue A', bookingId: ID, lignes: [{ libelle: 'Lavage', montant: 40 }, { libelle: 'Lavage intérieur', montant: 30 }], ancienPrix: 40, nouveauPrix: 70, jeton: 'j', appUrl: 'https://app.test' }),
+    () => m.sendPrestationModifiee({ ...client, prestation: 'Lavage intérieur', ajout: false, scheduledAt: QUAND, address: '1 rue A', lieu: 'centre', bookingId: ID, lignes: [{ libelle: 'Lavage', montant: 40 }], ancienPrix: 70, nouveauPrix: 40 }),
     () => m.sendAnnulationAcompte({ ...client, scheduledAt: QUAND, lienReservation: 'https://app.test/book/malo' }),
     () => m.sendRappelAcompte({ ...client, scheduledAt: QUAND, echeance: QUAND, bookingId: ID, acompte: { montant: 10, liens: [{ libelle: 'PayPal', url: 'https://p.test' }], virement: { titulaire: 't', iban: 'FR76', reference: 'r' }, wero: { telephone: '06', lien: 'https://w.test' } } }),
     () => m.sendTamponFidelite({ to: 'c@test.fr', clientName: 'Julie M.', washerName: 'Malo Lavage', url: 'https://app.test/f', tampons: 8, requis: 8, complete: true, phrase: 'p', couleur: '#306090' }),

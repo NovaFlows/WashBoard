@@ -3,7 +3,7 @@
 // final sans outil particulier — pas un JSON brut. Calcul pur : `ClientProfileModalV2.tsx`
 // construit juste le fichier à partir de ce texte, aucune requête ici.
 
-import type { ClientProfile } from './clientProfile'
+import { prestationLibelle, type ClientProfile } from './clientProfile'
 
 const dateFr = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -29,7 +29,7 @@ export function texteExportClient(profil: ClientProfile, nomLaveur: string): str
   lignes.push('RÉSERVATIONS', profil.bookings.length === 0 ? 'Aucune.' : '')
   for (const b of profil.bookings) {
     const prix = b.booked_price ?? b.services?.price ?? 0
-    lignes.push(`- ${dateFr(b.scheduled_at)} · ${b.services?.name ?? 'Prestation'} · ${prix} € · ${b.address} · statut : ${b.status}`)
+    lignes.push(`- ${dateFr(b.scheduled_at)} · ${prestationLibelle(b)} · ${prix} € · ${b.address} · statut : ${b.status}`)
   }
   lignes.push('')
 

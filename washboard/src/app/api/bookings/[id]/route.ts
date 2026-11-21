@@ -13,6 +13,7 @@ import { colonnesMontantEncaisse, lireMontant, montantPrevu } from '@/lib/clotur
 import { prevenirTampon } from '@/lib/fideliteServeur'
 import { avisJoignable } from '@/lib/messagesAutomatiques'
 import { dureeTotale } from '@/lib/pricing'
+import { libellePrestations } from '@/lib/detailRendezVous'
 import { PROLONGATIONS_ACOMPTE, echeanceProlongee } from '@/lib/acompte'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
@@ -200,11 +201,13 @@ export async function PATCH(
   // ── Opérations asynchrones (Google Calendar + email) ────────────────────
   if (status && status !== booking.status) {
     const svc = booking.services as { name: string; price: number; duration_minutes: number } | null
-    const endIso = new Date(
+    // La fin enregistrée compte les prestations et options ajoutées ; à défaut, l'ancien calcul.
+    const endIso = booking.ends_at ?? new Date(
       new Date(booking.scheduled_at).getTime() + (svc?.duration_minutes ?? 60) * vehicleCount * 60_000
     ).toISOString()
+    const prestations = libellePrestations(booking)
 
-    const eventTitle = `🚗 ${svc?.name ?? 'Lavage'} — ${booking.client_name}`
+    const eventTitle = `🚗 ${prestations} — ${booking.client_name}`
 
     if (status === 'confirmed') {
       // 1. Créer l'événement Google Calendar
@@ -239,7 +242,7 @@ export async function PATCH(
         clientEmail:   booking.client_email,
         washerName:    washer.name,
         washerPhone:   washer.phone ?? null,
-        serviceName:   svc?.name ?? 'Lavage',
+        serviceName:   prestations,
         vehicleType:    booking.vehicle_type ?? undefined,
         vehicleCount:   booking.vehicle_count ?? undefined,
         vehiclesDetail: (booking.vehicles_detail as import('@/types').VehicleItem[] | null) ?? undefined,

@@ -278,6 +278,22 @@ describe('PATCH /api/bookings/[id] — client de lecture et d’écriture', () =
     for (const e of ecritures) expect(e.filtres).toMatchObject({ id: 'c', washer_id: 'washer-1' })
   })
 
+  it('confirmation : email et événement nomment les prestations ajoutées, l’événement finit à la fin enregistrée', async () => {
+    const ajoutee = { id: 'prestation:p2', label: 'Lavage intérieur', price: 30, category: 'prestation', duration_minutes: 45 }
+    plan.washer = { ...WASHER, google_refresh_token: 'rt' }
+    plan.booking = {
+      ...plan.booking, booked_price: 70, ends_at: '2026-10-03T15:45:00.000Z',
+      vehicles_detail: [{ type: 'voiture', count: 1, unit_price: 40, addons: [ajoutee] }], selected_addons: [ajoutee],
+    }
+    vi.mocked(createCalendarEvent).mockResolvedValueOnce('evt-1')
+    vi.mocked(sendBookingConfirmation).mockResolvedValueOnce(undefined as never)
+    await PATCH(requete({ status: 'confirmed' }), { params })
+    expect(vi.mocked(sendBookingConfirmation).mock.calls[0][0]).toMatchObject({ serviceName: 'Lavage + Lavage intérieur', servicePrice: 70 })
+    const evenement = vi.mocked(createCalendarEvent).mock.calls[0][1]
+    expect(evenement.summary).toContain('Lavage + Lavage intérieur')
+    expect(evenement.endIso).toBe('2026-10-03T15:45:00.000Z')
+  })
+
   it('programme l’avis par SMS pour un client saisi sans email, pas par email', async () => {
     const AVIS = { review_enabled: true, google_review_url: 'https://g.page/r/x', review_delay_hours: 3 }
     plan.booking = { ...plan.booking, client_email: null }
