@@ -41,6 +41,12 @@ export function nomsPrestations(b: Reservation): string[] {
   return [...(principale ? [principale] : []), ...supplementaires]
 }
 
+/** Toutes les prestations sur une ligne, « Lavage extérieur + Lavage intérieur » : emails, reçu,
+ *  accueil, historique. `repli` si le rendez-vous n'a plus de prestation principale. */
+export function libellePrestations(b: Reservation, repli = 'Lavage'): string {
+  return nomsPrestations(b).join(' + ') || repli
+}
+
 /** Détail du prix, ligne par ligne : prestation, prestations ajoutées, options, déplacement. */
 export function lignesDetailPrix(b: Reservation): LigneDetail[] {
   const lignes: LigneDetail[] = []

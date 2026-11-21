@@ -6,6 +6,7 @@ import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 import './recu.css'
 import { adresseAvecLieu } from '@/lib/centreAuto'
+import { libellePrestations } from '@/lib/detailRendezVous'
 import { getLangue } from '@/lib/i18n/serveur'
 import { LOCALES_INTL } from '@/lib/i18n/langues'
 import { getT } from '@/lib/i18n/serveur'
@@ -129,7 +130,7 @@ export default async function ConfirmationPage({ params }: Props) {
             <div className="wb-recu-ligne">
               <div>
                 <p className="titre">
-                  {service?.name ?? 'Lavage automobile'}
+                  {libellePrestations({ services: service, vehicles_detail: booking.vehicles_detail, selected_addons: booking.selected_addons }, 'Lavage automobile')}
                   {booking.vehicle_type && <span> — {booking.vehicle_type}</span>}
                 </p>
                 <p className="petit">{formattedDate} à {time}</p>

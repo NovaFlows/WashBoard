@@ -26,6 +26,9 @@
 // documents : un paramètre FACULTATIF (`reglages`), une ligne par client SEULEMENT si quelque
 // chose a été réglé — son absence vaut « rien de particulier », le comportement d'aujourd'hui.
 
+import { libellePrestations } from './detailRendezVous'
+import type { ServiceAddon, VehicleItem } from '@/types'
+
 export type ClientBooking = {
   id: string
   client_name: string
@@ -52,7 +55,18 @@ export type ClientBooking = {
    *  par véhicule) — pas une donnée à ressaisir : `vehiculesReserves`, plus bas, la reprend
    *  telle quelle. Forme minimale : seul `models` sert ici, le reste de `VehicleItem`
    *  (`@/types`) ne concerne que le formulaire de réservation. */
-  vehicles_detail?: { models?: string[] | null }[] | null
+  vehicles_detail?: { models?: string[] | null; count?: number | null; addons?: ServiceAddon[] | null }[] | null
+  /** Prestations ajoutées au rendez-vous (`prestationLibelle`) : options `prestation:<id>`. */
+  selected_addons?: ServiceAddon[] | null
+}
+
+/** Toutes les prestations d'un rendez-vous de l'historique, « Lavage extérieur + Lavage intérieur ». */
+export function prestationLibelle(b: Pick<ClientBooking, 'services' | 'vehicles_detail' | 'selected_addons'>): string {
+  return libellePrestations({
+    services: b.services,
+    vehicles_detail: (b.vehicles_detail ?? null) as VehicleItem[] | null,
+    selected_addons: b.selected_addons ?? null,
+  }, 'Prestation')
 }
 
 /** Un réglage écrit à la main sur un client — table `clients`, SQL donné le 2026-09-28.

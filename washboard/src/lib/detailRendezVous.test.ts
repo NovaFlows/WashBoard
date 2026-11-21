@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detailUtile, lignesDetailPrix, nomsPrestations } from './detailRendezVous'
+import { detailUtile, libellePrestations, lignesDetailPrix, nomsPrestations } from './detailRendezVous'
 
 const addon = (id: string, label: string, price: number) => ({ id, label, price, category: id.startsWith('prestation:') ? 'prestation' : 'x' })
 const sable = addon('sable', 'Sable', 15)
@@ -17,6 +17,16 @@ describe('détail d’un rendez-vous', () => {
     expect(nomsPrestations(b)).toEqual(['Lavage extérieur', 'Lavage complet'])
     expect(nomsPrestations({ services: { name: 'Seule' }, vehicles_detail: null })).toEqual(['Seule'])
     expect(nomsPrestations({})).toEqual([])
+  })
+
+  it('libellé sur une ligne pour les emails, le reçu et l’historique', () => {
+    expect(libellePrestations(b)).toBe('Lavage extérieur + Lavage complet')
+    expect(libellePrestations({ services: { name: 'Seule' } })).toBe('Seule')
+    expect(libellePrestations({})).toBe('Lavage')
+    expect(libellePrestations({}, 'Prestation')).toBe('Prestation')
+    // Ancien format, options communes : la prestation ajoutée est nommée aussi.
+    expect(libellePrestations({ services: { name: 'Lavage extérieur' }, vehicles_detail: [{ type: 'citadine', count: 1, unit_price: 40 }], selected_addons: [complet] }))
+      .toBe('Lavage extérieur + Lavage complet')
   })
 
   it('détaille la prestation, la prestation ajoutée, l’option puis le déplacement', () => {
