@@ -103,7 +103,22 @@ describe('POST /api/bookings/[id]/prestations', () => {
     expect(lectures).toContainEqual({ table: 'services', filtres: { id: S2, washer_id: 'washer-1' } })
     expect(sendPrestationModifiee).toHaveBeenCalledWith(expect.objectContaining({
       to: 'client@example.com', prestation: 'Peinture 2 étriers', ajout: true, ancienPrix: 150, nouveauPrix: 230,
+      bookingId: C, jeton: null,
+      // Détail APRÈS l'ajout, comme sur le reçu.
+      lignes: [
+        expect.objectContaining({ libelle: 'Peinture 4 étriers', montant: 150 }),
+        expect.objectContaining({ libelle: 'Peinture 2 étriers', montant: 80 }),
+      ],
     }))
+  })
+
+  it('rendez-vous confirmé : l’email donne le lien du reçu à jour', async () => {
+    vi.stubEnv('BOOKING_LINK_SECRET', 'secret-de-test')
+    booking = { ...booking, status: 'confirmed' }
+    await ajout()
+    const appel = vi.mocked(sendPrestationModifiee).mock.calls[0][0] as { jeton: string | null }
+    expect(typeof appel.jeton).toBe('string')
+    vi.unstubAllEnvs()
   })
 
   it('ignore tout prix ou nom envoyé par le navigateur', async () => {

@@ -10,6 +10,8 @@ import { sendPrestationModifiee } from '@/lib/email'
 import { estReservationDeTest } from '@/lib/e2e'
 import { patchCalendarEvent } from '@/lib/google-calendar'
 import { rateLimit } from '@/lib/rateLimit'
+import { lignesDetailPrix } from '@/lib/detailRendezVous'
+import { genererJetonReservation } from '@/lib/bookingToken'
 
 // POST { service_id } : le laveur ajoute une prestation de son catalogue à un rendez-vous.
 // DELETE { service_id } : il retire une prestation ajoutée (lib/prestationsRendezVous.ts).
@@ -128,11 +130,18 @@ async function modifier(request: NextRequest, { params }: { params: Promise<{ id
       to: booking.client_email,
       clientName: booking.client_name,
       washerName: washer.name,
+      washerPhone: washer.phone ?? null,
       prestation: verdict.libelle,
       ajout: sens === 'ajout',
       scheduledAt: booking.scheduled_at,
+      address: booking.address,
+      lieu: booking.lieu ?? null,
+      bookingId: booking.id,
+      lignes: lignesDetailPrix({ ...booking, ...verdict.colonnes }),
       ancienPrix: verdict.ancienPrix,
       nouveauPrix: verdict.nouveauPrix,
+      // Reçu déjà envoyé à la confirmation : le lien donne sa version à jour.
+      jeton: booking.status === 'confirmed' ? genererJetonReservation(booking.id) : null,
     }).catch(e => logger.error('bookings.prestations.email_failed', { bookingId: id }, e))
   }
 
