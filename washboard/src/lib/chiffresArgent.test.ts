@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  encaissementsDesFactures, finitAvant, premierJourDeDonnee, serieArgent, totauxArgent,
-  type FactureManuelle, type FraisArgent, type ReservationArgent,
+  encaissementsDesFactures, finitAvant, paiementsAVenir, premierJourDeDonnee, serieArgent, totauxArgent,
+  type FactureManuelle, type FraisArgent, type ReservationArgent, type ReservationAVenir,
 } from './chiffresArgent'
 import { plageDe, type PeriodeChiffres } from './chiffresPeriode'
 import { revenuNet } from './pricing'
@@ -326,5 +326,41 @@ describe('encaissementsDesFactures — les factures écrites à la main', () => 
     )
     expect(s.vide).toBe(false)
     expect(s.encaisse).toBe(150)
+  })
+})
+
+describe('paiementsAVenir', () => {
+  const MAINT = Date.parse('2026-09-23T08:00:00Z')
+  const a = (id: string, quand: string, prix: number, extra: Partial<ReservationAVenir> = {}): ReservationAVenir => ({
+    id, status: 'confirmed', scheduled_at: quand, booked_price: prix, client_name: id, ...extra,
+  })
+
+  it('ne garde que les confirmés dont le créneau n’est pas passé, les plus proches d’abord', () => {
+    const r = paiementsAVenir([
+      a('loin', '2026-09-30T09:00:00Z', 50),
+      a('hier', '2026-09-22T09:00:00Z', 999),
+      a('proche', '2026-09-24T09:00:00Z', 70),
+      { ...a('attente', '2026-09-25T09:00:00Z', 999), status: 'pending' },
+      { ...a('fait', '2026-09-25T09:00:00Z', 999), status: 'done' },
+    ], MAINT)
+    expect(r.nb).toBe(2)
+    expect(r.total).toBe(120)
+    expect(r.prochains.map(p => p.id)).toEqual(['proche', 'loin'])
+  })
+
+  it('applique la remise créneau optimisé et retranche l’acompte déjà reçu', () => {
+    const r = paiementsAVenir([
+      a('x', '2026-09-24T09:00:00Z', 80, { is_smart_slot: true, smart_discount: 10, acompte_statut: 'recu', acompte_montant: 20 }),
+      a('y', '2026-09-25T09:00:00Z', 40, { acompte_statut: 'en_attente', acompte_montant: 15 }),
+    ], MAINT)
+    expect(r.total).toBe(50 + 40)
+  })
+
+  it('limite la liste sans toucher au total', () => {
+    const toutes = Array.from({ length: 8 }, (_, i) => a(`r${i}`, `2026-10-0${i + 1}T09:00:00Z`, 10))
+    const r = paiementsAVenir(toutes, MAINT, 3)
+    expect(r.prochains).toHaveLength(3)
+    expect(r.nb).toBe(8)
+    expect(r.total).toBe(80)
   })
 })

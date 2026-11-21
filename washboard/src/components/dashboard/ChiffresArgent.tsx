@@ -9,8 +9,8 @@ import GraphiqueBarres, { type PointBarre } from '@/components/dashboard/Graphiq
 import { libelleCategorie } from '@/lib/depenses'
 import { deplacer, formaterJour, libelleComparaison, plageDe, type PeriodeChiffres, type PeriodType } from '@/lib/chiffresPeriode'
 import {
-  encaissementsDesFactures, finitAvant, premierJourDeDonnee, serieArgent, totauxArgent,
-  type FactureManuelle, type ReservationArgent,
+  encaissementsDesFactures, finitAvant, paiementsAVenir, premierJourDeDonnee, serieArgent, totauxArgent,
+  type FactureManuelle, type ReservationAVenir,
 } from '@/lib/chiffresArgent'
 import { ecartRelatif } from '@/lib/crmStats'
 import { useT , useLocale } from '@/components/i18n/I18nProvider'
@@ -159,7 +159,7 @@ export default function ChiffresArgent({
   /** Factures écrites à la main, pas encore marquées payées — colonne de gauche sur grand
    *  écran uniquement (écran 7 de la maquette). */
   facturesImpayees?: number
-  bookings: ReservationArgent[]
+  bookings: ReservationAVenir[]
   /** Factures écrites à la main et marquées payées (voir `encaissementsDesFactures`). */
   facturesManuelles?: FactureManuelle[]
   periode: PeriodeChiffres
@@ -205,6 +205,10 @@ export default function ChiffresArgent({
     })()
     return () => { annule = true }
   }, [hasCompta, cle, plage.debut, plage.fin, plagePrec.debut, plagePrec.fin])
+
+  // L'argent attendu : rendez-vous confirmés à venir. Indépendant de la période choisie, et
+  // jamais additionné à l'encaissé (il n'est pas rentré).
+  const aVenir = useMemo(() => paiementsAVenir(bookings, maintenant), [bookings, maintenant])
 
   const premierJour = useMemo(() => premierJourDeDonnee(bookings), [bookings])
 
@@ -351,6 +355,50 @@ export default function ChiffresArgent({
     />
   )
 
+  const blocAVenir = (
+    <div>
+      <div className="flex items-baseline justify-between px-0.5 pb-2">
+        <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{t('Paiements à venir')}</span>
+        {aVenir.nb > 0 && (
+          <span className={`text-[12.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+            {aVenir.nb > 1 ? t('{n} rendez-vous confirmés', { n: aVenir.nb }) : t('{n} rendez-vous confirmé', { n: aVenir.nb })}
+          </span>
+        )}
+      </div>
+      <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] overflow-hidden">
+        {aVenir.nb === 0 ? (
+          <p className={`text-[13px] ${corps} text-[color:var(--v2-color-gris)] text-center py-6 px-4`}>
+            {t('Rien à encaisser pour le moment : aucun rendez-vous confirmé à venir.')}
+          </p>
+        ) : (
+          <>
+            <div className="px-4 pt-3.5 pb-2.5 flex flex-col gap-0.5">
+              <span className={`text-[26px] leading-none ${hero}`}>{euros(aVenir.total)}</span>
+              <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                {t('Pas encore dans votre encaissé : il y entre quand vous terminez le rendez-vous.')}
+              </span>
+            </div>
+            <ul className="px-4 divide-y divide-[color:var(--v2-filet)] border-t border-[color:var(--v2-filet)]">
+              {aVenir.prochains.map(p => (
+                <li key={p.id} className="flex items-center gap-2.5 py-2.5">
+                  <span className="flex-1 min-w-0 flex flex-col gap-px">
+                    <span className={`text-[14.5px] ${corpsFort} truncate`}>{p.client || '—'}</span>
+                    <span className={`text-[12px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                      {new Date(p.quand).toLocaleDateString(loc, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Paris' })}
+                      {' · '}
+                      {new Date(p.quand).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })}
+                    </span>
+                  </span>
+                  <span className={`text-[14.5px] ${corpsFort} tabular-nums shrink-0`}>{euros(p.montant)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </div>
+  )
+
   const blocDepenses = !hasCompta ? <ComptaVerrouillee /> : (
     <div>
       <div className="flex items-baseline justify-between px-0.5 pb-2">
@@ -428,6 +476,7 @@ export default function ChiffresArgent({
             <div className="rounded-[var(--v2-radius-surface)] bg-[color:var(--v2-color-surface)] border border-[color:var(--v2-filet)] px-4 py-3.5">
               {blocGrapheContenu}
             </div>
+            {blocAVenir}
             {blocDepenses}
             {blocFacturesLiens}
           </div>
@@ -443,6 +492,7 @@ export default function ChiffresArgent({
             </div>
           </div>
 
+          {blocAVenir}
           {blocDepenses}
           {blocFacturesLiens}
         </>

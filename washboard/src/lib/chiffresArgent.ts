@@ -233,3 +233,46 @@ export function premierJourDeDonnee(reservations: { scheduled_at: string }[]): s
 export function finitAvant(p: PeriodeChiffres, jour: string | null): boolean {
   return !!jour && plageDe(p).fin < jour
 }
+
+/** Un rendez-vous confirmé dont l'argent n'est pas encore rentré. */
+export type ReservationAVenir = ReservationArgent & {
+  id: string
+  client_name?: string | null
+  /** Acompte déjà versé : il est rentré, il ne reste donc pas « à venir ». */
+  acompte_montant?: number | null
+  acompte_statut?: 'en_attente' | 'recu' | null
+}
+
+export type PaiementAVenir = { id: string; client: string; quand: string; montant: number }
+
+export type PaiementsAVenir = {
+  /** Total de ce qui reste à encaisser sur les rendez-vous confirmés à venir. */
+  total: number
+  nb: number
+  /** Les plus proches d'abord, limités à `limite`. */
+  prochains: PaiementAVenir[]
+}
+
+/** Les paiements que le laveur peut attendre : ses rendez-vous CONFIRMÉS dont le créneau n'est
+ *  pas passé. Ils entreront dans l'« Encaissé » quand il les terminera (`status = 'done'`) ;
+ *  d'ici là ce n'est pas de l'argent reçu, d'où un bloc séparé et jamais additionné au chiffre
+ *  de la période. Même prix net que l'encaissé (`revenuNet`), moins l'acompte déjà versé. Les
+ *  demandes encore en attente de réponse (`pending`) ne comptent pas : rien n'est accepté. */
+export function paiementsAVenir(
+  reservations: ReservationAVenir[], maintenant: number, limite = 5,
+): PaiementsAVenir {
+  const lignes: PaiementAVenir[] = []
+  for (const b of reservations) {
+    if (b.status !== 'confirmed') continue
+    if (new Date(b.scheduled_at).getTime() < maintenant) continue
+    const verse = b.acompte_statut === 'recu' ? Number(b.acompte_montant ?? 0) : 0
+    const montant = Math.max(0, netDe(b) - (Number.isFinite(verse) ? verse : 0))
+    lignes.push({ id: b.id, client: b.client_name?.trim() || '', quand: b.scheduled_at, montant })
+  }
+  lignes.sort((a, b) => a.quand.localeCompare(b.quand))
+  return {
+    total: lignes.reduce((s, l) => s + l.montant, 0),
+    nb: lignes.length,
+    prochains: lignes.slice(0, limite),
+  }
+}
