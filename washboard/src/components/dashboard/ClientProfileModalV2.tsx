@@ -7,7 +7,7 @@ import {
   X, Phone, Mail, MapPin, MoreHorizontal, Star, BellRing, Car, Pencil, ListChecks, Users, BellOff,
   Download, Eraser, Check,
 } from 'lucide-react'
-import type { ClientProfile } from '@/lib/clientProfile'
+import { prestationLibelle, type ClientProfile } from '@/lib/clientProfile'
 import { timelineClient } from '@/lib/clientTimeline'
 import { FUSEAU } from '@/lib/dateUtils'
 import { statutAffiche, type StatutAffiche } from '@/lib/cloture'
@@ -918,7 +918,7 @@ export default function ClientProfileModalV2({
                       {e.type === 'prestation' ? (
                         <>
                           <span className="flex items-baseline justify-between gap-2">
-                            <span className={`truncate text-[14.5px] ${nom}`}>{e.booking.services?.name ?? 'Prestation'}</span>
+                            <span className={`truncate text-[14.5px] ${nom}`}>{prestationLibelle(e.booking)}</span>
                             <span className={`shrink-0 text-[14px] ${corpsFort} tabular-nums`}>
                               {e.booking.booked_price ?? e.booking.services?.price ?? 0} €
                             </span>

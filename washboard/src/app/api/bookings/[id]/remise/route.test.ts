@@ -71,6 +71,13 @@ describe('POST /api/bookings/[id]/remise', () => {
     expect(sendRemiseLaveur).toHaveBeenCalledWith(expect.objectContaining({ to: 'client@example.com', ancienPrix: 99, nouveauPrix: 79, serviceName: 'Lavage complet' }))
   })
 
+  it('l’email nomme aussi les prestations ajoutées au rendez-vous', async () => {
+    const ajoutee = { id: 'prestation:p2', label: 'Lavage intérieur', price: 30, category: 'prestation' }
+    booking = { ...booking, vehicles_detail: [{ type: 'voiture', count: 1, unit_price: 69, addons: [ajoutee] }], selected_addons: [ajoutee] }
+    await POST(requete({ prix: 79 }), { params })
+    expect(sendRemiseLaveur).toHaveBeenCalledWith(expect.objectContaining({ serviceName: 'Lavage complet + Lavage intérieur' }))
+  })
+
   it('rendez-vous saisi par le laveur : la remise est gardée, aucun email', async () => {
     booking = { ...booking, saisie_par_laveur: true }
     const res = await POST(requete({ prix: 79 }), { params })

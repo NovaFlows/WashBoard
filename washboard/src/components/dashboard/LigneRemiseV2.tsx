@@ -131,8 +131,8 @@ export default function LigneRemiseV2({ rdv, onMaj }: {
               type="button"
               onClick={enregistrer}
               disabled={enCours || remiseSaisie === null}
-              className={`h-10 flex-1 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} text-white disabled:opacity-50 transition-transform active:scale-[.97]`}
-              style={{ background: 'var(--v2-color-accent)' }}
+              className={`h-10 flex-1 rounded-[var(--v2-radius-bouton)] text-[13.5px] ${corpsFort} disabled:opacity-50 transition-transform active:scale-[.97]`}
+              style={{ background: 'var(--v2-color-accent)', color: 'var(--v2-color-sur-accent)' }}
             >
               {enCours ? t('Enregistrement…') : t('Enregistrer')}
             </button>

@@ -18,17 +18,18 @@ type Reservation = {
 
 export type LigneDetail = { cle: string; libelle: string; montant: number; genre: 'principale' | 'prestation' | 'option' | 'deplacement' }
 
-/** Options choisies, une entrée par option avec le nombre de véhicules qui la portent. */
-function optionsChoisies(b: Reservation): { option: ServiceAddon; fois: number }[] {
+/** Options choisies, une entrée par option avec le nombre de véhicules qui la portent et leur
+ *  montant cumulé : une même prestation ajoutée n'a pas le même prix sur une voiture et un SUV. */
+function optionsChoisies(b: Reservation): { option: ServiceAddon; fois: number; montant: number }[] {
   const vehicules = b.vehicles_detail ?? []
   const brutes = optionsParVehicule(vehicules)
     ? vehicules.flatMap(v => (v.addons ?? []).map(option => ({ option, fois: Math.max(1, v.count ?? 1) })))
     : (b.selected_addons ?? []).map(option => ({ option, fois: 1 }))
-  const regroupees = new Map<string, { option: ServiceAddon; fois: number }>()
+  const regroupees = new Map<string, { option: ServiceAddon; fois: number; montant: number }>()
   for (const { option, fois } of brutes) {
     const cle = option.id ?? option.label
     const deja = regroupees.get(cle)
-    regroupees.set(cle, { option, fois: (deja?.fois ?? 0) + fois })
+    regroupees.set(cle, { option: deja?.option ?? option, fois: (deja?.fois ?? 0) + fois, montant: (deja?.montant ?? 0) + Number(option.price ?? 0) * fois })
   }
   return [...regroupees.values()]
 }
@@ -38,6 +39,12 @@ export function nomsPrestations(b: Reservation): string[] {
   const principale = b.services?.name
   const supplementaires = optionsChoisies(b).filter(o => estPrestationSupplementaire(o.option)).map(o => o.option.label)
   return [...(principale ? [principale] : []), ...supplementaires]
+}
+
+/** Toutes les prestations sur une ligne, « Lavage extérieur + Lavage intérieur » : emails, reçu,
+ *  accueil, historique. `repli` si le rendez-vous n'a plus de prestation principale. */
+export function libellePrestations(b: Reservation, repli = 'Lavage'): string {
+  return nomsPrestations(b).join(' + ') || repli
 }
 
 /** Détail du prix, ligne par ligne : prestation, prestations ajoutées, options, déplacement. */
@@ -55,12 +62,12 @@ export function lignesDetailPrix(b: Reservation): LigneDetail[] {
   }
   const choisies = optionsChoisies(b)
   for (const genre of ['prestation', 'option'] as const) {
-    for (const { option, fois } of choisies) {
+    for (const { option, fois, montant } of choisies) {
       if (estPrestationSupplementaire(option) !== (genre === 'prestation')) continue
       lignes.push({
         cle: `${genre}:${option.id ?? option.label}`,
         libelle: fois > 1 ? `${option.label} × ${fois}` : option.label,
-        montant: Number(option.price ?? 0) * fois,
+        montant,
         genre,
       })
     }

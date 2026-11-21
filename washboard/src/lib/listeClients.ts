@@ -14,7 +14,7 @@
 // ses documents restent lisibles partout ailleurs (Chiffres, une fiche ouverte par un autre
 // chemin) — seul ce fichier-ci le cache.
 
-import { buildClientProfile, cleClient, type ClientBooking, type ClientDocument, type ClientReglages } from './clientProfile'
+import { buildClientProfile, cleClient, prestationLibelle, type ClientBooking, type ClientDocument, type ClientReglages } from './clientProfile'
 import { estSourceDecouverte, type SourceDecouverte } from './sourceDecouverte'
 
 export type RendezVousCourt = { service: string; date: string }
@@ -47,7 +47,7 @@ export type ResumeClient = {
   source: SourceDecouverte | null
 }
 
-const court = (b: ClientBooking): RendezVousCourt => ({ service: b.services?.name ?? 'Prestation', date: b.scheduled_at })
+const court = (b: ClientBooking): RendezVousCourt => ({ service: prestationLibelle(b), date: b.scheduled_at })
 
 /** Un client par email (ou par téléphone à défaut), le plus récemment actif en premier. */
 export function listeClients(

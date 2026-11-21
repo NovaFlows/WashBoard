@@ -21,6 +21,7 @@ import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ConfirmerClotureV2 from '@/components/dashboard/ConfirmerClotureV2'
 import LigneAcompteV2 from '@/components/dashboard/LigneAcompteV2'
 import LigneRemiseV2 from '@/components/dashboard/LigneRemiseV2'
+import LignePrestationsV2, { type PrestationProposee } from '@/components/dashboard/LignePrestationsV2'
 import { Feuille } from '@/components/dashboard/FeuilleV2'
 import RendezVousManuelV2 from '@/components/dashboard/RendezVousManuelV2'
 import ProposerCreneauV2, { type OrigineCreneau } from '@/components/dashboard/ProposerCreneauV2'
@@ -250,6 +251,23 @@ function origineDuTrou(precedent: Booking, suivant: Booking): OrigineCreneau {
   return { position: null, adresse: null, voisin: 'précédent' }
 }
 
+type PrestationsFiche = {
+  catalogue: PrestationProposee[]
+  debutSuivant: string | null
+  onMaj: (champs: Pick<Booking, 'booked_price' | 'vehicles_detail' | 'selected_addons' | 'ends_at'>) => void
+}
+
+/** Début du rendez-vous suivant le même jour, pour prévenir qu'une prestation ajoutée le fait
+ *  déborder. Seulement pour un laveur seul : en équipe, un autre peut le prendre. */
+function debutDuSuivant(b: Booking, tous: Booking[], teamSize: number): string | null {
+  if (teamSize > 1) return null
+  const debut = new Date(b.scheduled_at)
+  const suivants = tous
+    .filter(x => x.id !== b.id && x.status !== 'cancelled' && isSameDay(new Date(x.scheduled_at), debut) && new Date(x.scheduled_at).getTime() > debut.getTime())
+    .sort((x, y) => new Date(x.scheduled_at).getTime() - new Date(y.scheduled_at).getTime())
+  return suivants[0]?.scheduled_at ?? null
+}
+
 function finRendezVous(b: Booking): Date {
   const duree = effectiveDuration((b.services?.duration_minutes ?? 60) + addonsDuration(b.selected_addons), b.vehicle_count)
   return new Date(new Date(b.scheduled_at).getTime() + duree * 60_000)
@@ -346,7 +364,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
   // commentaire en tête de fichier et `useRendezVousFiche`.
   const {
     selected, setSelected, openBooking,
-    updating, majPrix, majAcompte,
+    updating, majPrix, majAcompte, majPrestations,
     editNotes, setEditNotes, notesSaving, saveNotes,
     rescheduling, setRescheduling, startReschedule,
     editDate, setEditDate, editTime, setEditTime, rescheduleSaving, rescheduleErr, saveReschedule,
@@ -354,6 +372,11 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
     clotureDemandee, setClotureDemandee,
     factureEnCours, factureMsg, emettreFactureManuelle,
   } = useRendezVousFiche({ bookings, setBookings, unavailabilities: unavails, teamSize })
+
+  // Ajout / retrait de prestation dans la fiche ouverte (LignePrestationsV2).
+  const prestationsFiche: PrestationsFiche | null = selected
+    ? { catalogue: services, debutSuivant: debutDuSuivant(selected, bookings, teamSize), onMaj: champs => majPrestations(selected.id, champs) }
+    : null
 
   // Arrivée depuis une notification : `?rdv=<id>` ouvre la fiche tout de
   // suite, positionnée sur le bon jour — même besoin que
@@ -723,7 +746,8 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                     factureMsg={factureMsg}
                     emettreFactureManuelle={emettreFactureManuelle}
                     majPrix={majPrix}
-          majAcompte={majAcompte}
+                    majAcompte={majAcompte}
+                    prestations={prestationsFiche}
                   />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2.5 px-6 text-center">
@@ -1240,6 +1264,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
           emettreFactureManuelle={emettreFactureManuelle}
           majPrix={majPrix}
           majAcompte={majAcompte}
+          prestations={prestationsFiche}
         />
       )}
     </div>
@@ -1338,6 +1363,7 @@ function DetailRendezVous({
   factureEnCours, factureMsg, emettreFactureManuelle,
   majPrix,
   majAcompte,
+  prestations,
 }: {
   booking: Booking
   onClose: () => void
@@ -1365,6 +1391,7 @@ function DetailRendezVous({
   emettreFactureManuelle: (id: string) => void
   majPrix: (id: string, champs: { booked_price: number; remise_laveur: number }) => void
   majAcompte: (id: string, champs: { status: 'pending' | 'cancelled' | 'confirmed' | 'done'; acompte_echeance: string | null }) => void
+  prestations: PrestationsFiche | null
 }) {
   const loc = useLocale()
   const tr = useT()
@@ -1514,14 +1541,16 @@ function DetailRendezVous({
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 pt-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
-          <div className={`flex items-center justify-between rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] px-3.5 py-3`}>
-            <span className={`text-[14px] ${corps}`}>{lignePrestation(b)}</span>
-            <span className={`text-[15px] ${corpsFort} tabular-nums`}>
+          <div className={`flex items-center justify-between gap-3 rounded-[var(--v2-radius-carte)] border border-[color:var(--v2-filet)] px-3.5 py-3`}>
+            <span className={`min-w-0 text-[14px] ${corps}`}>{lignePrestation(b)}</span>
+            <span className={`shrink-0 whitespace-nowrap text-[15px] ${corpsFort} tabular-nums`}>
               {remise ? formatPrice(prix) : `${prix} €`}
             </span>
           </div>
 
           <DetailPrixV2 b={b} className="mt-3 space-y-1.5 px-1" />
+
+          {prestations && <LignePrestationsV2 key={b.id} rdv={b} catalogue={prestations.catalogue} debutSuivant={prestations.debutSuivant} onMaj={prestations.onMaj} />}
 
           <LigneRemiseV2 rdv={b} onMaj={champs => majPrix(b.id, champs)} />
 
@@ -1822,6 +1851,7 @@ function FicheRdvBureauV2({
   factureEnCours, factureMsg, emettreFactureManuelle,
   majPrix,
   majAcompte,
+  prestations,
 }: {
   booking: Booking
   updating: boolean
@@ -1848,6 +1878,7 @@ function FicheRdvBureauV2({
   emettreFactureManuelle: (id: string) => void
   majPrix: (id: string, champs: { booked_price: number; remise_laveur: number }) => void
   majAcompte: (id: string, champs: { status: 'pending' | 'cancelled' | 'confirmed' | 'done'; acompte_echeance: string | null }) => void
+  prestations: PrestationsFiche | null
 }) {
   const loc = useLocale()
   const tr = useT()
@@ -2014,6 +2045,8 @@ function FicheRdvBureauV2({
         {/* Même détail que la feuille du téléphone (`DetailRendezVous`) : sans lui, le laveur voyait
             un total sans savoir d'où venaient les options et les frais de déplacement. */}
         <DetailPrixV2 b={b} className="mt-4 space-y-1.5" />
+
+        {prestations && <LignePrestationsV2 key={b.id} rdv={b} catalogue={prestations.catalogue} debutSuivant={prestations.debutSuivant} onMaj={prestations.onMaj} />}
 
         <LigneRemiseV2 rdv={b} onMaj={champs => majPrix(b.id, champs)} />
 
