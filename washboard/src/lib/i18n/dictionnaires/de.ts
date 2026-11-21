@@ -37,7 +37,8 @@ import { tp1 } from './de/tp1'
 import { tq0 } from './de/tq0'
 import { parrainage } from './de/parrainage'
 import { optionsRubriques } from './de/optionsRubriques'
+import { paiementsAVenir } from './de/paiementsAVenir'
 import { tr0 } from './de/tr0'
 
 // Une partie par fichier : pour traduire un nouvel écran, ajouter `./de/<partie>.ts` ici.
-export const de: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3, ...demo, ...demo2, ...demo3, ...tb0, ...tb1, ...tb2, ...tb3, ...tb4, ...tb5, ...tc0, ...td0, ...te0, ...tf0, ...tg0, ...th0, ...ti0, ...tj0, ...tk0, ...tl0, ...tl1, ...tm0, ...tn0, ...tn1, ...tn2, ...tp0, ...tp1, ...tq0, ...tr0, ...parrainage, ...optionsRubriques }
+export const de: Dictionnaire = { ...commun, ...landing, ...tableau, ...reglages, ...meteo, ...messages, ...landing2, ...faq, ...landing3, ...demo, ...demo2, ...demo3, ...tb0, ...tb1, ...tb2, ...tb3, ...tb4, ...tb5, ...tc0, ...td0, ...te0, ...tf0, ...tg0, ...th0, ...ti0, ...tj0, ...tk0, ...tl0, ...tl1, ...tm0, ...tn0, ...tn1, ...tn2, ...tp0, ...tp1, ...tq0, ...tr0, ...parrainage, ...optionsRubriques, ...paiementsAVenir }
