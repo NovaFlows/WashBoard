@@ -7,6 +7,7 @@ import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouille
 import './recu.css'
 import { adresseAvecLieu } from '@/lib/centreAuto'
 import { libellePrestations } from '@/lib/detailRendezVous'
+import { FUSEAU } from '@/lib/dateUtils'
 import { getLangue } from '@/lib/i18n/serveur'
 import { LOCALES_INTL } from '@/lib/i18n/langues'
 import { getT } from '@/lib/i18n/serveur'
@@ -54,9 +55,9 @@ export default async function ConfirmationPage({ params }: Props) {
   const service = booking.services as { name: string; duration_minutes: number } | null
 
   const date         = new Date(booking.scheduled_at)
-  const formattedDate = date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const time          = date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
-  const today         = new Date().toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' })
+  const formattedDate = date.toLocaleDateString(loc, { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const time          = date.toLocaleTimeString(loc, { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const today         = new Date().toLocaleDateString(loc, { timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric' })
   const ref           = booking.id.slice(0, 8).toUpperCase()
 
   const discount   = Number(booking.smart_discount ?? 0)

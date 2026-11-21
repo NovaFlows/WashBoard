@@ -2,6 +2,7 @@ import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { adresseAvecLieu } from '@/lib/centreAuto'
 import { nomsPrestations } from '@/lib/detailRendezVous'
+import { FUSEAU } from '@/lib/dateUtils'
 import type { ServiceAddon } from '@/types'
 import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 
@@ -69,9 +70,9 @@ export default function BookingPDF({ booking, t = sansTraduction, loc = 'fr-FR' 
   const service = booking.services
 
   const date         = new Date(booking.scheduled_at)
-  const formattedDate = date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const time          = date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
-  const today         = new Date().toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' })
+  const formattedDate = date.toLocaleDateString(loc, { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const time          = date.toLocaleTimeString(loc, { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const today         = new Date().toLocaleDateString(loc, { timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric' })
   const ref           = booking.id.slice(0, 8).toUpperCase()
 
   const count           = booking.vehicle_count ?? 1

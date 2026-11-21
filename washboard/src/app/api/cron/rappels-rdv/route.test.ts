@@ -8,6 +8,7 @@ let rdvs: Fiche[]
 let laveur: Fiche | null
 let emailEchoue: false | { name: string }
 let envois: { to: string; heures: number }[]
+let prestationsEnvoyees: string[]
 let ecritures: { id?: string; valeurs: Record<string, unknown> }[]
 
 function builder(table: string) {
@@ -33,9 +34,10 @@ vi.mock('@/lib/cronRequest', () => ({
   createAdminClient: () => ({ from: (t: string) => builder(t) }),
 }))
 vi.mock('@/lib/email', () => ({
-  sendRappelRdv: async (p: { to: string; heures: number }) => {
+  sendRappelRdv: async (p: { to: string; heures: number; serviceName: string }) => {
     if (emailEchoue) return { data: null, error: emailEchoue }
     envois.push({ to: p.to, heures: p.heures })
+    prestationsEnvoyees.push(p.serviceName)
     return { data: { id: 'x' }, error: null }
   },
 }))
@@ -60,6 +62,7 @@ beforeEach(() => {
   }
   emailEchoue = false
   envois = []
+  prestationsEnvoyees = []
   ecritures = []
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -73,6 +76,14 @@ describe('GET /api/cron/rappels-rdv', () => {
     expect(body).toMatchObject({ ok: true, envoyes: 1, echecs: 0 })
     expect(envois).toEqual([{ to: 'julie@example.fr', heures: 24 }])
     expect(ecritures).toEqual([{ id: 'b1', valeurs: { rappels_rdv_envoyes: [24] } }])
+    expect(prestationsEnvoyees).toEqual(['Lavage complet'])
+  })
+
+  it('nomme toutes les prestations, y compris celles ajoutées au rendez-vous', async () => {
+    const ajoutee = { id: 'prestation:p2', label: 'Lavage intérieur', price: 30, category: 'prestation' }
+    rdvs = [{ ...RDV(), vehicles_detail: [{ type: 'voiture', count: 1, unit_price: 40, addons: [ajoutee] }], selected_addons: [ajoutee] }]
+    await GET(requete())
+    expect(prestationsEnvoyees).toEqual(['Lavage complet + Lavage intérieur'])
   })
 
   it('n\'envoie rien avant l\'heure du rappel', async () => {
