@@ -16,7 +16,7 @@ import type { AcomptePublic } from '@/lib/acompte'
 import type { Washer, Service, ServiceCategory, Availability } from '@/types'
 import type { AbonnementInfo } from '@/lib/plan'
 import type { CentreAutoPublic } from '@/lib/centreAuto'
-import { paysDuTelephone } from '@/lib/phone'
+import { paysDuTelephone, whatsappDigits } from '@/lib/phone'
 import { getT } from '@/lib/i18n/serveur'
 type Props = {
  washer: Pick<Washer, 'id' | 'name' | 'slug' | 'phone' | 'logo_url' | 'welcome_message' | 'brand_color' | 'background_theme' | 'website_url' | 'google_place_id' | 'base_address' | 'team_size' | 'travel_fee_mode' | 'travel_fee_tiers' | 'reservation_jour_meme' | 'silhouettes_vehicules' | 'demander_type_vehicule'> & AbonnementInfo & { profile_updated_at?: string | null; is_preview?: boolean }
@@ -216,7 +216,7 @@ export default async function LegacyBookingPage({washer, services, categories, a
         {washer.phone && !plafondAtteint && (
           <div className="mt-6 flex justify-center">
             <a
-              href={`https://wa.me/${washer.phone.replace(/\D/g, '').replace(/^0/, '33')}`}
+              href={`https://wa.me/${whatsappDigits(washer.phone)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-5 py-3 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold rounded-xl transition-colors"

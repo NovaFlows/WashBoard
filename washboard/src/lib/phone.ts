@@ -59,6 +59,48 @@ const ESPAGNE = /^\+34[6-9]\d{8}$/
 /** Un mobile espagnol : +34 6xx xxx xxx, ou 71x à 74x. */
 export const MOBILE_ESPAGNE = /^\+34(?:6\d{8}|7[1-4]\d{7})$/
 
+// Outre-mer (2026-11-26, demande d'Azura, laveur à Cayenne). Un numéro des DOM fait partie du plan
+// français : il s'écrit et se stocke en 10 chiffres (0694 12 34 56), comme un numéro de métropole, et
+// s'appelle tel quel depuis la France entière. Seule sa forme INTERNATIONALE diffère : +594 694 12 34 56,
+// pas +33 694… (numéro qui n'existe pas). Avant ce correctif, le code de confirmation par SMS et les
+// liens WhatsApp partaient en +33 : le laveur guyanais ne recevait rien et ses clients tombaient dans le vide.
+// Le préfixe (les 4 premiers chiffres) dit de quel territoire vient le numéro (plan de l'Arcep).
+
+/** Indicatif international d'un numéro d'outre-mer, d'après ses 4 premiers chiffres (forme 0XXX). */
+const INDICATIF_OUTRE_MER: Readonly<Record<string, string>> = {
+  // Guadeloupe, Saint-Martin, Saint-Barthélemy
+  '0590': '590', '0690': '590', '0691': '590',
+  // Guyane
+  '0594': '594', '0694': '594',
+  // Martinique
+  '0596': '596', '0696': '596', '0697': '596',
+  // La Réunion et Mayotte (même indicatif)
+  '0262': '262', '0263': '262', '0692': '262', '0693': '262', '0269': '262', '0639': '262',
+}
+
+/** L'indicatif d'outre-mer d'un numéro à 10 chiffres (0694…), ou `null` pour un numéro de métropole. */
+function indicatifOutreMer(dixChiffres: string): string | null {
+  return /^0\d{9}$/.test(dixChiffres) ? INDICATIF_OUTRE_MER[dixChiffres.slice(0, 4)] ?? null : null
+}
+
+/** « +594 694 12 34 56 » (ou 00594…, ou 594694123456 collé) → 0694123456, si le préfixe va bien avec
+ *  l'indicatif ; `undefined` si ce n'est pas un indicatif d'outre-mer, `null` s'il l'est mais que le
+ *  reste ne colle pas (on ne devine pas). */
+function depuisOutreMer(n: string): string | null | undefined {
+  const m = /^(?:\+|00)?(590|594|596|262)(\d+)$/.exec(n)
+  if (!m || (!n.startsWith('+') && !n.startsWith('00') && n.length !== 12)) return undefined
+  const national = '0' + m[2]
+  return national.length === 10 && indicatifOutreMer(national) === m[1] ? national : null
+}
+
+/** Forme internationale (E.164, sans « + ») d'un numéro canonique : 33… en métropole, 594… en
+ *  Guyane, 262… à La Réunion, etc. ; les numéros déjà en +32/+41… sont rendus sans leur « + ». */
+export function chiffresInternationaux(canonique: string): string {
+  const chiffres = canonique.replace(/\D/g, '')
+  if (!chiffres.startsWith('0')) return chiffres
+  return (indicatifOutreMer(chiffres) ?? '33') + chiffres.slice(1)
+}
+
 /** Forme canonique d'un numéro : 10 chiffres pour un numéro français, +32… pour un numéro belge,
  *  +41… pour un numéro suisse. Renvoie `null` si l'entrée n'est pas exploitable — l'appelant décide
  *  quoi en faire, on ne devine pas. `pays` ('BE', 'CH') permet de lire un numéro saisi à la
@@ -109,6 +151,10 @@ export function normalizePhone(brut: string | null | undefined, pays: PaysTeleph
     if (m && QUEBEC.test('+1' + m[1])) return '+1' + m[1]
   }
 
+  // Outre-mer : +594, +590, +596, +262 → 10 chiffres, comme un numéro de métropole.
+  const dom = depuisOutreMer(n)
+  if (dom !== undefined) return dom
+
   if (n.startsWith('+33')) n = '0' + n.slice(3)
   else if (n.startsWith('0033')) n = '0' + n.slice(4)
   else if (n.startsWith('33') && n.length === 11) n = '0' + n.slice(2)
@@ -132,8 +178,8 @@ export function isValidPhone(brut: string | null | undefined): boolean {
  *  cette extraction — l'appelant doit vérifier que le téléphone existe avant
  *  d'appeler cette fonction, elle ne le fait pas non plus. */
 export function whatsappDigits(brut: string): string {
-  const chiffres = brut.replace(/\D/g, '')
-  return chiffres.startsWith('0') ? '33' + chiffres.slice(1) : chiffres
+  // Outre-mer (2026-11-26) : 0694… devient 594694…, plus 33694… (numéro inexistant).
+  return chiffresInternationaux(brut)
 }
 
 /** Est-ce un mobile (06 ou 07 en France, 04xx en Belgique, 07x en Suisse) ? Utile quand un SMS doit

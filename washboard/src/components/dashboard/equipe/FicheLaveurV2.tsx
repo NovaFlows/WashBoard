@@ -16,6 +16,7 @@ import EcranEquipe, { Carte, Initiales, LigneInfo, Point, Section } from './Ecra
 import ChoixDate, { dateJour } from './ChoixDate'
 import BlocAbonnementFiche from './BlocAbonnementFiche'
 import type { ParrainageFiche } from '@/lib/ficheLaveurDonnees'
+import { whatsappDigits } from '@/lib/phone'
 
 // Fiche d'un laveur, espace équipe (2026-11-05). On y arrive surtout en touchant la
 // notification « nouvel inscrit » : d'abord de quoi appeler et quoi dire, ensuite le
@@ -24,10 +25,8 @@ import type { ParrainageFiche } from '@/lib/ficheLaveurDonnees'
 const TON_POINT = { ok: 'vert', attention: 'ambre', alerte: 'rouge', neutre: 'gris' } as const
 const ETAPES = ['Ouvrent la page', 'Vont aux créneaux', 'Donnent leurs coordonnées', 'Réservent']
 
-function numeroWhatsApp(tel: string): string {
-  const chiffres = tel.replace(/\D/g, '')
-  return chiffres.startsWith('0') ? '33' + chiffres.slice(1) : chiffres
-}
+/** Même conversion que partout ailleurs (outre-mer compris : 0694… → 594694…). */
+const numeroWhatsApp = whatsappDigits
 
 /** Enregistre une ligne du suivi. Renvoie le message d'erreur, ou null. */
 async function enregistrerSuivi(washerId: string, corpsRequete: Record<string, unknown>): Promise<string | null> {
