@@ -6,7 +6,7 @@
 // pourrait ouvrir trois comptes d'essai avec le même téléphone. On stocke donc
 // toujours la même forme : 10 chiffres commençant par 0.
 
-export type PaysTelephone = 'FR' | 'BE' | 'CH' | 'LU' | 'QC'
+export type PaysTelephone = 'FR' | 'BE' | 'CH' | 'LU' | 'QC' | 'DE' | 'ES'
 
 // Ouverture à la Belgique (2026-11-11). Un numéro français reste stocké en 10 chiffres (06…) ;
 // un numéro belge est stocké en forme internationale (+32470123456) : c'est la seule façon de ne
@@ -44,6 +44,63 @@ const INDICATIFS_QUEBEC = '(?:263|354|367|418|438|450|468|514|579|581|819|873)'
 /** Un numéro québécois en forme internationale : +1, un indicatif régional du Québec, puis 7 chiffres. */
 const QUEBEC = new RegExp(`^\\+1${INDICATIFS_QUEBEC}[2-9]\\d{6}$`)
 
+// Allemagne et Espagne (2026-11-15). Allemagne : +49 puis 7 à 13 chiffres, sans le zéro de tête (0176 12345678
+// s'écrit +49 176 12345678) ; un mobile commence par 15, 16 ou 17 (0151…, 0160…, 0170…). Espagne : +34 puis
+// 9 chiffres commençant par 6 à 9, sans zéro de tête ; un mobile commence par 6, ou par 71 à 74. Comme pour
+// le Luxembourg, on ne les lit SANS « + » que là où l'on sait de quel pays on parle (liste de l'inscription) :
+// un numéro espagnol à 9 chiffres ressemble à un mobile luxembourgeois.
+
+/** Un numéro allemand en forme internationale : +49, premier chiffre 1 à 9, 7 à 13 chiffres au total. */
+const ALLEMAGNE = /^\+49[1-9]\d{6,12}$/
+/** Un mobile allemand : +49 15x, 16x ou 17x, puis 7 ou 8 chiffres. */
+export const MOBILE_ALLEMAGNE = /^\+491[567]\d{8,9}$/
+/** Un numéro espagnol en forme internationale : +34 puis 9 chiffres commençant par 6 à 9. */
+const ESPAGNE = /^\+34[6-9]\d{8}$/
+/** Un mobile espagnol : +34 6xx xxx xxx, ou 71x à 74x. */
+export const MOBILE_ESPAGNE = /^\+34(?:6\d{8}|7[1-4]\d{7})$/
+
+// Outre-mer (2026-11-26, demande d'Azura, laveur à Cayenne). Un numéro des DOM fait partie du plan
+// français : il s'écrit et se stocke en 10 chiffres (0694 12 34 56), comme un numéro de métropole, et
+// s'appelle tel quel depuis la France entière. Seule sa forme INTERNATIONALE diffère : +594 694 12 34 56,
+// pas +33 694… (numéro qui n'existe pas). Avant ce correctif, le code de confirmation par SMS et les
+// liens WhatsApp partaient en +33 : le laveur guyanais ne recevait rien et ses clients tombaient dans le vide.
+// Le préfixe (les 4 premiers chiffres) dit de quel territoire vient le numéro (plan de l'Arcep).
+
+/** Indicatif international d'un numéro d'outre-mer, d'après ses 4 premiers chiffres (forme 0XXX). */
+const INDICATIF_OUTRE_MER: Readonly<Record<string, string>> = {
+  // Guadeloupe, Saint-Martin, Saint-Barthélemy
+  '0590': '590', '0690': '590', '0691': '590',
+  // Guyane
+  '0594': '594', '0694': '594',
+  // Martinique
+  '0596': '596', '0696': '596', '0697': '596',
+  // La Réunion et Mayotte (même indicatif)
+  '0262': '262', '0263': '262', '0692': '262', '0693': '262', '0269': '262', '0639': '262',
+}
+
+/** L'indicatif d'outre-mer d'un numéro à 10 chiffres (0694…), ou `null` pour un numéro de métropole. */
+function indicatifOutreMer(dixChiffres: string): string | null {
+  return /^0\d{9}$/.test(dixChiffres) ? INDICATIF_OUTRE_MER[dixChiffres.slice(0, 4)] ?? null : null
+}
+
+/** « +594 694 12 34 56 » (ou 00594…, ou 594694123456 collé) → 0694123456, si le préfixe va bien avec
+ *  l'indicatif ; `undefined` si ce n'est pas un indicatif d'outre-mer, `null` s'il l'est mais que le
+ *  reste ne colle pas (on ne devine pas). */
+function depuisOutreMer(n: string): string | null | undefined {
+  const m = /^(?:\+|00)?(590|594|596|262)(\d+)$/.exec(n)
+  if (!m || (!n.startsWith('+') && !n.startsWith('00') && n.length !== 12)) return undefined
+  const national = '0' + m[2]
+  return national.length === 10 && indicatifOutreMer(national) === m[1] ? national : null
+}
+
+/** Forme internationale (E.164, sans « + ») d'un numéro canonique : 33… en métropole, 594… en
+ *  Guyane, 262… à La Réunion, etc. ; les numéros déjà en +32/+41… sont rendus sans leur « + ». */
+export function chiffresInternationaux(canonique: string): string {
+  const chiffres = canonique.replace(/\D/g, '')
+  if (!chiffres.startsWith('0')) return chiffres
+  return (indicatifOutreMer(chiffres) ?? '33') + chiffres.slice(1)
+}
+
 /** Forme canonique d'un numéro : 10 chiffres pour un numéro français, +32… pour un numéro belge,
  *  +41… pour un numéro suisse. Renvoie `null` si l'entrée n'est pas exploitable — l'appelant décide
  *  quoi en faire, on ne devine pas. `pays` ('BE', 'CH') permet de lire un numéro saisi à la
@@ -74,6 +131,17 @@ export function normalizePhone(brut: string | null | undefined, pays: PaysTeleph
   if (intlLu) return LUXEMBOURG.test(intlLu) ? intlLu : null
   if (pays === 'LU' && /^[2-9]\d{5,8}$/.test(n)) return '+352' + n
 
+  // Allemagne : +49 (ou 0049) — jamais ambigu ; « +49(0)176… » porte un zéro de trop, on le retire.
+  // Saisie à l'allemande (0176 12345678), seulement quand on sait qu'on est en Allemagne.
+  const intlDe = n.startsWith('+49') ? n.replace(/^\+490/, '+49') : n.startsWith('0049') ? '+' + n.slice(2).replace(/^490/, '49') : null
+  if (intlDe) return ALLEMAGNE.test(intlDe) ? intlDe : null
+  if (pays === 'DE' && /^0[1-9]\d{6,12}$/.test(n)) return '+49' + n.slice(1)
+
+  // Espagne : +34 (ou 0034) ; saisie locale (612 34 56 78, sans zéro) seulement quand on sait qu'on est en Espagne.
+  const intlEs = n.startsWith('+34') ? n : n.startsWith('0034') ? '+' + n.slice(2) : null
+  if (intlEs) return ESPAGNE.test(intlEs) ? intlEs : null
+  if (pays === 'ES' && /^[6-9]\d{8}$/.test(n)) return '+34' + n
+
   // Québec : +1 (ou 001) puis un indicatif québécois ; saisie locale, avec ou sans le « 1 » de tête,
   // seulement quand on sait qu'on est au Québec.
   const intlQc = n.startsWith('+1') ? n : n.startsWith('001') ? '+' + n.slice(2) : null
@@ -82,6 +150,10 @@ export function normalizePhone(brut: string | null | undefined, pays: PaysTeleph
     const m = /^1?([2-9]\d{9})$/.exec(n)
     if (m && QUEBEC.test('+1' + m[1])) return '+1' + m[1]
   }
+
+  // Outre-mer : +594, +590, +596, +262 → 10 chiffres, comme un numéro de métropole.
+  const dom = depuisOutreMer(n)
+  if (dom !== undefined) return dom
 
   if (n.startsWith('+33')) n = '0' + n.slice(3)
   else if (n.startsWith('0033')) n = '0' + n.slice(4)
@@ -106,8 +178,8 @@ export function isValidPhone(brut: string | null | undefined): boolean {
  *  cette extraction — l'appelant doit vérifier que le téléphone existe avant
  *  d'appeler cette fonction, elle ne le fait pas non plus. */
 export function whatsappDigits(brut: string): string {
-  const chiffres = brut.replace(/\D/g, '')
-  return chiffres.startsWith('0') ? '33' + chiffres.slice(1) : chiffres
+  // Outre-mer (2026-11-26) : 0694… devient 594694…, plus 33694… (numéro inexistant).
+  return chiffresInternationaux(brut)
 }
 
 /** Est-ce un mobile (06 ou 07 en France, 04xx en Belgique, 07x en Suisse) ? Utile quand un SMS doit
@@ -115,7 +187,7 @@ export function whatsappDigits(brut: string): string {
 export function isMobilePhone(brut: string | null | undefined, pays: PaysTelephone = 'FR'): boolean {
   const n = normalizePhone(brut, pays)
   // Québec : aucun préfixe ne distingue un mobile d'un fixe, tout numéro québécois est accepté.
-  return n !== null && (/^0[67]/.test(n) || MOBILE_BELGE.test(n) || MOBILE_SUISSE.test(n) || MOBILE_LUXEMBOURG.test(n) || QUEBEC.test(n))
+  return n !== null && (/^0[67]/.test(n) || MOBILE_BELGE.test(n) || MOBILE_SUISSE.test(n) || MOBILE_LUXEMBOURG.test(n) || QUEBEC.test(n) || MOBILE_ALLEMAGNE.test(n) || MOBILE_ESPAGNE.test(n))
 }
 
 /** Le pays d'un numéro canonique : « +32… » est belge, « +41… » suisse, le reste français. */
@@ -124,6 +196,8 @@ export function paysDuTelephone(brut: string | null | undefined): PaysTelephone 
   if (/^(\+32|0032)/.test(n)) return 'BE'
   if (/^(\+41|0041)/.test(n)) return 'CH'
   if (/^(\+352|00352)/.test(n)) return 'LU'
+  if (/^(\+49|0049)/.test(n)) return 'DE'
+  if (/^(\+34|0034)/.test(n)) return 'ES'
   if (new RegExp(`^(\\+1|001)${INDICATIFS_QUEBEC}`).test(n)) return 'QC'
   return 'FR'
 }
@@ -144,6 +218,10 @@ export function normaliserMobile(brut: string | null | undefined): string | null
   // (`lib/paysInscription.ts`), pas une conséquence de ce format.
   const lu = normalizePhone(brut, 'LU')
   if (lu && MOBILE_LUXEMBOURG.test(lu)) return lu
+  // Allemagne et Espagne : seulement avec leur indicatif (+49 / +34) — voir l'en-tête, un 9 chiffres espagnol
+  // se confondrait avec un mobile luxembourgeois. À l'inscription, la liste de pays ajoute l'indicatif.
+  const etranger = normalizePhone(brut)
+  if (etranger && (MOBILE_ALLEMAGNE.test(etranger) || MOBILE_ESPAGNE.test(etranger))) return etranger
   const qc = normalizePhone(brut, 'QC')
   return qc && QUEBEC.test(qc) ? qc : null
 }
@@ -158,6 +236,10 @@ export function formatPhone(brut: string | null | undefined): string {
     const reste = n.slice(3)
     return `+41 ${reste.slice(0, 2)} ${reste.slice(2, 5)} ${reste.slice(5, 7)} ${reste.slice(7)}`
   }
+  // Allemagne : +49 176 12345678 (indicatif du mobile sur trois chiffres, puis le reste).
+  if (n.startsWith('+49')) return `+49 ${n.slice(3, 6)} ${n.slice(6)}`
+  // Espagne : +34 612 345 678.
+  if (n.startsWith('+34')) return `+34 ${n.slice(3, 6)} ${n.slice(6, 9)} ${n.slice(9)}`
   // Luxembourg : +352 621 123 456.
   if (n.startsWith('+352')) {
     const reste = n.slice(4)
@@ -190,6 +272,8 @@ export const PAYS_TELEPHONE: readonly ChoixPaysTelephone[] = [
   { code: 'CH', indicatif: '+41', libelle: 'Suisse', exemple: '079 123 45 67' },
   { code: 'LU', indicatif: '+352', libelle: 'Luxembourg', exemple: '621 123 456' },
   { code: 'QC', indicatif: '+1', libelle: 'Québec', exemple: '514 234 5678' },
+  { code: 'DE', indicatif: '+49', libelle: 'Allemagne', exemple: '0176 12345678' },
+  { code: 'ES', indicatif: '+34', libelle: 'Espagne', exemple: '612 34 56 78' },
 ]
 
 /** Le numéro saisi dans le champ, sous le pays choisi dans la liste, en forme canonique
@@ -201,7 +285,8 @@ export function telephoneDuPays(brut: string | null | undefined, pays: PaysTelep
   if (!n) return null
   if (n.startsWith('+') || n.startsWith('00')) return normalizePhone(n, pays)
   // Luxembourg et Québec n'ont pas de zéro de tête : le numéro se lit tel quel.
-  if (pays === 'LU' || pays === 'QC') return normalizePhone(n, pays)
+  if (pays === 'LU' || pays === 'QC' || pays === 'ES') return normalizePhone(n, pays)
+  if (pays === 'DE') return normalizePhone(/^0/.test(n) ? n : '0' + n, pays)
   return normalizePhone(/^0/.test(n) ? n : '0' + n, pays)
 }
 

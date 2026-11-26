@@ -2663,6 +2663,11 @@ rien à faire, mais que le projet reste globalement sain.
 
 ## 🟡 Roadmap produit
 
+- [ ] Idée potentielle (Ryan, 2026-11-21, à ne faire que sur sa demande explicite) — **Retirer la
+      prestation principale d'un rendez-vous** qui en a plusieurs. Aujourd'hui (PR #37) seules les
+      prestations ajoutées se retirent depuis la fiche ; la principale reste. Il faudrait promouvoir
+      une prestation ajoutée au rang de principale (`service_id`, prix de base, durée).
+
 - **Un vrai CRM de suivi client** — Yanis (l'associé d'Alexandre) a proposé cinq écrans dans un
   canevas partagé le 2026-09-28 : Prospects (avant la première réservation), À relancer, Fiche
   client (timeline), Fiche entreprise (plusieurs sites/contacts, délai de paiement), et un menu

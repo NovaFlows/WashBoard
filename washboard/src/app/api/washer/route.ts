@@ -118,7 +118,7 @@ export async function PATCH(request: NextRequest) {
   // Signalé par un audit externe le 2026-09-05.
   const { data: profil, error: profilError } = await supabase
     .from('washers')
-    .select('name, phone, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, facture_prochain_numero, sms_sender, sms_sender_statut')
+    .select('name, phone, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, facture_prochain_numero, sms_sender, sms_sender_statut')
     .eq('user_id', user.id).single()
 
   if (profilError || !profil) {

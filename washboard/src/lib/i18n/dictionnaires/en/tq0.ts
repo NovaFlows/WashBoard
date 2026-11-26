@@ -1,0 +1,25 @@
+import type { Dictionnaire } from '../../traduire'
+
+export const tq0: Dictionnaire = {
+  'TVA non applicable — régime de la petite entreprise (§ 19 UStG, Kleinunternehmerregelung).': 'VAT not applicable — small business scheme (§ 19 UStG, Kleinunternehmerregelung).',
+  'TVA non applicable — opération exonérée (art. 20 de la loi 37/1992 sur la TVA).': 'VAT not applicable — exempt transaction (art. 20 of Law 37/1992 on VAT).',
+  'En cas de retard de paiement : intérêts de retard de 9 points au-dessus du taux de base et forfait de 40 € pour frais de recouvrement (§ 288 BGB).': 'In case of late payment: default interest at 9 percentage points above the base rate and a flat fee of €40 for recovery costs (§ 288 BGB).',
+  'En cas de retard de paiement : intérêts de retard et indemnité de 40 € pour frais de recouvrement (loi 3/2004 de lutte contre le retard de paiement).': 'In case of late payment: default interest and a €40 recovery fee (Law 3/2004 on combating late payment).',
+  'Numéro fiscal invalide : Steuernummer (10 à 13 chiffres, par exemple 12/345/67890) ou USt-IdNr. (DE suivi de 9 chiffres).': 'Invalid tax number: Steuernummer (10 to 13 digits, for example 12/345/67890) or USt-IdNr. (DE followed by 9 digits).',
+  'Société (GmbH, UG, GbR…)': 'Company (GmbH, UG, GbR…)',
+  'Vos factures portent votre forme juridique, votre capital et votre inscription au registre du commerce (HRB).': 'Your invoices show your legal form, your capital and your commercial register entry (HRB).',
+  '« HRB » (registre du commerce), le tribunal d’instance (Amtsgericht), puis votre numéro.': '“HRB” (commercial register), the local court (Amtsgericht), then your number.',
+  'Numéro de TVA invalide : DE suivi de 9 chiffres, par exemple DE123456789.': 'Invalid VAT number: DE followed by 9 digits, for example DE123456789.',
+  'NIF invalide : DNI (8 chiffres et une lettre), NIE (X, Y ou Z, 7 chiffres et une lettre) ou CIF (une lettre, 7 chiffres et une clé).': 'Invalid NIF: DNI (8 digits and a letter), NIE (X, Y or Z, 7 digits and a letter) or CIF (a letter, 7 digits and a check character).',
+  'Autónomo (entreprise individuelle)': 'Autónomo (sole trader)',
+  'Vous exercez en nom propre, avec votre NIF.': 'You trade in your own name, with your NIF.',
+  'Société (SL, SA, SLU…)': 'Company (SL, SA, SLU…)',
+  'Vos factures portent votre forme juridique, votre capital et votre inscription au registre du commerce.': 'Your invoices show your legal form, your capital and your commercial register entry.',
+  '« Registro Mercantil », la province, puis le tome, le folio et la feuille.': '“Registro Mercantil”, the province, then the volume, folio and sheet.',
+  'Numéro de TVA invalide : ES suivi du NIF (9 caractères), par exemple ES12345678Z.': 'Invalid VAT number: ES followed by the NIF (9 characters), for example ES12345678Z.',
+  'Allemagne': 'Germany',
+  'Espagne': 'Spain',
+  'Steuernummer': 'Steuernummer',
+  'USt-IdNr.': 'USt-IdNr.',
+  'NIF': 'NIF',
+}

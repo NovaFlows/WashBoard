@@ -5,8 +5,10 @@ import { isSupportMember } from '@/lib/supportAccess'
 import { COMPTES_INTERNES_EXCLUS_DIFFUSION } from '@/lib/plan'
 import { logger } from '@/lib/logger'
 import { estExpediteurApprouve } from '@/lib/expediteurs'
-import type { DonneesLaveur, WasherFiche } from '@/lib/ficheLaveur'
+import { visitesParLaveur, type DonneesLaveur, type LigneVisites, type VisitesAgregees, type WasherFiche } from '@/lib/ficheLaveur'
 import { relanceDue, tableAbsente, type Appel } from '@/lib/suiviAppels'
+import { statutFilleul, type CompteParrainage } from '@/lib/parrainage'
+import { construireArbre, type LigneParrainage } from '@/lib/arbreParrainage'
 
 // Lectures de l'espace équipe (fiches laveurs). Service-role : l'équipe voit
 // tous les comptes, ce que la RLS refuse — d'où la garde `exigerEquipe` en
@@ -30,13 +32,12 @@ export async function exigerEquipe() {
   return { user, washer }
 }
 
-const COLONNES_WASHER = 'id, user_id, name, slug, phone, created_at, plan, grandfathered, subscription_status, trial_ends_at, subscription_ends_at, cancels_at, zone_config, base_address, logo_url, google_review_url, website_url, sms_sender, sms_sender_statut, pwa_installee_le, derniere_connexion_le, onboarding_complete_at, acquisition_source, profil_activite, facture_nom_legal, telephone_verifie_le, is_preview'
+const COLONNES_WASHER = 'id, user_id, name, slug, phone, created_at, plan, grandfathered, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, cancels_at, zone_config, base_address, logo_url, google_review_url, website_url, sms_sender, sms_sender_statut, pwa_installee_le, derniere_connexion_le, onboarding_complete_at, acquisition_source, profil_activite, facture_nom_legal, telephone_verifie_le, is_preview'
 
 /** Lit toutes les pages d'une requête : PostgREST plafonne à 1 000 lignes,
  *  et les visites de tous les laveurs dépassent vite ce plafond. */
 async function toutLire<T>(requete: (de: number, a: number) => PromiseLike<{ data: T[] | null; error: unknown }>, table: string): Promise<T[]> {
-  const lignes: T[] = []
-  for (let de = 0; ; de += 1000) {
+  const lire = async (de: number): Promise<T[]> => {
     const { data, error } = await requete(de, de + 999)
     if (error) {
       // Une fiche incomplète affichée comme « 0 réservation » mentirait :
@@ -44,28 +45,63 @@ async function toutLire<T>(requete: (de: number, a: number) => PromiseLike<{ dat
       logger.error('equipe.fiche.read_failed', { table }, error)
       throw error
     }
-    lignes.push(...(data ?? []))
-    if (!data || data.length < 1000) return lignes
+    return data ?? []
+  }
+  // Première page seule : la plupart des tables tiennent dedans. Si elle est pleine, les
+  // suivantes partent par lots en parallèle (les visites dépassent 13 000 lignes : lues une
+  // page après l'autre, l'ouverture de l'espace Équipe prenait plus de 6 secondes).
+  const lignes: T[] = await lire(0)
+  if (lignes.length < 1000) return lignes
+  for (let debut = 1000; ; debut += PAGES_EN_PARALLELE * 1000) {
+    const lot = await Promise.all(Array.from({ length: PAGES_EN_PARALLELE }, (_, i) => lire(debut + i * 1000)))
+    for (const page of lot) lignes.push(...page)
+    if (lot[lot.length - 1].length < 1000) return lignes
   }
 }
 
-async function lireLiees(admin: Admin, ids: string[], depuis: string | null) {
-  const [prestations, horaires, reservations, evenements, abonnements] = await Promise.all([
+const PAGES_EN_PARALLELE = 8
+
+/** Les visites de tous ces laveurs, comptées par la base (fonction SQL `equipe_visites`) : une
+ *  centaine de lignes au lieu de plusieurs milliers. `null` tant que la fonction n'existe pas
+ *  encore en base — l'appelant lit alors les visites une à une, plus lentement mais pareil. */
+async function lireVisitesAgregees(admin: Admin, ids: string[], depuis: string): Promise<Map<string, VisitesAgregees> | null> {
+  const lignes: LigneVisites[] = []
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await admin.rpc('equipe_visites', { p_ids: ids, p_depuis: depuis }).range(de, de + 999)
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') {
+        logger.warn('equipe.visites.fonction_absente', {})
+        return null
+      }
+      logger.error('equipe.fiche.read_failed', { table: 'equipe_visites' }, error)
+      throw error
+    }
+    const page = (data ?? []) as LigneVisites[]
+    lignes.push(...page)
+    if (page.length < 1000) return visitesParLaveur(lignes)
+  }
+}
+
+async function lireLiees(admin: Admin, ids: string[], depuis: string | null, compteesParLaBase = false) {
+  const lireBrutes = () => toutLire<DonneesLaveur['evenements'][number] & { washer_id: string }>((de, a) => {
+    let q = admin.from('booking_funnel_events').select('washer_id, session_id, step, referrer_host, created_at').in('washer_id', ids)
+    if (depuis) q = q.gte('created_at', depuis)
+    return q.order('created_at').range(de, a)
+  }, 'booking_funnel_events')
+  const brutes = compteesParLaBase && depuis ? null : lireBrutes()
+  const [visites, prestations, horaires, reservations, abonnements] = await Promise.all([
+    compteesParLaBase && depuis ? lireVisitesAgregees(admin, ids, depuis) : Promise.resolve(null),
     toutLire<{ washer_id: string; name: string; price: number | null; en_veille: boolean | null }>((de, a) =>
       admin.from('services').select('washer_id, name, price, en_veille').in('washer_id', ids).order('created_at').range(de, a), 'services'),
     toutLire<{ washer_id: string; day_of_week: number }>((de, a) =>
       admin.from('availabilities').select('washer_id, day_of_week').in('washer_id', ids).range(de, a), 'availabilities'),
     toutLire<DonneesLaveur['reservations'][number] & { washer_id: string }>((de, a) =>
       admin.from('bookings').select('washer_id, status, created_at, scheduled_at, booked_price, saisie_par_laveur, review_sms_sent_at').in('washer_id', ids).range(de, a), 'bookings'),
-    toutLire<DonneesLaveur['evenements'][number] & { washer_id: string }>((de, a) => {
-      let q = admin.from('booking_funnel_events').select('washer_id, session_id, step, referrer_host, created_at').in('washer_id', ids)
-      if (depuis) q = q.gte('created_at', depuis)
-      return q.order('created_at').range(de, a)
-    }, 'booking_funnel_events'),
     toutLire<{ washer_id: string }>((de, a) =>
       admin.from('push_subscriptions').select('washer_id').in('washer_id', ids).range(de, a), 'push_subscriptions'),
   ])
-  return { prestations, horaires, reservations, evenements, abonnements }
+  const evenements = brutes ? await brutes : visites ? [] : await lireBrutes()
+  return { prestations, horaires, reservations, evenements, abonnements, visites }
 }
 
 function assembler(w: WasherFiche, liees: Awaited<ReturnType<typeof lireLiees>>, utilisateur: { email?: string | null; last_sign_in_at?: string | null } | undefined): DonneesLaveur {
@@ -78,6 +114,7 @@ function assembler(w: WasherFiche, liees: Awaited<ReturnType<typeof lireLiees>>,
     joursOuverts: de(liees.horaires).map(h => h.day_of_week),
     reservations: de(liees.reservations),
     evenements: de(liees.evenements),
+    ...(liees.visites ? { visitesAgregees: liees.visites.get(w.id) ?? { total: 0, parEtape: {}, parHote: [] } } : {}),
     appareilsNotifies: de(liees.abonnements).length,
   }
 }
@@ -120,7 +157,7 @@ export async function chargerTousLesLaveurs(): Promise<DonneesLaveur[]> {
     if (data.users.length < 200) break
   }
 
-  const liees = await lireLiees(admin, reels.map(w => w.id), depuis)
+  const liees = await lireLiees(admin, reels.map(w => w.id), depuis, true)
   return reels.map(w => assembler(w, liees, w.user_id ? utilisateurs.get(w.user_id) : undefined))
 }
 
@@ -184,4 +221,53 @@ export async function chargerResumeEquipe(now: Date = new Date()) {
     expediteursEnAttente: expediteurs.error ? null : (expediteurs.data ?? []).filter(e => !e.sms_sender || !estExpediteurApprouve(e.sms_sender)).length,
     aRelancer: appels.actif ? aRelancer : null,
   }
+}
+
+export type ParrainageFiche = {
+  parrain: { id: string; nom: string } | null
+  filleuls: number
+  clients: number
+  recompenseDonnee: boolean
+  /** Mois gagnés par ce parrain alors que son abonnement n'a pas de date de fin : à reporter à la main. */
+  aReporterALaMain: number
+}
+
+/** Parrainage vu depuis la fiche : son parrain, et ce que lui a rapporté. `null` si illisible. */
+export async function chargerParrainageFiche(washerId: string): Promise<ParrainageFiche | null> {
+  const admin = createAdminClient()
+  const [enHaut, enBas] = await Promise.all([
+    admin.from('parrainages').select('recompense_le, parrain:washers!parrainages_parrain_id_fkey(id, name)').eq('filleul_id', washerId).maybeSingle(),
+    admin.from('parrainages').select('recompense_forme, filleul:washers!parrainages_filleul_id_fkey(subscription_status, trial_ends_at)').eq('parrain_id', washerId),
+  ])
+  if (enHaut.error || enBas.error) {
+    logger.warn('equipe.fiche.parrainage_read_failed', { washerId }, enHaut.error ?? enBas.error)
+    return null
+  }
+  const un = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null)
+  const parrain = un(enHaut.data?.parrain as { id: string; name: string } | { id: string; name: string }[] | null)
+  const filleuls = (enBas.data ?? []).map(l => un(l.filleul as CompteParrainage | CompteParrainage[] | null)).filter((f): f is CompteParrainage => !!f)
+  return {
+    parrain: parrain ? { id: parrain.id, nom: parrain.name } : null,
+    filleuls: filleuls.length,
+    clients: filleuls.filter(f => statutFilleul(f) === 'client').length,
+    recompenseDonnee: !!enHaut.data?.recompense_le,
+    aReporterALaMain: (enBas.data ?? []).filter(l => l.recompense_forme === 'abonnement_a_la_main').length,
+  }
+}
+
+/** Toutes les lignes de parrainage, assemblées en arbre avec les signaux. `null` si illisible. */
+export async function chargerArbreParrainages(now: Date = new Date()) {
+  const admin = createAdminClient()
+  const colonnesLaveur = 'id, name, plan, grandfathered, subscription_status, trial_ends_at, pro_offert_jusqu_au, cgv_acceptees_ip, facture_siret'
+  const { data, error } = await admin
+    .from('parrainages')
+    .select(`id, cree_le, ip_inscription, recompense_le, recompense_forme, signal_ok_le,
+      parrain:washers!parrainages_parrain_id_fkey(${colonnesLaveur}),
+      filleul:washers!parrainages_filleul_id_fkey(${colonnesLaveur})`)
+    .order('cree_le', { ascending: true })
+  if (error) {
+    logger.error('support.parrainages.lecture', {}, error)
+    return null
+  }
+  return construireArbre((data ?? []) as unknown as LigneParrainage[], now)
 }

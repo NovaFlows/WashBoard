@@ -37,7 +37,7 @@ export function FeuilleEmailV2({ email, onClose }: { email: string; onClose: () 
   async function soumettre(e: React.FormEvent) {
     e.preventDefault()
     if (enCours) return
-    const refus = validerEmail(nouvel)
+    const refus = validerEmail(nouvel, t)
     if (refus) { setErreur(refus); return }
     if (nouvel.trim() === email.trim()) { onClose(); return }
     setErreur(null)
@@ -115,7 +115,7 @@ export function FeuilleMotDePasseV2({ email, onClose }: { email: string; onClose
   async function soumettre(e: React.FormEvent) {
     e.preventDefault()
     if (enCours) return
-    const refus = validerMotDePasse(nouveau, confirmation)
+    const refus = validerMotDePasse(nouveau, confirmation, t)
     if (refus) { setErreur(refus); return }
     setErreur(null)
     setEnCours(true)
@@ -192,7 +192,7 @@ export function FeuilleTelephoneV2({ telephone, onChange, onClose }: { telephone
   async function demander(e: React.FormEvent) {
     e.preventDefault()
     if (enCours) return
-    const refus = validerTelephone(nouveau) ?? (nouveau.trim() ? null : t('Indiquez votre nouveau numéro.'))
+    const refus = validerTelephone(nouveau, t) ?? (nouveau.trim() ? null : t('Indiquez votre nouveau numéro.'))
     if (refus) { setErreur(refus); return }
     if (!motDePasse) { setErreur(t('Indiquez votre mot de passe actuel.')); return }
     setErreur(null)

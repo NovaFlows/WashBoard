@@ -187,6 +187,15 @@ export const PRIX_LAVEUR_SUPPLEMENTAIRE = 19
  *  paiement, le compte retombe sur la grille normale. */
 export const PLAN_ESSAI: Plan = 'pro'
 
+/** Durée de l'essai d'un compte créé aujourd'hui (30 jours jusqu'au 2026-11-15).
+ *  Les essais déjà en cours gardent leur `trial_ends_at`. */
+export const JOURS_ESSAI = 14
+
+/** `trial_ends_at` d'un compte qui s'inscrit maintenant. */
+export function finEssaiInscription(now: Date = new Date()): string {
+  return new Date(now.getTime() + JOURS_ESSAI * 24 * 60 * 60 * 1000).toISOString()
+}
+
 /** Offre à laquelle correspond le tarif des clients historiques
  *  (`grandfathered`). Ils payaient 49 € pour l'ancien Essentiel : c'est
  *  exactement le tarif du Pro dans la grille 2026, et ils ont tout débloqué.
@@ -308,6 +317,14 @@ export type AbonnementInfo = PlanInfo & {
   subscription_status?: string | null
   trial_ends_at?: string | null
   subscription_ends_at?: string | null
+  /** Mois de Pro gagné par parrainage (lib/parrainage.ts) ; absent avant le SQL. */
+  pro_offert_jusqu_au?: string | null
+}
+
+/** Vrai tant qu'un mois de Pro gagné par parrainage court encore. */
+export function proOffertActif(w: { pro_offert_jusqu_au?: string | null } | null | undefined, now: Date = new Date()): boolean {
+  const fin = w?.pro_offert_jusqu_au ? new Date(w.pro_offert_jusqu_au).getTime() : NaN
+  return fin > now.getTime()
 }
 
 // ── Simulation, en développement UNIQUEMENT ────────────────────────────────
@@ -434,8 +451,21 @@ export function planEffectif(
   if (forcee) return forcee
   if (finEssaiSimuleeEnDev()) return 'decouverte'
 
-  if (suitRetourGratuit(w) && essaiTermineSansFormule(w, now)) return 'decouverte'
-  return washerPlan(w)
+  const base = planPaye(w, now)
+  // Mois gagné par parrainage : au moins le Pro, sans jamais faire descendre un Business.
+  if (proOffertActif(w, now) && RANK[base] < RANK.pro) return 'pro'
+  return base
+}
+
+/** L’offre que le laveur a (ou paie), sans le Pro offert par parrainage. */
+export function planPaye(w: AbonnementInfo | null | undefined, now: Date = new Date()): Plan {
+  return suitRetourGratuit(w) && essaiTermineSansFormule(w, now) ? 'decouverte' : washerPlan(w)
+}
+
+/** Date de fin du Pro offert quand il élève l’offre du laveur, sinon null. */
+export function proOffertEnCours(w: AbonnementInfo | null | undefined, now: Date = new Date()): string | null {
+  if (!proOffertActif(w, now) || RANK[planPaye(w, now)] >= RANK.pro) return null
+  return w?.pro_offert_jusqu_au ?? null
 }
 
 /** Vrai quand il faut demander au laveur de choisir sa formule : son essai est
@@ -445,6 +475,7 @@ export function doitChoisirFormule(
   now: Date = new Date(),
 ): boolean {
   if (finEssaiSimuleeEnDev()) return true
+  if (proOffertActif(w, now)) return false
   return suitRetourGratuit(w) && essaiTermineSansFormule(w, now)
 }
 

@@ -8,51 +8,52 @@
 // ne servent qu'à répondre tout de suite, sans aller-retour.
 
 import { isValidPhone, formatPhone } from '@/lib/phone'
+import { sansTraduction, type Traducteur } from '@/lib/i18n/traduire'
 import { infosFacturationManquantes, siretValide, numeroTvaValide, identifiantValidePour, reglesPays, type InfosFacturation, type PaysFacturation } from '@/lib/facture'
 
 /** Ce qu'une ligne de l'écran affiche sous son intitulé. `ton` : ambre quand c'est à faire. */
 export type Resume = { texte: string; ton?: 'ambre' }
 
-const A_RENSEIGNER: Resume = { texte: 'À renseigner', ton: 'ambre' }
+const A_RENSEIGNER = (t: Traducteur): Resume => ({ texte: t('À renseigner'), ton: 'ambre' })
 
-export function resumeNomEntreprise(nom: string | null | undefined): Resume {
+export function resumeNomEntreprise(nom: string | null | undefined, t: Traducteur = sansTraduction): Resume {
   const n = nom?.trim()
-  return n ? { texte: n } : A_RENSEIGNER
+  return n ? { texte: n } : A_RENSEIGNER(t)
 }
 
-export function resumeTelephone(telephone: string | null | undefined): Resume {
+export function resumeTelephone(telephone: string | null | undefined, tr: Traducteur = sansTraduction): Resume {
   const t = telephone?.trim()
-  if (!t) return A_RENSEIGNER
+  if (!t) return A_RENSEIGNER(tr)
   // Un numéro déjà en base peut être dans un format que `formatPhone` ne sait pas espacer :
   // on l'affiche alors tel quel plutôt que de le masquer.
   return { texte: formatPhone(t) || t }
 }
 
-export function resumeAdresseDepart(adresse: string | null | undefined): Resume {
+export function resumeAdresseDepart(adresse: string | null | undefined, t: Traducteur = sansTraduction): Resume {
   const a = adresse?.trim()
-  return a ? { texte: a } : { texte: 'À renseigner : sert au calcul des frais de déplacement', ton: 'ambre' }
+  return a ? { texte: a } : { texte: t('À renseigner : sert au calcul des frais de déplacement'), ton: 'ambre' }
 }
 
-export function resumeEmail(email: string | null | undefined): Resume {
+export function resumeEmail(email: string | null | undefined, t: Traducteur = sansTraduction): Resume {
   const e = email?.trim()
-  return e ? { texte: e } : A_RENSEIGNER
+  return e ? { texte: e } : A_RENSEIGNER(t)
 }
 
 /** Facturation : complète, ou le nombre d'informations qui manquent (le détail est dans la
  *  feuille, ligne par ligne — l'écran n'a pas la place de les énumérer). */
-export function resumeFacturation(infos: InfosFacturation): Resume {
+export function resumeFacturation(infos: InfosFacturation, t: Traducteur = sansTraduction): Resume {
   const manques = infosFacturationManquantes(infos)
-  if (manques.length === 0) return { texte: 'Complètes' }
+  if (manques.length === 0) return { texte: t('Complètes') }
   return {
-    texte: manques.length === 1 ? '1 information manquante' : `${manques.length} informations manquantes`,
+    texte: manques.length === 1 ? t('1 information manquante') : t('{n} informations manquantes', { n: manques.length }),
     ton: 'ambre',
   }
 }
 
-export function resumeEquipe(teamSize: number | null | undefined, peutEquipe: boolean): Resume {
+export function resumeEquipe(teamSize: number | null | undefined, peutEquipe: boolean, t: Traducteur = sansTraduction): Resume {
   if (!peutEquipe) return { texte: 'Pro' }
   const n = Math.max(1, Math.floor(Number(teamSize) || 1))
-  return { texte: n > 1 ? `${n} laveurs` : '1 laveur' }
+  return { texte: n > 1 ? t('{n} laveurs', { n }) : t('1 laveur') }
 }
 
 // ── Vérifications de saisie ────────────────────────────────────────────────
@@ -61,40 +62,40 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export const MOT_DE_PASSE_MIN = 6
 
 /** `null` si la saisie passe, sinon la phrase à afficher. */
-export function validerNomEntreprise(saisie: string): string | null {
-  return saisie.trim() ? null : 'Le nom de votre entreprise ne peut pas être vide.'
+export function validerNomEntreprise(saisie: string, t: Traducteur = sansTraduction): string | null {
+  return saisie.trim() ? null : t('Le nom de votre entreprise ne peut pas être vide.')
 }
 
 /** Vide est accepté : un laveur a le droit de retirer son numéro. */
-export function validerTelephone(saisie: string): string | null {
+export function validerTelephone(saisie: string, tr: Traducteur = sansTraduction): string | null {
   const t = saisie.trim()
   if (!t) return null
-  return isValidPhone(t) ? null : 'Numéro invalide : 10 chiffres (06…) ou format international (+33…).'
+  return isValidPhone(t) ? null : tr('Numéro invalide : 10 chiffres (06…) ou format international (+33…).')
 }
 
-export function validerEmail(saisie: string): string | null {
-  return EMAIL_RE.test(saisie.trim()) ? null : 'Adresse e-mail invalide.'
+export function validerEmail(saisie: string, t: Traducteur = sansTraduction): string | null {
+  return EMAIL_RE.test(saisie.trim()) ? null : t('Adresse e-mail invalide.')
 }
 
-export function validerMotDePasse(nouveau: string, confirmation: string): string | null {
-  if (nouveau.length < MOT_DE_PASSE_MIN) return `Le mot de passe doit faire au moins ${MOT_DE_PASSE_MIN} caractères.`
-  if (nouveau !== confirmation) return 'Les deux mots de passe ne sont pas identiques.'
+export function validerMotDePasse(nouveau: string, confirmation: string, t: Traducteur = sansTraduction): string | null {
+  if (nouveau.length < MOT_DE_PASSE_MIN) return t('Le mot de passe doit faire au moins {min} caractères.', { min: MOT_DE_PASSE_MIN })
+  if (nouveau !== confirmation) return t('Les deux mots de passe ne sont pas identiques.')
   return null
 }
 
 /** Facturation : ce qu'on refuse AVANT d'envoyer (le reste — champs vides — est autorisé,
  *  la facture reste simplement impossible à émettre tant qu'il manque quelque chose). */
-export function validerFacturation(champs: { siret: string; regime: 'franchise' | 'assujetti'; numeroTva: string; prochainNumero: string; numeroActuel: number; pays?: PaysFacturation }): string | null {
+export function validerFacturation(champs: { siret: string; regime: 'franchise' | 'assujetti'; numeroTva: string; prochainNumero: string; numeroActuel: number; pays?: PaysFacturation }, t: Traducteur = sansTraduction): string | null {
   // Pays connu (téléphone confirmé) : l'identifiant doit avoir le format de CE pays, avec sa phrase.
-  if (champs.pays && champs.siret.trim() && !identifiantValidePour(champs.pays, champs.siret)) return reglesPays(champs.pays).identifiantErreur
-  if (champs.siret.trim() && !siretValide(champs.siret)) return 'Numéro d’entreprise invalide : SIRET (14 chiffres), numéro BCE belge (10 chiffres) ou numéro IDE suisse (CHE-123.456.789).'
+  if (champs.pays && champs.siret.trim() && !identifiantValidePour(champs.pays, champs.siret)) return t(reglesPays(champs.pays).identifiantErreur)
+  if (champs.siret.trim() && !siretValide(champs.siret)) return t('Numéro d’entreprise invalide : SIRET (14 chiffres), numéro BCE belge (10 chiffres) ou numéro IDE suisse (CHE-123.456.789).')
   if (champs.regime === 'assujetti' && champs.numeroTva.trim() && !numeroTvaValide(champs.numeroTva)) {
-    return 'Numéro de TVA invalide : FR suivi de 11 caractères, BE suivi du numéro BCE, ou CHE-123.456.789 TVA en Suisse.'
+    return t('Numéro de TVA invalide : FR suivi de 11 caractères, BE suivi du numéro BCE, ou CHE-123.456.789 TVA en Suisse.')
   }
   const suivant = Number(champs.prochainNumero)
-  if (!Number.isInteger(suivant) || suivant < 1) return 'Le prochain numéro de facture doit être un nombre entier.'
+  if (!Number.isInteger(suivant) || suivant < 1) return t('Le prochain numéro de facture doit être un nombre entier.')
   if (suivant < champs.numeroActuel) {
-    return `Le prochain numéro ne peut pas revenir en arrière : il est déjà à ${champs.numeroActuel}.`
+    return t('Le prochain numéro ne peut pas revenir en arrière : il est déjà à {n}.', { n: champs.numeroActuel })
   }
   return null
 }
@@ -124,8 +125,8 @@ export function seuilPalier(t: PalierDeplacement): number {
   return t.max_km ?? t.max_minutes ?? 0
 }
 
-export function libellePalier(t: PalierDeplacement): string {
-  return `Jusqu’à ${seuilPalier(t)} ${t.max_km != null ? 'km' : 'min'}`
+export function libellePalier(p: PalierDeplacement, t: Traducteur = sansTraduction): string {
+  return t('Jusqu’à {seuil} {unite}', { seuil: seuilPalier(p), unite: p.max_km != null ? 'km' : 'min' })
 }
 
 export const MODES_DEPLACEMENT: { valeur: ModeDeplacement; libelle: string; detail: string }[] = [
@@ -135,12 +136,14 @@ export const MODES_DEPLACEMENT: { valeur: ModeDeplacement; libelle: string; deta
 
 const euro = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(2).replace('.', ',')} €`
 
-export function resumeFraisDeplacement(tiers: PalierDeplacement[] | null | undefined): Resume {
+export function resumeFraisDeplacement(tiers: PalierDeplacement[] | null | undefined, t: Traducteur = sansTraduction): Resume {
   const n = tiers?.length ?? 0
-  if (n === 0) return { texte: 'Aucun : le déplacement est offert' }
-  const plus = tiers!.reduce((m, t) => Math.max(m, t.fee), 0)
-  const km = unitePaliers(tiers) === 'km' ? ' au km' : ''
-  return { texte: `${n} palier${n > 1 ? 's' : ''}${km}, jusqu’à ${euro(plus)}` }
+  if (n === 0) return { texte: t('Aucun : le déplacement est offert') }
+  const plus = tiers!.reduce((m, p) => Math.max(m, p.fee), 0)
+  const km = unitePaliers(tiers) === 'km'
+  return { texte: km
+    ? t('{n} palier{v1} au km, jusqu’à {max}', { n, v1: n > 1 ? 's' : '', max: euro(plus) })
+    : t('{n} palier{v1}, jusqu’à {max}', { n, v1: n > 1 ? 's' : '', max: euro(plus) }) }
 }
 
 /** Ajoute un palier (seuil en minutes ou en km → frais), trié et sans doublon de seuil : un

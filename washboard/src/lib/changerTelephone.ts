@@ -15,9 +15,9 @@ export function verifierNouveauNumero(saisie: unknown, actuel: string | null | u
   const telephone = normaliserMobile(brut)
   if (!telephone) {
     return {
-      erreur: normalizePhone(brut) || normalizePhone(brut, 'BE') || normalizePhone(brut, 'CH') || normalizePhone(brut, 'LU') || normalizePhone(brut, 'QC')
+      erreur: normalizePhone(brut) || normalizePhone(brut, 'BE') || normalizePhone(brut, 'CH') || normalizePhone(brut, 'LU') || normalizePhone(brut, 'QC') || normalizePhone(brut, 'DE') || normalizePhone(brut, 'ES')
         ? phraseMobileRequis()
-        : 'Numéro invalide : 06 12 34 56 78, 0470 12 34 56 ou format international (+33…, +32…, +41…, +352…, +1…).',
+        : 'Numéro invalide : 06 12 34 56 78, 0470 12 34 56 ou format international (+33…, +32…, +41…, +352…, +1…, +49…, +34…).',
     }
   }
   if (!estMobileFrancais(telephone)) return { erreur: phraseMobileRequis() }

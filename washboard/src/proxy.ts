@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { jetonEncoreFrais } from '@/lib/sessionSupabase'
+import { COOKIE_LANGUE, detecterLangue } from '@/lib/i18n/langues'
+import { cheminInterne, estCheminInterne, estPageVitrine } from '@/lib/vitrine'
 
 // Rafraîchissement de la session à chaque requête.
 //
@@ -27,6 +29,27 @@ import { jetonEncoreFrais } from '@/lib/sessionSupabase'
 // (même comportement, autre nom de fichier et de fonction exportée).
 
 export async function proxy(request: NextRequest) {
+  // Site public pré-calculé : même choix de langue qu'avant (choix de la personne, robots en
+  // français, langue du navigateur, pays), puis la version prête de cette langue. L'adresse vue
+  // par le visiteur et par Google ne change pas. Aucune session à rafraîchir sur ces pages.
+  const chemin = request.nextUrl.pathname
+  if (estCheminInterne(chemin)) {
+    const introuvable = request.nextUrl.clone()
+    introuvable.pathname = '/page-introuvable'
+    return NextResponse.rewrite(introuvable)
+  }
+  if (estPageVitrine(chemin)) {
+    const langue = detecterLangue({
+      cookie: request.cookies.get(COOKIE_LANGUE)?.value,
+      acceptLanguage: request.headers.get('accept-language'),
+      pays: request.headers.get('x-vercel-ip-country'),
+      userAgent: request.headers.get('user-agent'),
+    })
+    const cible = request.nextUrl.clone()
+    cible.pathname = cheminInterne(chemin, langue)
+    return NextResponse.rewrite(cible)
+  }
+
   let response = NextResponse.next({ request })
 
   // Sans cookie de session, il n'y a rien à rafraîchir : une page de
@@ -124,5 +147,20 @@ export const config = {
     '/login',
     '/signup',
     '/onboarding',
+    // Site public pré-calculé (lib/vitrine.ts) : choix de la langue uniquement, sans session.
+    '/',
+    '/blog',
+    '/blog/:path*',
+    '/cgv',
+    '/confidentialite',
+    '/mentions-legales',
+    '/logiciel-lavage-auto',
+    '/logiciel-nettoyage-canape',
+    '/logiciel-services-a-domicile',
+    '/meilleur-logiciel-lavage-auto',
+    '/facturation-laveur-auto',
+    '/optimisation-tournee-lavage-auto',
+    '/vitrine',
+    '/vitrine/:path*',
   ],
 }

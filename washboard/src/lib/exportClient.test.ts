@@ -36,6 +36,13 @@ describe('texteExportClient', () => {
     expect(t).toContain('article 15 du RGPD')
   })
 
+  it('nomme les prestations ajoutées au rendez-vous', () => {
+    const ajoutee = { id: 'prestation:p2', label: 'Lavage intérieur', price: 40, category: 'prestation' }
+    const avecAjout = { ...profil.bookings[0], booked_price: 100, vehicles_detail: [{ count: 1, addons: [ajoutee] }], selected_addons: [ajoutee] }
+    const t = texteExportClient({ ...profil, bookings: [avecAjout] }, 'AutoNettoyage')
+    expect(t).toContain('Lavage complet + Lavage intérieur · 100 €')
+  })
+
   it('dit « Aucune »/« Aucun » sans réservation ni document, plutôt qu’une section vide', () => {
     const t = texteExportClient({ ...profil, bookings: [], documents: [] }, 'AutoNettoyage')
     expect(t).toContain('Aucune.')

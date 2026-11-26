@@ -580,14 +580,14 @@ export async function sendTrialExpired({ to, washerName, appUrl, retourGratuit =
     return resend.emails.send({
       from: 'WashBoard <noreply@washboard.fr>',
       to,
-      subject: `Votre mois d'essai est terminé — quelle formule vous va ?`,
+      subject: `Votre essai est terminé — quelle formule vous va ?`,
       html: page({
-        titre: 'Votre mois d&apos;essai est terminé',
+        titre: 'Votre essai gratuit est terminé',
         entete: enteteWashBoard(url),
         contenu: `
-${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre mois d&apos;essai est terminé', sousTitre: 'Rien ne s&apos;arrête — à vous de choisir la suite' })}
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre essai gratuit est terminé', sousTitre: 'Rien ne s&apos;arrête — à vous de choisir la suite' })}
 ${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
-${paragraphe(`Vous avez essayé WashBoard pendant un mois, avec tout le produit. Votre page de
+${paragraphe(`Vous avez essayé WashBoard avec tout le produit. Votre page de
 réservation, votre agenda et vos clients sont toujours là — nous ne coupons rien.`, { marge: '0 0 20px' })}
 ${encadre(`En attendant votre choix, votre compte est passé sur l&apos;offre Découverte :
 gratuite, ${BOOKING_QUOTA.decouverte} réservations par mois.`, 'neutre', '0 0 20px')}
@@ -921,6 +921,124 @@ ${paragraphe('Rien à faire de votre côté : le nouveau prix est déjà pris en
   })
 }
 
+/** Petite pastille à côté d'une ligne (« Ajoutée », « Retirée »). */
+function pastille(texte: string): string {
+  return `<span style="display:inline-block;margin-left:8px;padding:2px 8px;border:1px solid ${COULEUR.filet};border-radius:999px;background:${COULEUR.papier};font-family:${POLICE};font-size:10.5px;font-weight:700;line-height:1.5;letter-spacing:.08em;text-transform:uppercase;color:${COULEUR.gris};vertical-align:2px;white-space:nowrap;">${texte}</span>`
+}
+
+/** Prestation ajoutée ou retirée par le laveur sur une réservation prise en ligne
+ *  (lib/prestationsRendezVous.ts) : le client reçoit le détail à jour, comme sur son reçu. */
+export async function sendPrestationModifiee({
+  to, clientName, washerName, washerPhone, prestation, ajout, scheduledAt, address, lieu, bookingId,
+  lignes, ancienPrix, nouveauPrix, jeton, appUrl, fuseau,
+}: {
+  to: string
+  clientName: string
+  washerName: string
+  washerPhone?: string | null
+  /** Fuseau du laveur (lib/fuseaux.ts) ; Paris par défaut. */
+  fuseau?: string
+  /** Nom de la prestation ajoutée ou retirée. */
+  prestation: string
+  ajout: boolean
+  scheduledAt: string
+  address: string
+  lieu?: string | null
+  bookingId: string
+  /** Détail du prix APRÈS la modification (lignesDetailPrix). */
+  lignes: { libelle: string; montant: number }[]
+  ancienPrix: number
+  nouveauPrix: number
+  /** Jeton du reçu PDF : seulement si un reçu a déjà été envoyé (rendez-vous confirmé). */
+  jeton?: string | null
+  appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const date = new Date(scheduledAt)
+  const jour = date.toLocaleDateString('fr-FR', { timeZone: fuseau ?? FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const heure = date.toLocaleTimeString('fr-FR', { timeZone: fuseau ?? FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const ref = bookingId.slice(0, 8).toUpperCase()
+  const nom = escapeHtml(washerName)
+  const tel = washerPhone ? escapeHtml(formatPhone(washerPhone)) : ''
+  const nomPrestation = escapeHtml(prestation)
+  const ecart = Math.round((nouveauPrix - ancienPrix) * 100) / 100
+
+  // Montants ligne par ligne seulement s'ils tombent juste sur le total (sinon remise ou
+  // créneau optimisé en jeu : les noms seuls, le total fait foi).
+  const somme = lignes.reduce((s, l) => s + l.montant, 0)
+  const avecMontants = Math.abs(somme - nouveauPrix) < 0.005
+  const estAjoutee = (libelle: string) => ajout && (libelle === prestation || libelle.startsWith(`${prestation} × `))
+  const cellule = 'padding:12px 0;vertical-align:top;border-bottom:1px solid ' + COULEUR.filet + ';'
+  const rang = (libelle: string, montant: string, barre = false) => `<tr>
+    <td style="${cellule}padding-right:12px;font-size:14.5px;line-height:1.45;font-weight:600;color:${barre ? COULEUR.grisPetit : COULEUR.encre};">${libelle}</td>
+    <td style="${cellule}text-align:right;white-space:nowrap;font-size:14.5px;line-height:1.45;font-weight:600;color:${barre ? COULEUR.grisPetit : COULEUR.encre};">${montant}</td>
+  </tr>`
+  const rangs = lignes.map(l => rang(
+    `${escapeHtml(l.libelle)}${estAjoutee(l.libelle) ? pastille('Ajoutée') : ''}`,
+    avecMontants ? `${formatEuros(l.montant)} €` : '',
+  ))
+  if (!ajout) {
+    rangs.push(rang(
+      `<s>${nomPrestation}</s>${pastille('Retirée')}`,
+      avecMontants && ecart < 0 ? `<s>${formatEuros(-ecart)} €</s>` : '',
+      true,
+    ))
+  }
+
+  const tableau = `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:${POLICE};margin:0 0 8px;">
+  <tr>
+    <td style="padding:0 0 8px;border-bottom:1px solid ${COULEUR.filet};">${etiquette('Prestations', '0')}</td>
+    <td style="padding:0 0 8px;border-bottom:1px solid ${COULEUR.filet};text-align:right;white-space:nowrap;">${avecMontants ? etiquette('Montant TTC', '0') : ''}</td>
+  </tr>
+  ${rangs.join('\n  ')}
+  <tr>
+    <td style="padding:14px 12px 0 0;border-top:2px solid ${COULEUR.encre};vertical-align:bottom;font-size:12.5px;font-weight:700;line-height:1.35;letter-spacing:.06em;color:${COULEUR.encre};">NOUVEAU TOTAL<br><span style="font-weight:500;letter-spacing:0;color:${COULEUR.gris};">à régler sur place</span></td>
+    <td style="padding:12px 0 0;border-top:2px solid ${COULEUR.encre};text-align:right;white-space:nowrap;vertical-align:bottom;">
+      <span style="display:block;font-size:13px;color:${COULEUR.grisPetit};text-decoration:line-through;">${formatEuros(ancienPrix)} €</span>
+      <span style="display:block;font-size:24px;font-weight:700;letter-spacing:-0.02em;font-stretch:108%;color:${COULEUR.encre};">${formatEuros(nouveauPrix)} €</span>
+    </td>
+  </tr>
+</table>`
+
+  const base = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+  const recu = jeton !== undefined && jeton !== null
+    ? bouton('Télécharger le reçu à jour', `${base}/api/bookings/${bookingId}/pdf?jeton=${jeton}`, 'sombre', '24px 0 0')
+    : ''
+
+  const contact = tel
+    ? `Une question ? Contactez <strong>${nom}</strong> au <strong style="white-space:nowrap;">${tel}</strong>.`
+    : `Une question ? Contactez directement <strong>${nom}</strong>.`
+
+  return resend.emails.send({
+    from: `${nom} via WashBoard <noreply@washboard.fr>`,
+    to,
+    subject: ajout ? `${washerName} a ajouté une prestation à votre réservation` : `${washerName} a retiré une prestation de votre réservation`,
+    html: page({
+      titre: 'Votre réservation est mise à jour',
+      entete: enteteLaveur(nom, tel || undefined),
+      contenu: `
+${titre({
+  surtitre: `Réf. ${ref}`,
+  texte: 'Votre réservation est mise à jour',
+  sousTitre: ajout ? `« ${nomPrestation} » a été ajoutée à votre rendez-vous.` : `« ${nomPrestation} » a été retirée de votre rendez-vous.`,
+})}
+${paragraphe(`Bonjour <strong>${escapeHtml(clientName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`<strong>${nom}</strong> a mis à jour votre rendez-vous : le prix passe de
+<strong>${formatEuros(ancienPrix)} €</strong> à <strong>${formatEuros(nouveauPrix)} €</strong>. Voici le détail à jour.`, { marge: '0 0 20px' })}
+${details([
+  { libelle: 'Date', valeur: jour },
+  { libelle: 'Heure', valeur: heure },
+  { libelle: libelleAdresse(lieu), valeur: escapeHtml(address) },
+], '0 0 24px')}
+${tableau}
+${encadre(`Rien à faire de votre côté : le nouveau prix est déjà pris en compte.<br><span style="font-weight:400;color:${COULEUR.gris};">${contact}</span>`, 'neutre', '20px 0 0')}
+${recu}`,
+      pied: `Message envoyé via WashBoard pour le compte de ${nom}`,
+    }),
+  })
+}
+
 /** Rappel avant l'échéance de l'acompte, une seule fois (`api/cron/acomptes`, règle dans
  *  `rappelAcompteDu`). Les moyens de paiement sont ceux de « Demande reçue », relus dans les
  *  réglages actuels du laveur. */
@@ -1069,6 +1187,35 @@ ${titre({ texte: titreCarte })}
 ${paragraphe(escapeHtml(phrase), { marge: '20px 0 22px', style: 'line-height:1.5;' })}
 ${bouton(complete ? 'Voir ma carte' : nouveaux > 1 ? 'Voir mes tampons' : 'Voir mon tampon', escapeHtml(url), 'sombre', '0')}`,
       pied: `Message envoyé via WashBoard pour le compte de ${escapeHtml(washerName)}.`,
+    }),
+  })
+}
+
+/** Au parrain, quand un filleul devient abonné (lib/parrainageServeur.ts, `recompenserParrain`). */
+export async function sendParrainageRecompense({ to, washerName, filleulName, phrase, appUrl }: {
+  to: string
+  washerName: string
+  filleulName: string
+  /** Ce qui a été appliqué, en clair : « Votre prochain paiement est repoussé au 5 janvier. » */
+  phrase: string
+  appUrl?: string
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const url = appUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
+  return resend.emails.send({
+    from: 'WashBoard <noreply@washboard.fr>',
+    to,
+    subject: `${filleulName} est devenu client : votre mois est offert`,
+    html: page({
+      titre: 'Votre mois est offert',
+      entete: enteteWashBoard(url),
+      contenu: `
+${titre({ icone: iconeTitre(url, 'etiquette'), texte: 'Votre mois est offert', sousTitre: 'Merci de faire connaître WashBoard' })}
+${paragraphe(`Bonjour <strong>${escapeHtml(washerName)}</strong>,`, { marge: '0 0 8px' })}
+${paragraphe(`<strong>${escapeHtml(filleulName)}</strong>, que vous avez parrainé, vient de s&apos;abonner. ${escapeHtml(phrase)}`, { marge: '0 0 20px' })}
+${bouton('Parrainer un autre collègue', `${url}/dashboard/parrainage`, 'accent', '0')}
+${paragraphe('Chaque collègue qui s&apos;abonne avec votre code vous offre un mois de plus.', { ton: 'petit', marge: '16px 0 0' })}`,
+      pied: QUESTIONS,
     }),
   })
 }

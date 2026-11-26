@@ -96,6 +96,8 @@ export type ServiceAddon = {
   price: number
   category: string
   duration_minutes?: number
+  /** Une phrase sous l'option, lue par le client avant de la cocher. */
+  description?: string
 }
 
 export type CategoryType = {

@@ -10,6 +10,7 @@ import VisiteGuidee from './VisiteGuidee'
 import type { VisitesAFaire } from '@/lib/visiteGuidee'
 import { SupportBadgesContext } from './SupportBadgesContext'
 import { OffreContext } from './OffreContext'
+import { useProOffert } from './ProOffertContext'
 import { PLAN_LABELS, PLAN_COULEURS, planEffectif, doitChoisirFormule, accesComplet, hasFeature, type Plan, type Feature } from '@/lib/plan'
 import { isCardRegistered, formatDateFR } from '@/lib/subscription'
 import { useSupportUnreadBadge } from '@/lib/useSupportUnreadBadge'
@@ -35,7 +36,7 @@ type Props = {
   subscriptionStatus?: string | null
   plan?: Plan
   grandfathered?: boolean
-  stripeSubscriptionId?: string | null
+  abonnementStripe?: boolean
   cancelsAt?: string | null
   /** Date de création de la fiche : décide si ce compte suit la règle 2026
    *  (retour sur Découverte à la fin de l'essai) ou l'ancienne (suspension). */
@@ -400,8 +401,8 @@ function NouvellesOffresBanner({ bureau, actif, onDisponibiliteChange }: PropsBa
   )
 }
 
-function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, cancelsAt, choisirFormule, grandfathered, subscriptionEndsAt, bureau, actif, onDisponibiliteChange }: {
-  trialEndsAt?: string | null; subscriptionStatus?: string | null; stripeSubscriptionId?: string | null; cancelsAt?: string | null; choisirFormule?: boolean; grandfathered?: boolean; subscriptionEndsAt?: string | null
+function TrialBanner({ trialEndsAt, subscriptionStatus, abonnementStripe, cancelsAt, choisirFormule, grandfathered, subscriptionEndsAt, bureau, actif, onDisponibiliteChange }: {
+  trialEndsAt?: string | null; subscriptionStatus?: string | null; abonnementStripe?: boolean; cancelsAt?: string | null; choisirFormule?: boolean; grandfathered?: boolean; subscriptionEndsAt?: string | null
 } & PropsBandeau) {
   const t = useT()
   const loc = useLocale()
@@ -490,7 +491,7 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
       const isUrgent = daysLeft <= 7
 
       // Carte enregistrée, facturation différée
-      if (isCardRegistered(stripeSubscriptionId, subscriptionStatus)) {
+      if (isCardRegistered(abonnementStripe, subscriptionStatus)) {
         return bandeau(`carte-${daysLeft}`, fermer => etat(
           'vert',
           daysLeft > 1 ? t('✓ Carte enregistrée — facturation dans {n} jours', { n: daysLeft }) : t('✓ Carte enregistrée — facturation dans {n} jour', { n: daysLeft }),
@@ -518,12 +519,14 @@ function TrialBanner({ trialEndsAt, subscriptionStatus, stripeSubscriptionId, ca
   return actif ? contenu : null
 }
 
-export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, stripeSubscriptionId, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee, avancementVisite }: Props) {
+export function DashboardShell({ washerName, children, trialEndsAt, subscriptionStatus, plan, grandfathered, abonnementStripe, cancelsAt, createdAt, slug, subscriptionEndsAt, visiteGuidee, avancementVisite }: Props) {
   const t = useT()
   // Reconstitué ici plutôt que calculé dans chacune des douze pages : une
   // règle recopiée douze fois est une règle qui finit par diverger.
+  const proOffertJusquAu = useProOffert()
   const fiche = {
     plan, grandfathered, slug,
+    pro_offert_jusqu_au: proOffertJusquAu,
     created_at: createdAt,
     subscription_status: subscriptionStatus,
     trial_ends_at: trialEndsAt,
@@ -535,7 +538,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   const offreCourante = useMemo(
     () => ({ offre: offreEffective, peut: (f: Feature) => hasFeature(fiche, f) }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [offreEffective, plan, grandfathered, slug, createdAt, subscriptionStatus, trialEndsAt, subscriptionEndsAt],
+    [offreEffective, plan, grandfathered, slug, createdAt, subscriptionStatus, trialEndsAt, subscriptionEndsAt, proOffertJusquAu],
   )
   const choisirFormule = doitChoisirFormule(fiche)
   // Design mobile (téléphone, installé ou dans le navigateur) : décide du châssis.
@@ -663,7 +666,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
   const bandeaux = (
     <>
       <TrialBanner
-        trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} stripeSubscriptionId={stripeSubscriptionId}
+        trialEndsAt={trialEndsAt} subscriptionStatus={subscriptionStatus} abonnementStripe={abonnementStripe}
         cancelsAt={cancelsAt} choisirFormule={choisirFormule} grandfathered={grandfathered} subscriptionEndsAt={subscriptionEndsAt}
         bureau={showRailBureau} actif={estBandeauActif('trial')} onDisponibiliteChange={rapporterTrial}
       />
@@ -719,7 +722,7 @@ export function DashboardShell({ washerName, children, trialEndsAt, subscription
                 réellement — voir son en-tête). Les écrans pas encore migrés en v2 (Aujourd'hui,
                 Agenda, Chiffres, Plus) héritent de cette largeur sans la demander : ils
                 s'étirent, visibles sur les captures de la passe — attendu, pas corrigé ici. */}
-            <main id="main-content" className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-[34px] pt-[26px] pb-10">
+            <main id="main-content" className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-[34px] pt-[26px] pb-10">
               {pageContent}
             </main>
           </div>

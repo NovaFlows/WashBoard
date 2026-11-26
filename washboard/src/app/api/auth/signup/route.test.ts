@@ -55,6 +55,14 @@ vi.mock('@supabase/supabase-js', () => ({
 const { envoyerLien } = vi.hoisted(() => ({ envoyerLien: vi.fn() }))
 vi.mock('@/lib/codeSms', async () => ({ ...(await vi.importActual<object>('@/lib/codeSms')), envoyerCodeSms: envoyerLien }))
 
+const { parrainage } = vi.hoisted(() => ({
+  parrainage: { trouver: vi.fn(), rattacher: vi.fn() },
+}))
+vi.mock('@/lib/parrainageServeur', () => ({
+  trouverParrain: parrainage.trouver,
+  rattacherFilleul: parrainage.rattacher,
+}))
+
 const { POST } = await import('./route')
 
 const ID_COMPTE = '0b7d3c2e-4f1a-4c8e-9d2b-7a6f5e4d3c2b'
@@ -96,6 +104,9 @@ beforeEach(() => {
     creerUtilisateur: { data: { user: { id: ID_COMPTE } }, error: null },
     suppressionErreur: null,
   }
+  parrainage.trouver.mockReset()
+  parrainage.rattacher.mockReset()
+  parrainage.rattacher.mockResolvedValue(true)
   envoyerLien.mockReset()
   envoyerLien.mockResolvedValue({ ok: true })
   vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -135,6 +146,17 @@ describe('POST /api/auth/signup — unicité du téléphone', () => {
     const { res } = await inscrire({ phone: NUMERO_EXEMPTE })
     expect(res.status).toBe(200)
     expect(inserts).toHaveLength(1)
+  })
+
+  it('ouvre un essai Pro de 14 jours', async () => {
+    const avant = Date.now()
+    const { res } = await inscrire({ phone: NUMERO_EXEMPTE })
+    expect(res.status).toBe(200)
+    const fin = new Date(inserts[0].trial_ends_at as string).getTime()
+    const quatorzeJours = 14 * 24 * 60 * 60 * 1000
+    expect(fin - avant).toBeGreaterThanOrEqual(quatorzeJours - 1000)
+    expect(fin - avant).toBeLessThan(quatorzeJours + 60_000)
+    expect(inserts[0]).toMatchObject({ subscription_status: 'trial', plan: 'pro' })
   })
 
   it('n\'interroge même pas la base pour un numéro exempté', async () => {
@@ -281,5 +303,56 @@ describe('POST /api/auth/signup — confirmation par SMS', () => {
     plan.insertErreurs = [{ code: '23505' }, { code: '23505' }, { code: '23505' }]
     await inscrire()
     expect(envoyerLien).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/auth/signup — code parrain', () => {
+  const JOUR = 24 * 60 * 60 * 1000
+  const dureeEssai = () => new Date(inserts[0].trial_ends_at as string).getTime() - Date.now()
+
+  it('code valide : 28 jours d’essai et lien avec le parrain', async () => {
+    parrainage.trouver.mockResolvedValue({ id: 'parrain-1', name: 'Bell Auto' })
+    const { res } = await inscrire({ code_parrain: ' bellauto-k7p2 ' })
+    expect(res.status).toBe(200)
+    expect(parrainage.trouver).toHaveBeenCalledWith(expect.anything(), 'BELLAUTO-K7P2')
+    expect(dureeEssai()).toBeGreaterThan(27.9 * JOUR)
+    expect(dureeEssai()).toBeLessThan(28.1 * JOUR)
+    expect(parrainage.rattacher).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      filleulId: inserts[0].id, parrainId: 'parrain-1', code: 'BELLAUTO-K7P2',
+    }))
+  })
+
+  it('code inconnu : refus, aucun compte créé', async () => {
+    parrainage.trouver.mockResolvedValue(null)
+    const { res, body } = await inscrire({ code_parrain: 'BELLAUTO-ZZZZ' })
+    expect(res.status).toBe(400)
+    expect(body.error).toMatch(/Ce code n’existe pas/)
+    expect(comptesCrees).toHaveLength(0)
+  })
+
+  it('code mal formé : refusé sans même interroger la base', async () => {
+    const { res } = await inscrire({ code_parrain: '<script>alert(1)</script>' })
+    expect(res.status).toBe(400)
+    expect(parrainage.trouver).not.toHaveBeenCalled()
+    expect(comptesCrees).toHaveLength(0)
+  })
+
+  it('vérification en panne : 503, rien de créé', async () => {
+    parrainage.trouver.mockResolvedValue('erreur')
+    const { res } = await inscrire({ code_parrain: 'BELLAUTO-K7P2' })
+    expect(res.status).toBe(503)
+    expect(comptesCrees).toHaveLength(0)
+  })
+
+  it('sans code : 14 jours, aucun rattachement', async () => {
+    await inscrire({ code_parrain: '' })
+    expect(dureeEssai()).toBeLessThan(14.1 * JOUR)
+    expect(parrainage.rattacher).not.toHaveBeenCalled()
+  })
+
+  it('ignore une durée ou un parrain envoyés par le navigateur', async () => {
+    await inscrire({ trial_ends_at: '2099-01-01T00:00:00Z', parrain_id: 'pirate', trial_days: 999 })
+    expect(dureeEssai()).toBeLessThan(14.1 * JOUR)
+    expect(parrainage.rattacher).not.toHaveBeenCalled()
   })
 })

@@ -14,7 +14,8 @@ import { jourParisDe } from '@/lib/chiffresPeriode'
 import { formatConversionRate } from '@/lib/funnelStats'
 import { DEPARTMENTS } from '@/lib/france-departments'
 import type { WidgetKey } from '@/lib/dashboardWidgets'
-import type { ZoneConfig } from '@/types'
+import type { ServiceAddon, VehicleItem, ZoneConfig } from '@/types'
+import { libellePrestations } from '@/lib/detailRendezVous'
 import PersonnaliserV2 from '@/components/dashboard/PersonnaliserV2'
 import ChoixItineraireV2 from '@/components/dashboard/ChoixItineraireV2'
 import MeteoAccueilV2, { STYLE_VERRE } from '@/components/dashboard/MeteoAccueilV2'
@@ -23,6 +24,7 @@ import { PLAN_LABELS, PLAN_COULEURS, PLAN_PRICES, PLAN_CARDS, type Plan } from '
 import type { JourSemaine } from '@/lib/semaineAccueil'
 import { adresseAvecLieu } from '@/lib/centreAuto'
 import { useLocale, useT } from '@/components/i18n/I18nProvider'
+import { CarteParrainageV2, CelebrationParrainageV2 } from '@/components/dashboard/ParrainageAccueilV2'
 
 // « Aujourd'hui », présentation v2 — réservée à la PWA installée en mode
 // standalone (voir Accueil.tsx, le point de branchement ; décision
@@ -185,6 +187,8 @@ export type RdvAccueil = {
   // La durée est déjà chargée par la page (voir la requête) : elle manquait dans ce type,
   // et sert à savoir si le créneau est fini (« À clôturer »).
   services: { name: string; price: number; duration_minutes?: number | null; service_categories?: { name: string } | null } | null
+  vehicles_detail?: VehicleItem[] | null
+  selected_addons?: ServiceAddon[] | null
 }
 
 /** Montant réellement facturé — les deux fonctions du projet, sans copie
@@ -203,9 +207,11 @@ function prixAffiche(b: RdvAccueil): string {
  *  planche : aucune règle de mise en forme fiable ne les couvre. */
 function lignePrestation(b: RdvAccueil, t: (p: string) => string): string {
   if (!b.services) return t('Prestation')
+  // Plusieurs prestations : toutes nommées, comme dans l'agenda.
+  const nom = libellePrestations(b)
   return b.services.service_categories?.name
-    ? `${b.services.service_categories.name} · ${b.services.name}`
-    : b.services.name
+    ? `${b.services.service_categories.name} · ${nom}`
+    : nom
 }
 
 /** Temps de route du jour : la somme des trajets entre deux rendez-vous
@@ -414,6 +420,8 @@ export default function AccueilV2({
         </p>
       )}
 
+      <CarteParrainageV2 />
+
       {reste.length > 0 && (
         <section className="mt-6">
           <div className="flex items-baseline justify-between gap-2 px-0.5 pb-2">
@@ -559,6 +567,7 @@ export default function AccueilV2({
         </>
       )}
 
+      <CelebrationParrainageV2 />
       {personnaliser && <PersonnaliserV2 visibles={widgets} onClose={() => setPersonnaliser(false)} />}
     </div>
   )

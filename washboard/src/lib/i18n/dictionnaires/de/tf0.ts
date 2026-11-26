@@ -42,7 +42,7 @@ export const tf0: Dictionnaire = {
   'Total ({basketCount} élément{v1})': 'Gesamt ({basketCount} Position(en))',
   '● Dans le secteur du laveur{v0}': '● Im Gebiet des Autowäschers{v0}',
   'Plafond atteint : {unite}': 'Limit erreicht: {unite}',
-  'Votre mois d’essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à {v0} réservations par mois.': 'Dein Testmonat ist vorbei, und nichts geht verloren: Buchungsseite, Kalender und Kunden sind weiterhin da. Bis du dich entscheidest, läuft das Konto auf Découverte, begrenzt auf {v0} Buchungen pro Monat.',
+  'Votre essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à {v0} réservations par mois.': 'Dein Test ist vorbei, und nichts geht verloren: Buchungsseite, Kalender und Kunden sind weiterhin da. Bis du dich entscheidest, läuft das Konto auf Découverte, begrenzt auf {v0} Buchungen pro Monat.',
   '{dus} mois de paiement en retard. Régularisez pour éviter la suspension de votre page de réservation.': '{dus} Monate Zahlungsrückstand. Gleiche ihn aus, damit deine Buchungsseite nicht gesperrt wird.',
   'Les réservations se remettent à zéro le {remiseAZero}, puis tous les mois à cette date. Les rendez-vous annulés ne comptent pas.': 'Die Buchungen werden am {remiseAZero} zurückgesetzt, dann jeden Monat an diesem Datum. Stornierte Termine zählen nicht.',
   'Client historique : toutes les fonctionnalités sont incluses, sans changer d’offre —{v0}{v1}.': 'Langjähriger Kunde: Alle Funktionen sind enthalten, ohne den Tarif zu wechseln –{v0}{v1}.',

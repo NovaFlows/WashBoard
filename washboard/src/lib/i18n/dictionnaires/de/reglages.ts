@@ -6,7 +6,7 @@ export const reglages: Dictionnaire = {
   'L’argent': 'Das Geld',
   'Argent, acquisition, clients': 'Geld, Neukunden, Kunden',
   'Devis et factures': 'Angebote und Rechnungen',
-  'Écrits à la main': 'Von Hand geschrieben',
+  'Écrits à la main': 'Handgeschrieben',
   'De temps en temps': 'Von Zeit zu Zeit',
   'Mon profil': 'Mein Profil',
   'Entreprise, factures': 'Unternehmen, Rechnungen',

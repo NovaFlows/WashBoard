@@ -91,7 +91,8 @@ type Disponibilites = { bookings: ExistingBooking[]; unavailabilities: Unavailab
 export type WasherPublic = {
   id: string
   name: string
-  base_address: string | null
+  /** Seul le fait qu'une adresse de départ existe sert ici : l'adresse elle-même reste côté serveur. */
+  adresse_de_base_renseignee: boolean
   team_size: number | null
   travel_fee_mode: 'base' | 'previous'
   travel_fee_tiers: { max_minutes?: number; max_km?: number; fee: number }[] | null
@@ -428,7 +429,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 )}
                 servicePrice={form.booked_price ?? services.find(s => s.id === form.service_id)?.price ?? 0}
                 washerId={washer.id}
-                hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
+                hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && washer.adresse_de_base_renseignee}
                 travelFeeMode={washer.travel_fee_mode ?? 'base'}
                 reservationJourMeme={washer.reservation_jour_meme === true}
                 fuseau={washer.fuseau}
@@ -470,7 +471,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                   className="inline-block px-6 py-3 text-white text-sm font-semibold rounded-xl transition-opacity hover:opacity-90"
                   style={{ backgroundColor: accent }}
                 >
-                  {t('Activer ma page — 1 mois offert')}
+                  {t('Activer ma page — 14 jours offerts')}
                 </a>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">{t('Sans carte bancaire')}</p>
                 <button

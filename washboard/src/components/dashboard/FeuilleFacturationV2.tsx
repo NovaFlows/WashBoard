@@ -5,7 +5,7 @@ import { Feuille, CHAMP, PRESSION, BOUTON, corps } from '@/components/dashboard/
 import { Constat } from '@/components/dashboard/PrestationsUiV2'
 import { Bloc, Pied, Puces } from '@/components/dashboard/ReglageAutomatismeV2'
 import { validerFacturation } from '@/lib/profil'
-import { paysDuProfil, reglesPays, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, type RegimeTva, type StatutJuridique } from '@/lib/facture'
+import { paysDuProfil, reglesPays, tauxInitial, tauxTvaPour, tauxTvaNormal, infosFacturationManquantes, phraseManques, type RegimeTva, type StatutJuridique } from '@/lib/facture'
 import type { ChampsProfil } from '@/lib/profilApi'
 import { useT } from '@/components/i18n/I18nProvider'
 
@@ -81,7 +81,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
   const [capital, setCapital] = useState(washer.facture_capital ?? '')
   const [immatriculation, setImmatriculation] = useState(washer.facture_immatriculation ?? '')
   const [regime, setRegime] = useState<RegimeTva>(washer.facture_regime_tva ?? 'franchise')
-  const [taux, setTaux] = useState<number>(washer.facture_taux_tva ?? tauxTvaNormal(paysDuProfil({ facture_numero_tva: washer.facture_numero_tva, facture_siret: washer.facture_siret, phone: (washer as { phone?: string | null }).phone })))
+  const [taux, setTaux] = useState<number>(tauxInitial(washer.facture_taux_tva, paysDuProfil({ facture_numero_tva: washer.facture_numero_tva, facture_siret: washer.facture_siret, phone: (washer as { phone?: string | null }).phone })))
   const [numeroTva, setNumeroTva] = useState(washer.facture_numero_tva ?? '')
   // Taux du pays du laveur (France 20/10/5,5, Belgique 21/12/6, Suisse 8,1/2,6/3,8), plus celui déjà enregistré s'il est ailleurs.
   const pays = paysDuProfil({ facture_numero_tva: numeroTva, facture_siret: siret, phone: (washer as { phone?: string | null }).phone })
@@ -110,7 +110,7 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
   async function soumettre(e: React.FormEvent) {
     e.preventDefault()
     if (enCours) return
-    const refus = validerFacturation({ siret, regime, numeroTva, prochainNumero, numeroActuel, pays })
+    const refus = validerFacturation({ siret, regime, numeroTva, prochainNumero, numeroActuel, pays }, t)
     if (refus) { setErreur(refus); return }
     setErreur(null)
     setEnCours(true)
@@ -150,8 +150,8 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
             valeur={statut}
             onChange={setStatut}
             options={[
-              { valeur: 'ei', libelle: regles.statutEi.libelle, aide: regles.statutEi.aide },
-              { valeur: 'societe', libelle: regles.statutSociete.libelle, aide: regles.statutSociete.aide },
+              { valeur: 'ei', libelle: t(regles.statutEi.libelle), aide: t(regles.statutEi.aide) },
+              { valeur: 'societe', libelle: t(regles.statutSociete.libelle), aide: t(regles.statutSociete.aide) },
             ] as const}
           />
         </Bloc>
@@ -255,8 +255,8 @@ export default function FeuilleFacturationV2({ washer, onEnregistrer, onClose }:
             valeur={regime}
             onChange={setRegime}
             options={[
-              { valeur: 'franchise', libelle: 'Franchise en base', aide: t('Vous ne facturez pas la TVA (cas le plus courant)') },
-              { valeur: 'assujetti', libelle: 'Assujetti', aide: t('Vous facturez la TVA et la reversez') },
+              { valeur: 'franchise', libelle: t('Franchise en base'), aide: t('Vous ne facturez pas la TVA (cas le plus courant)') },
+              { valeur: 'assujetti', libelle: t('Assujetti'), aide: t('Vous facturez la TVA et la reversez') },
             ] as const}
           />
           {assujetti && (

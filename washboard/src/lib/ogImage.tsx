@@ -14,8 +14,8 @@ import sharp from 'sharp'
 // Habillage refonte 2026 (2026-10-16) : fond papier, Archivo, vrai logo, et
 // captures de la nouvelle version (ordinateur + mobile) dans `public/og/`.
 
-export const OG_SIZE = { width: 1200, height: 630 }
-export const OG_CONTENT_TYPE = 'image/png'
+import { OG_SIZE, OG_CONTENT_TYPE } from './imagePartage'
+export { OG_SIZE, OG_CONTENT_TYPE }
 
 // Jetons v2 de globals.css (thème clair).
 const FOND = '#F6F5F3'

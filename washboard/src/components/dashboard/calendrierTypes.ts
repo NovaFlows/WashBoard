@@ -2,7 +2,7 @@ import type { CentreAutoPublic } from '@/lib/centreAuto'
 
 // Formes envoyées par `calendrier/page.tsx` à l'agenda, partagées par ses écrans et ses hooks.
 export type Service = { name: string; price: number; duration_minutes: number }
-export type ServiceFull = { id: string; name: string; price: number; duration_minutes: number; vehicle_price_overrides: Record<string, number>; category_id: string | null; vehicle_types: string[] }
+export type ServiceFull = { id: string; name: string; price: number; duration_minutes: number; vehicle_price_overrides: Record<string, number>; category_id: string | null; vehicle_types: string[]; en_veille?: boolean | null }
 export type Category = { id: string; name: string; types: { id: string; name: string }[] }
 export type Booking = {
   id: string
@@ -14,7 +14,11 @@ export type Booking = {
   lieu?: 'domicile' | 'centre' | null
   lat: number | null
   lng: number | null
+  /** Prestation principale (les ajoutées voyagent en options `prestation:<id>`). */
+  service_id?: string | null
   scheduled_at: string
+  /** Fin du créneau en base (durée des prestations et options comprise). */
+  ends_at?: string | null
   status: 'pending' | 'confirmed' | 'cancelled' | 'done'
   notes: string | null
   is_smart_slot: boolean
@@ -27,7 +31,7 @@ export type Booking = {
   selected_addons: { id: string; label: string; price: number; category: string; duration_minutes?: number }[] | null
   travel_fee: number | null
   vehicle_count: number | null
-  vehicles_detail: { type: string; count: number; unit_price: number; label?: string; models?: string[] }[] | null
+  vehicles_detail: { type: string; count: number; unit_price: number; label?: string; models?: string[]; addons?: { id: string; label: string; price: number; category: string; duration_minutes?: number }[] }[] | null
   // Catégorie jointe : « Lavage complet » ne dit pas si c'est une voiture ou
   // un canapé, alors que ça change le matériel à emporter.
   services: (Service & { service_categories?: { name: string } | null }) | null

@@ -51,7 +51,32 @@ export type DonneesLaveur = {
   joursOuverts: number[]
   reservations: { status: string; created_at: string; scheduled_at: string | null; booked_price: number | null; saisie_par_laveur: boolean | null; review_sms_sent_at: string | null }[]
   evenements: { session_id: string; step: string; referrer_host: string | null; created_at: string }[]
+  /** Les visites déjà comptées par la base (liste des laveurs, 30 jours) : quand elles sont
+   *  là, `evenements` est vide et c'est elles qui font foi. */
+  visitesAgregees?: VisitesAgregees
   appareilsNotifies: number
+}
+
+/** Visites d'un laveur comptées en sessions distinctes (fonction SQL `equipe_visites`). */
+export type VisitesAgregees = {
+  total: number
+  parEtape: Record<string, number>
+  parHote: { referrer_host: string | null; sessions: number }[]
+}
+
+/** Une ligne de `equipe_visites` : un total, un compte par étape, ou un compte par site d'origine. */
+export type LigneVisites = { washer_id: string; kind: 'total' | 'step' | 'host'; step: string | null; referrer_host: string | null; sessions: number }
+
+export function visitesParLaveur(lignes: LigneVisites[]): Map<string, VisitesAgregees> {
+  const parLaveur = new Map<string, VisitesAgregees>()
+  for (const l of lignes) {
+    let v = parLaveur.get(l.washer_id)
+    if (!v) { v = { total: 0, parEtape: {}, parHote: [] }; parLaveur.set(l.washer_id, v) }
+    if (l.kind === 'total') v.total = l.sessions
+    else if (l.kind === 'step' && l.step) v.parEtape[l.step] = l.sessions
+    else if (l.kind === 'host') v.parHote.push({ referrer_host: l.referrer_host, sessions: l.sessions })
+  }
+  return parLaveur
 }
 
 export type Ton = 'ok' | 'attention' | 'alerte' | 'neutre'
@@ -121,6 +146,15 @@ function provenance(evenements: DonneesLaveur['evenements']) {
   return [...parSource].map(([source, s]) => ({ source, visites: s.size })).sort((a, b) => b.visites - a.visites)
 }
 
+function provenanceAgregee(parHote: VisitesAgregees['parHote']) {
+  const parSource = new Map<string, number>()
+  for (const h of parHote) {
+    const s = sourceVisite(h.referrer_host)
+    parSource.set(s, (parSource.get(s) ?? 0) + h.sessions)
+  }
+  return [...parSource].map(([source, visites]) => ({ source, visites })).sort((a, b) => b.visites - a.visites)
+}
+
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
 export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
@@ -166,12 +200,14 @@ export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
 
   // ── Activité
   const ev30 = d.evenements.filter(e => depuis(e.created_at) < FENETRE_JOURS * JOUR_MS)
+  const agr = d.visitesAgregees
+  const etape = (nom: string) => agr ? (agr.parEtape[nom] ?? 0) : sessions(ev30, nom)
   const parcours: [number, number, number, number] = [
-    sessions(ev30, 'prestation'), sessions(ev30, 'creneau'), sessions(ev30, 'coordonnees'), sessions(ev30, 'confirmation'),
+    etape('prestation'), etape('creneau'), etape('coordonnees'), etape('confirmation'),
   ]
-  const visites30 = sessions(ev30)
-  const reseauxToujours = provenance(d.evenements).filter(p => estReseau(p.source))
-  const lienReseaux = d.evenements.length === 0 ? 'Non : sa page n’a jamais été ouverte'
+  const visites30 = agr ? agr.total : sessions(ev30)
+  const reseauxToujours = (agr ? provenanceAgregee(agr.parHote) : provenance(d.evenements)).filter(p => estReseau(p.source))
+  const lienReseaux = (agr ? agr.total === 0 : d.evenements.length === 0) ? 'Non : sa page n’a jamais été ouverte'
     : reseauxToujours.length ? `Oui : visites venues de ${reseauxToujours.map(p => `${p.source} (${p.visites})`).join(', ')}`
     : 'Pas de trace : aucune visite venue d’Instagram, TikTok ou Facebook'
   const resa = d.reservations.filter(r => r.status !== 'cancelled')
@@ -241,7 +277,7 @@ export function analyserLaveur(d: DonneesLaveur, now: Date = new Date()): Topo {
   return {
     statut, source, priorite, pagePrete, configuration,
     activite: {
-      derniereConnexion, visites30, parcours, provenance: provenance(ev30), lienReseaux,
+      derniereConnexion, visites30, parcours, provenance: agr ? provenanceAgregee(agr.parHote) : provenance(ev30), lienReseaux,
       reservations: resa.length,
       reservationsEnLigne: resa.filter(r => !r.saisie_par_laveur).length,
       reservations30: resa30.length,

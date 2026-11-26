@@ -1,0 +1,53 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { DashboardShell } from '@/components/dashboard/DashboardShell'
+import ProfilV2 from '@/components/dashboard/ProfilV2'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
+import { pourLeNavigateur } from '@/lib/washerNavigateur'
+import { hasFeature } from '@/lib/plan'
+import type { Washer } from '@/types'
+
+// Refonte 2026 — « Mon profil » : l'entreprise (nom, téléphone, adresse de départ, nombre de
+// laveurs), les mentions portées sur les factures, et les identifiants de connexion. Réservé à
+// la PWA installée (voir Profil.tsx, le garde-fou : le site est renvoyé vers
+// `/dashboard/parametres/tout#profil`).
+//
+// L'adresse est sous `/dashboard/parametres/` pour que « Plus » reste allumé dans la barre du
+// bas (BarreBasV2 : `startsWith('/dashboard/parametres')`).
+//
+// Lecture seule ici : les écritures passent par `PATCH /api/washer` (profil, facturation) et
+// par Supabase Auth depuis le navigateur (e-mail, mot de passe). Les colonnes sont ÉNUMÉRÉES
+// (jamais `*`) : tout ce qui franchit la frontière serveur → navigateur est sérialisé dans la
+// page, et la fiche laveur porte des jetons Google et des identifiants Stripe.
+// `slug`/`brand_color` : ajoutés passe bureau (2026-10-06), pour la liste « Plus » affichée à
+// gauche sur grand écran (`ProfilV2.tsx` la construit depuis cette même fiche) — même requête,
+// deux colonnes de plus. `slug` manquait déjà à `DashboardShell` (`slug={washer.slug}` plus
+// bas, silencieusement `undefined` jusqu'ici).
+const COLONNES =
+  'id, name, slug, brand_color, phone, base_address, team_size, travel_fee_tiers, travel_fee_mode, account_status, deletion_scheduled_at, ' +
+  'facture_statut, facture_nom_legal, facture_siret, facture_adresse, facture_forme_juridique, ' +
+  'facture_capital, facture_immatriculation, facture_regime_tva, facture_taux_tva, facture_numero_tva, ' +
+  'facture_prochain_numero, ' +
+  'trial_ends_at, subscription_status, plan, grandfathered, stripe_subscription_id, cancels_at'
+
+export default async function ProfilPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const washer = await washerDuUtilisateur(supabase, user.id, 'profil', COLONNES)
+  // Lu à part de la fiche (lib/centreAuto.ts) : tant que la colonne n'existe pas, l'écran s'ouvre quand même.
+  const { data: ficheCentre } = await supabase.from('washers').select('centre_auto').eq('id', washer.id).maybeSingle()
+
+  return (
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} abonnementStripe={!!washer.stripe_subscription_id} cancelsAt={washer.cancels_at ?? null}>
+      <ProfilV2
+        washer={pourLeNavigateur(washer as Washer)}
+        email={user.email ?? ''}
+        // Décidé côté serveur : le plan ne doit pas se deviner dans le navigateur.
+        peutEquipe={hasFeature(washer, 'multi_laveurs')}
+        centreAuto={(ficheCentre as { centre_auto?: unknown } | null)?.centre_auto ?? null}
+      />
+    </DashboardShell>
+  )
+}

@@ -21,7 +21,7 @@ export default function CoqueEquipe({ washer, children }: { washer: FicheEquipe;
       subscriptionStatus={washer?.subscription_status ?? null}
       plan={(washer?.plan ?? undefined) as Plan | undefined}
       grandfathered={washer?.grandfathered ?? false}
-      stripeSubscriptionId={washer?.stripe_subscription_id ?? null}
+      abonnementStripe={!!washer?.stripe_subscription_id}
       cancelsAt={washer?.cancels_at ?? null}
     >
       {children}

@@ -26,7 +26,7 @@ const commun = {
 }
 
 const { sendBookingRequest, sendBookingConfirmation, sendWasherNotification, sendWasherBookingLocked,
-  sendRappelRdv, sendAnnulationAcompte, sendRemiseLaveur } = await import('./index')
+  sendRappelRdv, sendAnnulationAcompte, sendRemiseLaveur, sendPrestationModifiee } = await import('./index')
 
 type Cas = [string, (fuseau: string | undefined, quand: string) => Promise<unknown>]
 const CAS: Cas[] = [
@@ -36,6 +36,8 @@ const CAS: Cas[] = [
   ['rappel de rendez-vous', (fuseau, quand) => sendRappelRdv({ ...commun, to: 'ines@test.fr', scheduledAt: quand, heures: 24, fuseau })],
   ['annulation faute d’acompte', (fuseau, quand) => sendAnnulationAcompte({ ...commun, to: 'ines@test.fr', scheduledAt: quand, fuseau })],
   ['remise accordée', (fuseau, quand) => sendRemiseLaveur({ ...commun, to: 'ines@test.fr', scheduledAt: quand, ancienPrix: 60, nouveauPrix: 50, fuseau })],
+  ['prestation ajoutée', (fuseau, quand) => sendPrestationModifiee({ ...commun, to: 'ines@test.fr', scheduledAt: quand, prestation: 'Cire', ajout: true,
+    lignes: [{ libelle: 'Lavage complet', montant: 60 }, { libelle: 'Cire', montant: 15 }], ancienPrix: 60, nouveauPrix: 75, jeton: null, fuseau })],
 ]
 
 beforeEach(() => { sendMock.mockClear() })

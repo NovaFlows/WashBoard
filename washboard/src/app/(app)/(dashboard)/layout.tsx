@@ -1,0 +1,116 @@
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
+import { quotaPrestations, planEffectif } from '@/lib/plan'
+import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
+import { COOKIE_REPORT } from '@/lib/veilleReport'
+import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
+import { FuseauProvider } from '@/components/FuseauContext'
+import { fuseauDuLaveur, type SourceFuseau } from '@/lib/fuseaux'
+import { ProOffertFourni } from '@/components/dashboard/ProOffertContext'
+
+/** Enveloppe commune à tout le tableau de bord.
+ *
+ *  Deux rôles distincts : fermer le tableau de bord à un compte dont l'email
+ *  n'est pas confirmé (en pratique Supabase refuse déjà la connexion d'un tel
+ *  compte ; cette garde couvre toute session qui y parviendrait par un autre
+ *  chemin — elle ne remplace PAS la vérification `if (!user) redirect('/login')`
+ *  de chaque page, qui reste le filet de sécurité si la session est absente),
+ *  et demander au laveur quelles prestations garder en ligne, quand il en a
+ *  plus que son offre n'en affiche.
+ *
+ *  Pourquoi ce deuxième rôle ici et pas sur la seule page d'accueil : le
+ *  laveur n'arrive pas toujours par là. L'application installée se rouvre là
+ *  où il l'avait laissée — son agenda, le plus souvent — et une notification
+ *  de réservation l'emmène droit sur une fiche de rendez-vous. La question
+ *  posée sur `/dashboard` seulement ne lui serait jamais arrivée, alors que sa
+ *  page de réservation n'affiche déjà plus tout son catalogue.
+ *
+ *  « Plus tard » reste toujours possible, sinon ce serait une porte fermée —
+ *  et il pose un cookie, sans quoi la fenêtre resurgirait au premier clic dans
+ *  le menu.
+ *
+ *  Coût : une lecture de la fiche laveur par page, sur un index (`user_id`).
+ *  Les offres sans plafond — Pro, Business, clients historiques — s'arrêtent
+ *  là ; seules celles qui en ont un lisent le catalogue. La fiche est certes
+ *  déjà lue par chaque page, mais la mutualiser demanderait de faire descendre
+ *  le résultat du layout vers les pages, ce que Next ne permet pas sans
+ *  contexte : une requête indexée de plus coûte moins cher que cette plomberie.
+ */
+/** Fuseau du laveur connecté, déduit de son adresse et de son téléphone
+ *  (lib/fuseaux.ts), pour tous les écrans du tableau de bord. Sans session ou
+ *  en cas d'échec, Paris — l'affichage d'avant, à l'identique. */
+async function fuseauConnecte(): Promise<string> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return fuseauDuLaveur(null)
+    const { data, error } = await supabase.from('washers').select('base_address, phone').eq('user_id', user.id).maybeSingle()
+    return error ? fuseauDuLaveur(null) : fuseauDuLaveur(data as SourceFuseau | null)
+  } catch {
+    return fuseauDuLaveur(null)
+  }
+}
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const [fuseau, contenu] = await Promise.all([fuseauConnecte(), contenuDuTableauDeBord(children)])
+  return <FuseauProvider fuseau={fuseau}>{contenu}</FuseauProvider>
+}
+
+async function contenuDuTableauDeBord(children: React.ReactNode): Promise<React.ReactNode> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Pas de session : les pages elles-mêmes redirigent vers la connexion.
+  if (!user) return <>{children}</>
+
+  if (!user.email_confirmed_at) redirect('/verifier-email')
+
+  // « Plus tard » : la question des prestations a déjà été repoussée, on ne lit que le Pro offert.
+  if ((await cookies()).get(COOKIE_REPORT)) {
+    const { data: fiche } = await supabase.from('washers').select('pro_offert_jusqu_au').eq('user_id', user.id).maybeSingle()
+    return <ProOffertFourni jusquAu={fiche?.pro_offert_jusqu_au ?? null}>{children}</ProOffertFourni>
+  }
+
+  const { data: washer } = await supabase
+    .from('washers')
+    .select('id, plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const envelopper = (contenu: React.ReactNode) => <ProOffertFourni jusquAu={washer?.pro_offert_jusqu_au ?? null}>{contenu}</ProOffertFourni>
+  const plafond = quotaPrestations(washer)
+  if (!washer || plafond === null) return envelopper(children)
+
+  // La colonne `en_veille` est demandée EXPLICITEMENT : tant que la migration
+  // 005 n'a pas tourné, cette lecture échoue, on n'a rien, et on ne redirige
+  // nulle part. L'écran ne peut donc pas proposer une action que le serveur
+  // refuserait. Voir `compterPrestations` pour le même raisonnement côté API.
+  const { data: services, error } = await supabase
+    .from('services')
+    .select('id, name, price, duration_minutes, vehicle_types, en_veille')
+    .order('created_at', { ascending: true })
+    .eq('washer_id', washer.id)
+
+  // Migration en attente ou vraie panne : dans les deux cas on laisse passer.
+  // Interrompre la navigation sur une lecture ratée serait pire que le
+  // problème qu'on cherche à signaler.
+  if (error) return envelopper(children)
+
+  const actives = (services ?? []).filter(estVisibleParLesClients)
+  const aRanger = aMettreEnVeille(actives.length, plafond)
+
+  return envelopper(
+    <>
+      {children}
+      {aRanger > 0 && (
+        <ChoixVeilleModal
+          actives={actives}
+          plafond={plafond}
+          aRanger={aRanger}
+          offre={planEffectif(washer)}
+        />
+      )}
+    </>
+  )
+}

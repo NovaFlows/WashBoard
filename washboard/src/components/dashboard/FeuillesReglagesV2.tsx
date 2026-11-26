@@ -106,7 +106,7 @@ export function FeuilleDeplacementV2({
                 onClick={() => { setUnite(u.valeur); setSeuil(''); setErreurPalier(null) }}
                 className={puce(unite === u.valeur)} style={PRESSION}
               >
-                {u.libelle}
+                {t(u.libelle)}
               </button>
             ))}
           </div>
@@ -123,7 +123,7 @@ export function FeuilleDeplacementV2({
                 {liste.map(p => (
                   <li key={seuilPalier(p)} className="flex min-h-[52px] items-center gap-3 pl-4 pr-1">
                     <span className={`min-w-0 flex-1 text-[15px] ${corps}`}>
-                      {libellePalier(p)} <span className="text-[color:var(--v2-color-gris)]">→</span>{' '}
+                      {libellePalier(p, t)} <span className="text-[color:var(--v2-color-gris)]">→</span>{' '}
                       <span className={`${corpsFort} tabular-nums`}>{euros(p.fee)}</span>
                     </span>
                     <button
@@ -193,8 +193,8 @@ export function FeuilleDeplacementV2({
                       {actif && <span className="h-2 w-2 rounded-full" style={{ background: 'var(--v2-color-accent)' }} />}
                     </span>
                     <span className="min-w-0">
-                      <span className={`block text-[15px] ${corpsFort}`}>{m.libelle}</span>
-                      <span className={`mt-0.5 block text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{m.detail}</span>
+                      <span className={`block text-[15px] ${corpsFort}`}>{t(m.libelle)}</span>
+                      <span className={`mt-0.5 block text-[12.5px] leading-snug ${corps} text-[color:var(--v2-color-gris)]`}>{t(m.detail)}</span>
                     </span>
                   </button>
                 )
@@ -244,7 +244,7 @@ export function ChampExpediteurSms({
     setTest({ enCours: false, erreur: null })
     confirmerEnvoi({
       titre: t('SMS envoyé'),
-      detail: telephone ? t('Regardez sur votre téléphone ({texte}).', { texte: resumeTelephone(telephone).texte }) : t('Regardez sur votre téléphone.'),
+      detail: telephone ? t('Regardez sur votre téléphone ({texte}).', { texte: resumeTelephone(telephone, t).texte }) : t('Regardez sur votre téléphone.'),
     })
   }
 

@@ -27,7 +27,7 @@ import {
 import { infosFacturationManquantes } from '@/lib/facture'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
-import type { Washer } from '@/types'
+import type { WasherNavigateur } from '@/lib/washerNavigateur'
 import { useT } from '@/components/i18n/I18nProvider'
 
 // « Mon profil » — refonte 2026, destination NEUVE de « Plus » (Alexandre, 2026-09-26 : la
@@ -52,7 +52,7 @@ type Feuille =
   | 'nom' | 'telephone' | 'adresse' | 'deplacement' | 'centre' | 'equipe' | 'facturation' | 'email' | 'motDePasse'
   | 'pause' | 'suppression' | null
 
-export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null }: { washer: Washer; email: string; peutEquipe: boolean; centreAuto?: unknown }) {
+export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null }: { washer: WasherNavigateur; email: string; peutEquipe: boolean; centreAuto?: unknown }) {
   const t = useT()
   const router = useRouter()
   const grandEcran = useGrandEcran()
@@ -88,28 +88,28 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
   async function enregistrer(champs: ChampsProfil): Promise<string | null> {
     const r = await enregistrerProfil(champs)
     if (!r.ok) return r.message
-    setFiche(f => ({ ...f, ...champs }) as Washer)
+    setFiche(f => ({ ...f, ...champs }) as WasherNavigateur)
     router.refresh()
     return null
   }
 
-  const nom = resumeNomEntreprise(fiche.name)
-  const telephone = resumeTelephone(fiche.phone)
-  const adresse = resumeAdresseDepart(fiche.base_address)
+  const nom = resumeNomEntreprise(fiche.name, t)
+  const telephone = resumeTelephone(fiche.phone, t)
+  const adresse = resumeAdresseDepart(fiche.base_address, t)
   const paliers = fiche.travel_fee_tiers ?? []
   const deplacement = paliers.length === 0 && !peut('frais_deplacement')
     ? { texte: t('Inclus dans l’offre {requiredPlanLabel}', { requiredPlanLabel: requiredPlanLabel('frais_deplacement') }) }
-    : resumeFraisDeplacement(paliers)
+    : resumeFraisDeplacement(paliers, t)
   const etatCompte = fiche.account_status === 'deactivated' || fiche.account_status === 'pending_deletion'
     ? fiche.account_status : null
-  const equipe = resumeEquipe(fiche.team_size, peutEquipe)
-  const facturation = resumeFacturation(fiche)
-  const courriel = resumeEmail(email)
+  const equipe = resumeEquipe(fiche.team_size, peutEquipe, t)
+  const facturation = resumeFacturation(fiche, t)
+  const courriel = resumeEmail(email, t)
 
   async function reactiver(): Promise<string | null> {
     const r = await actionCompte('reactivate')
     if (!r.ok) return r.message
-    setFiche(f => ({ ...f, account_status: 'active', deletion_scheduled_at: null }) as Washer)
+    setFiche(f => ({ ...f, account_status: 'active', deletion_scheduled_at: null }) as WasherNavigateur)
     router.refresh()
     return null
   }
@@ -119,7 +119,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
       ...f,
       account_status: etat,
       deletion_scheduled_at: etat === 'pending_deletion' ? new Date().toISOString() : null,
-    }) as Washer)
+    }) as WasherNavigateur)
     router.refresh()
   }
 
@@ -159,7 +159,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
             <Ligne label={t('Nom de l’entreprise')} valeur={nom.texte} ton={nom.ton} tronquer onClick={() => setFeuille('nom')} />
             <Ligne label={t('Adresse de départ')} valeur={adresse.texte} ton={adresse.ton} onClick={() => setFeuille('adresse')} />
             <Ligne label={t('Frais de déplacement')} valeur={deplacement.texte} onClick={() => setFeuille('deplacement')} />
-            <Ligne label={t('Centre auto')} valeur={resumeCentreAuto(centre)} onClick={() => setFeuille('centre')} />
+            <Ligne label={t('Centre auto')} valeur={resumeCentreAuto(centre, t)} onClick={() => setFeuille('centre')} />
             <Ligne
               label={t('Nombre de laveurs')}
               valeur={equipe.texte}
@@ -221,7 +221,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
           etiquette={t('Nom')}
           valeur={fiche.name ?? ''}
           placeholder={t('AutoNettoyage')}
-          valider={validerNomEntreprise}
+          valider={s => validerNomEntreprise(s, t)}
           onEnregistrer={v => enregistrer({ name: v })}
           onClose={fermer}
         />
@@ -229,7 +229,7 @@ export default function ProfilV2({ washer, email, peutEquipe, centreAuto = null 
       {feuille === 'telephone' && (
         <FeuilleTelephoneV2
           telephone={fiche.phone ?? null}
-          onChange={tel => { setFiche(f => ({ ...f, phone: tel }) as Washer); router.refresh() }}
+          onChange={tel => { setFiche(f => ({ ...f, phone: tel }) as WasherNavigateur); router.refresh() }}
           onClose={fermer}
         />
       )}

@@ -12,7 +12,7 @@ export async function POST() {
 
   const { data: washer, error: errWasher } = await supabase
     .from('washers')
-    .select('name, phone, sms_sender, sms_sender_statut, plan, grandfathered, google_review_url')
+    .select('name, phone, sms_sender, sms_sender_statut, plan, grandfathered, pro_offert_jusqu_au, google_review_url')
     .eq('user_id', user.id)
     .single()
 

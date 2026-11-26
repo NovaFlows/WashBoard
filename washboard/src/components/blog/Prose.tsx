@@ -159,7 +159,7 @@ export function Cta({
       <h2>{title}</h2>
       <p>{children}</p>
       <div className="heros-cta">
-        <Link href="/signup" className="btn btn-accent">{t('Lancer mon mois gratuit')}</Link>
+        <Link href="/signup" className="btn btn-accent">{t('Lancer mon essai gratuit')}</Link>
         {secondary && <Link href={secondary.href} className="pg-lien-doux">{secondary.label}</Link>}
       </div>
       <p className="rassure">{t('Sans engagement · Sans carte bancaire')}</p>

@@ -8,6 +8,9 @@ const etat = {
   users: [] as { id: string; email: string; last_sign_in_at: string | null }[],
   usersErreur: null as unknown,
   sessionUser: null as { id: string } | null,
+  // `equipe_visites` : par défaut absente de la base (PGRST202), comme avant que le SQL soit exécuté.
+  visites: null as Ligne[] | null,
+  appelsRpc: 0,
 }
 
 function requete(table: string) {
@@ -31,6 +34,17 @@ function requete(table: string) {
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
     from: requete,
+    rpc: (nom: string) => {
+      etat.appelsRpc++
+      let lignes = etat.visites
+      const q = {
+        range: (de: number, a: number) => { lignes = lignes?.slice(de, a + 1) ?? null; return q },
+        then: (ok: (v: unknown) => unknown, ko?: (e: unknown) => unknown) => Promise.resolve(
+          nom === 'equipe_visites' && lignes ? { data: lignes, error: null } : { data: null, error: { code: 'PGRST202', message: 'absente' } },
+        ).then(ok, ko),
+      }
+      return q
+    },
     auth: { admin: {
       getUserById: async (id: string) => ({ data: { user: etat.users.find(u => u.id === id) ?? null } }),
       listUsers: async ({ page }: { page: number }) => etat.usersErreur
@@ -51,7 +65,7 @@ const NOW = new Date('2026-11-06T12:00:00Z')
 const washer = (id: string, w: Ligne = {}): Ligne => ({ id, user_id: 'u-' + id, name: 'Laveur ' + id, slug: 'laveur-' + id, is_preview: false, created_at: '2026-11-01T10:00:00Z', ...w })
 
 beforeEach(() => {
-  etat.tables = {}; etat.erreurs = {}; etat.users = []; etat.usersErreur = null; etat.sessionUser = null
+  etat.tables = {}; etat.erreurs = {}; etat.users = []; etat.usersErreur = null; etat.sessionUser = null; etat.visites = null; etat.appelsRpc = 0
   process.env.SUPPORT_ADMIN_USER_IDS = 'equipe-1'
 })
 
@@ -109,6 +123,20 @@ describe('chargerTousLesLaveurs', () => {
     expect(tous.map(d => d.washer.id)).toEqual(['w1', 'w3'])
     expect(tous.map(d => d.email)).toEqual(['w1@exemple.fr', null])
   })
+  it('lit toutes les visites au-delà d’une page (plusieurs lots en parallèle), sans trou ni doublon', async () => {
+    etat.tables.washers = [washer('w1')]
+    // 20 345 lignes : la première page, puis deux lots de 8 pages, dont une dernière page courte.
+    etat.tables.booking_funnel_events = Array.from({ length: 20345 }, (_, i) => ({ washer_id: 'w1', session_id: `s${i}`, step: 'vu', referrer_host: null, created_at: '2026-11-01T00:00:00Z' }))
+    const [laveur] = await chargerTousLesLaveurs()
+    expect(laveur.evenements).toHaveLength(20345)
+    expect(new Set(laveur.evenements.map(e => e.session_id)).size).toBe(20345)
+  })
+  it('une page pleine pile suivie d’une page vide : rien en trop', async () => {
+    etat.tables.washers = [washer('w1')]
+    etat.tables.booking_funnel_events = Array.from({ length: 1000 }, (_, i) => ({ washer_id: 'w1', session_id: `s${i}`, step: 'vu', referrer_host: null, created_at: '2026-11-01T00:00:00Z' }))
+    const [laveur] = await chargerTousLesLaveurs()
+    expect(laveur.evenements).toHaveLength(1000)
+  })
   it('aucun laveur réel : liste vide ; utilisateurs illisibles : erreur', async () => {
     etat.tables.washers = [washer('w2', { is_preview: true })]
     expect(await chargerTousLesLaveurs()).toEqual([])
@@ -155,5 +183,51 @@ describe('chargerResumeEquipe', () => {
     etat.erreurs.washers = { code: '500' }
     etat.erreurs.suivi_appels = { code: '42P01' }
     expect(await chargerResumeEquipe(NOW)).toEqual({ nouveaux: null, total: null, expediteursEnAttente: null, aRelancer: null })
+  })
+})
+
+describe('chargerTousLesLaveurs : visites comptées par la base', () => {
+  const ligne = (washer_id: string, kind: string, sessions: number, step: string | null = null, referrer_host: string | null = null) => ({ washer_id, kind, step, referrer_host, sessions })
+
+  it('utilise les totaux de la base et ne lit pas les visites une à une', async () => {
+    etat.tables.washers = [washer('w1')]
+    // Si le code lisait quand même les visites brutes, ces lignes fausseraient le résultat.
+    etat.tables.booking_funnel_events = [{ washer_id: 'w1', session_id: 'brute', step: 'prestation', referrer_host: null, created_at: '2026-11-05T10:00:00Z' }]
+    etat.visites = [
+      ligne('w1', 'total', 12),
+      ligne('w1', 'step', 12, 'prestation'), ligne('w1', 'step', 7, 'creneau'), ligne('w1', 'step', 3, 'coordonnees'), ligne('w1', 'step', 1, 'confirmation'),
+      ligne('w1', 'host', 9, null, 'l.instagram.com'), ligne('w1', 'host', 3),
+    ]
+    const [d] = await chargerTousLesLaveurs()
+    expect(d.evenements).toEqual([])
+    expect(d.visitesAgregees).toEqual({
+      total: 12,
+      parEtape: { prestation: 12, creneau: 7, coordonnees: 3, confirmation: 1 },
+      parHote: [{ referrer_host: 'l.instagram.com', sessions: 9 }, { referrer_host: null, sessions: 3 }],
+    })
+  })
+
+  it('un laveur sans visite reçoit des totaux à zéro, pas les visites brutes', async () => {
+    etat.tables.washers = [washer('w1'), washer('w2')]
+    etat.visites = [ligne('w1', 'total', 2)]
+    const liste = await chargerTousLesLaveurs()
+    expect(liste.find(d => d.washer.id === 'w2')?.visitesAgregees).toEqual({ total: 0, parEtape: {}, parHote: [] })
+  })
+
+  it('fonction absente de la base : retombe sur la lecture des visites', async () => {
+    etat.tables.washers = [washer('w1')]
+    etat.tables.booking_funnel_events = [{ washer_id: 'w1', session_id: 's1', step: 'prestation', referrer_host: null, created_at: '2026-11-05T10:00:00Z' }]
+    const [d] = await chargerTousLesLaveurs()
+    expect(d.visitesAgregees).toBeUndefined()
+    expect(d.evenements).toHaveLength(1)
+  })
+
+  it("la fiche d'un seul laveur lit toujours les visites elles-mêmes", async () => {
+    etat.tables.washers = [washer('w1')]
+    etat.tables.booking_funnel_events = [{ washer_id: 'w1', session_id: 's1', step: 'prestation', referrer_host: null, created_at: '2026-11-05T10:00:00Z' }]
+    etat.visites = [ligne('w1', 'total', 99)]
+    const d = await chargerFicheLaveur('w1')
+    expect(etat.appelsRpc).toBe(0)
+    expect(d?.evenements).toHaveLength(1)
   })
 })

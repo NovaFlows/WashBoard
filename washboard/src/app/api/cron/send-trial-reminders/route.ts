@@ -5,6 +5,7 @@ import { notifierLaveur } from '@/lib/push'
 import { logger } from '@/lib/logger'
 import { FUSEAU } from '@/lib/dateUtils'
 import { suitRetourGratuit, BOOKING_QUOTA } from '@/lib/plan'
+import { rattraperRecompenses } from '@/lib/parrainageServeur'
 
 // Tourne chaque matin à 8h (cron-job.org : 0 8 * * *)
 export async function GET(request: NextRequest) {
@@ -191,5 +192,9 @@ export async function GET(request: NextRequest) {
     } catch (e) { logger.error('cron.grace_warning.send_failed', { washerId: washer.id }, e) }
   }
 
-  return NextResponse.json({ ok: true, ...counts })
+  // Parrainage : un filleul passé abonné sans le bouton « Paiement reçu » (SQL à la main,
+  // ou récompense déverrouillée après un échec) donne quand même son mois au parrain.
+  const parrainages = await rattraperRecompenses(admin)
+
+  return NextResponse.json({ ok: true, ...counts, parrainages })
 }

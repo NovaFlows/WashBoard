@@ -56,7 +56,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!facture && !jetonValide(id, jeton)) {
     const { data: laveur, error: errLaveur } = await supabase
       .from('washers')
-      .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, slug')
+      .select('id, plan, grandfathered, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au, slug')
       .eq('id', booking.washer_id)
       .single()
     if (errLaveur || !laveur) {
@@ -76,8 +76,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // et son client cherchent en retrouvant une facture dans leurs téléchargements.
   const dateRdv = new Date(booking.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })
   const nomFichier = facture
-    ? `facture-${facture.numero}-${dateRdv}.pdf`
-    : `recapitulatif-${booking.id.slice(0, 8).toUpperCase()}.pdf`
+    ? `${t('facture').toLowerCase()}-${facture.numero}-${dateRdv}.pdf`
+    : `${t('recapitulatif').toLowerCase()}-${booking.id.slice(0, 8).toUpperCase()}.pdf`
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer = await renderToBuffer(document as any)

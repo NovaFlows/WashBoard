@@ -10,7 +10,9 @@ import {
 } from '@/lib/plan'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2, { type ReglagesListeProps } from '@/components/dashboard/ListeReglagesV2'
-import { useT } from '@/components/i18n/I18nProvider'
+import { useLocale, useT } from '@/components/i18n/I18nProvider'
+import { formatDateFR } from '@/lib/subscription'
+import { BlocParrainageOffre } from '@/components/dashboard/ParrainageV2'
 
 export type PropsAbonnement = {
   subscriptionStatus: string
@@ -29,6 +31,8 @@ export type PropsAbonnement = {
   doitChoisir: boolean
   /** Liste « Plus », affichée à gauche sur grand écran (voir `ListeReglagesV2.tsx`). */
   liste: ReglagesListeProps
+  /** Fin du mois de Pro gagné par parrainage, quand il élève l’offre affichée. */
+  proOffertJusquAu?: string | null
 }
 
 // « Mon offre », présentation v2 — réservée à la PWA installée (voir
@@ -108,9 +112,10 @@ function JaugeV2({ titre: intitule, utilise, plafond, unite }: {
 export default function AbonnementV2({
   subscriptionStatus, trialEndsAt, subscriptionEndsAt, plan, grandfathered,
   plafondReservations, reservationsCeMois, plafondPrestations, prestationsAuCatalogue,
-  remiseAZero, doitChoisir, liste,
+  remiseAZero, doitChoisir, liste, proOffertJusquAu = null,
 }: PropsAbonnement) {
   const t = useT()
+  const loc = useLocale()
   const grandEcran = useGrandEcran()
   const [maintenant] = useState(() => Date.now())
   // L'annuel est présélectionné : c'est l'offre qu'on met en avant.
@@ -183,8 +188,11 @@ export default function AbonnementV2({
         </div>
 
         <div className="mt-4 space-y-2.5">
+          {proOffertJusquAu && (
+            <Constat ton="vert">{t('Pro offert jusqu’au {date}, puis retour à {offre}', { date: formatDateFR(proOffertJusquAu, loc), offre: PLAN_LABELS[plan] })}</Constat>
+          )}
           {doitChoisir && (
-            <Constat ton="accent">{t('Votre mois d’essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à {v0} réservations par mois.', { v0: plafondReservations ?? 5 })}</Constat>
+            <Constat ton="accent">{t('Votre essai est terminé, et rien n’est perdu : page de réservation, agenda et clients sont toujours là. En attendant votre choix, le compte tourne sur Découverte, limitée à {v0} réservations par mois.', { v0: plafondReservations ?? 5 })}</Constat>
           )}
           {subscriptionStatus === 'trial' && joursRestants !== null && (
             <Constat ton={joursRestants <= 7 ? 'ambre' : 'accent'}>
@@ -206,6 +214,8 @@ export default function AbonnementV2({
           )}
         </div>
       </section>
+
+      <BlocParrainageOffre />
 
       {/* ── Ce qu'il me reste ──────────────────────────────────────────────── */}
       {(plafondReservations !== null || plafondPrestations !== null) && (

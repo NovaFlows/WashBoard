@@ -13,6 +13,7 @@ class Redirection extends Error {
   constructor(public url: string) { super(`redirect ${url}`) }
 }
 
+vi.mock('@/lib/parrainageServeur', () => ({ annoncerInscriptionFilleul: async () => null }))
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => { throw new Redirection(url) },
 }))

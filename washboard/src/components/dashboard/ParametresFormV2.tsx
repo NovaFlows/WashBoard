@@ -2,7 +2,7 @@
 
 import { DiagnosticPwa } from '@/components/dashboard/DiagnosticPwa'
 import Link from 'next/link'
-import type { Washer } from '@/types'
+import type { WasherNavigateur } from '@/lib/washerNavigateur'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import ListeReglagesV2 from '@/components/dashboard/ListeReglagesV2'
 import ApercuPageV2 from '@/components/dashboard/ApercuPageV2'
@@ -174,7 +174,7 @@ export function FilAriane({ label, href }: { label: string; href: string }) {
 }
 
 type Props = {
-  washer: Washer
+  washer: WasherNavigateur
   /** Nombre de prestations, déjà compté côté serveur pour la barre
    *  d'avancement de `/dashboard/parametres` (voir page.tsx) — réutilisé tel
    *  quel, aucune requête ajoutée. `undefined` si le comptage a échoué : la

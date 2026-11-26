@@ -1,3 +1,4 @@
+import { optionsAvecDescriptionsNettoyees } from '@/lib/optionsRubriques'
 import { identifiantsCentresAcceptables, identifiantsCentresValides } from '@/lib/centreAuto'
 import { heuresDebutAcceptables, heuresDebutValides } from '@/lib/heuresPrestation'
 import { NextRequest, NextResponse } from 'next/server'
@@ -44,7 +45,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.en_veille === false) {
     const { data: washer, error: errWasher } = await supabase
       .from('washers')
-      .select('plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at')
+      .select('plan, grandfathered, slug, created_at, subscription_status, trial_ends_at, subscription_ends_at, pro_offert_jusqu_au')
       .eq('id', washerId).single()
 
     if (errWasher || !washer) {
@@ -88,7 +89,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.duration_minutes !== undefined) updates.duration_minutes = Number(body.duration_minutes)
   if (body.vehicle_types !== undefined) updates.vehicle_types = body.vehicle_types
   if (body.vehicle_price_overrides !== undefined) updates.vehicle_price_overrides = body.vehicle_price_overrides
-  if (body.addons !== undefined) updates.addons = body.addons
+  if (body.addons !== undefined) updates.addons = Array.isArray(body.addons) ? optionsAvecDescriptionsNettoyees(body.addons) : body.addons
   if (body.lieu_adapte !== undefined) updates.lieu_adapte = body.lieu_adapte
   if (body.lieu_restreint !== undefined) updates.lieu_restreint = body.lieu_restreint
   if (body.centres_ids !== undefined) updates.centres_ids = identifiantsCentresValides(body.centres_ids)

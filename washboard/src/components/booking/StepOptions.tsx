@@ -5,6 +5,7 @@ import type { Service, ServiceAddon, VehicleItem } from '@/types'
 import { hex } from '@/lib/colorUtils'
 import { dureeTotale, prixOptions } from '@/lib/pricing'
 import { useT } from '@/components/i18n/I18nProvider'
+import OptionsEnRubriques from './OptionsEnRubriques'
 
 // Options choisies véhicule par véhicule.
 //
@@ -52,7 +53,6 @@ export default function StepOptions({
     () => vehicules.map(v => v.addons ?? []),
   )
 
-  const categories = [...new Set(service.addons.map(a => a.category))]
   const plusieurs = vehicules.length > 1
 
   const vehiculesChoisis = vehicules.map((v, i) => ({ ...v, addons: choix[i] ?? [] }))
@@ -105,56 +105,57 @@ export default function StepOptions({
             </div>
           )}
 
-          {categories.map(category => (
-            <div key={category} className="mb-5">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5">{category}</p>
-              <div className="space-y-2">
-                {service.addons.filter(a => a.category === category).map(addon => {
-                  const isSel = (choix[iv] ?? []).some(a => a.id === addon.id)
-                  return (
-                    <button
-                      key={addon.id}
-                      onClick={() => basculer(iv, addon)}
-                      aria-pressed={isSel}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left"
+          <OptionsEnRubriques
+            options={service.addons}
+            idBase={`rubrique-${service.id}-${iv}`}
+            titresSiCourte
+            estChoisie={addon => (choix[iv] ?? []).some(a => a.id === addon.id)}
+            rendu={addon => {
+              const isSel = (choix[iv] ?? []).some(a => a.id === addon.id)
+              return (
+                <button
+                  onClick={() => basculer(iv, addon)}
+                  aria-pressed={isSel}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left"
+                  style={isSel
+                    ? { borderColor: accent, backgroundColor: hex(accent, 0.06) }
+                    : { borderColor: 'transparent' }
+                  }
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all"
                       style={isSel
-                        ? { borderColor: accent, backgroundColor: hex(accent, 0.06) }
-                        : { borderColor: 'transparent' }
+                        ? { borderColor: accent, backgroundColor: accent }
+                        : { borderColor: '#cbd5e1' }
                       }
                     >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all"
-                          style={isSel
-                            ? { borderColor: accent, backgroundColor: accent }
-                            : { borderColor: '#cbd5e1' }
-                          }
-                        >
-                          {isSel && (
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </div>
-                        <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{addon.label}</span>
-                      </div>
-                      <div className="flex flex-col items-end shrink-0 ml-3">
-                        <span
-                          className="text-sm font-semibold"
-                          style={isSel ? { color: accent } : { color: '#64748b' }}
-                        >
-                          +{addon.price}€
-                        </span>
-                        {addon.duration_minutes ? (
-                          <span className="text-xs text-slate-400 dark:text-slate-500">{t('+{duration_minutes} min', { duration_minutes: addon.duration_minutes })}</span>
-                        ) : null}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
+                      {isSel && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{addon.label}</span>
+                      {addon.description && <span className="block text-xs text-slate-500 dark:text-slate-400 leading-snug mt-0.5">{addon.description}</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0 ml-3">
+                    <span
+                      className="text-sm font-semibold"
+                      style={isSel ? { color: accent } : { color: '#64748b' }}
+                    >
+                      +{addon.price}€
+                    </span>
+                    {addon.duration_minutes ? (
+                      <span className="text-xs text-slate-400 dark:text-slate-500">{t('+{duration_minutes} min', { duration_minutes: addon.duration_minutes })}</span>
+                    ) : null}
+                  </div>
+                </button>
+              )
+            }}
+          />
         </div>
       ))}
 

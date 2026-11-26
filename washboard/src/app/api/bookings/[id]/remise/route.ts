@@ -8,6 +8,7 @@ import { appliquerRemiseLaveur } from '@/lib/remiseLaveur'
 import { sendRemiseLaveur } from '@/lib/email'
 import { estReservationDeTest } from '@/lib/e2e'
 import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
+import { libellePrestations } from '@/lib/detailRendezVous'
 
 // POST { prix } : le laveur baisse le prix d'un rendez-vous (lib/remiseLaveur.ts).
 // Réservation prise en ligne : le client est prévenu par email. Saisie par le laveur : rien.
@@ -68,12 +69,11 @@ export async function POST(
 
   const priseEnLigne = !booking.saisie_par_laveur
   if (priseEnLigne && booking.client_email?.trim() && !estReservationDeTest(booking.client_name)) {
-    const svc = booking.services as { name?: string } | null
     await sendRemiseLaveur({
       to: booking.client_email,
       clientName: booking.client_name,
       washerName: washer.name,
-      serviceName: svc?.name ?? 'Lavage',
+      serviceName: libellePrestations(booking),
       scheduledAt: booking.scheduled_at,
       fuseau: await lireFuseauLaveur(admin, washer.id),
       ancienPrix: verdict.ancienPrix,

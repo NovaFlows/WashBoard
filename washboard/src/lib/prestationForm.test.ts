@@ -256,6 +256,12 @@ describe('nouvelleOption', () => {
     expect('duration_minutes' in nouvelleOption({ ...b, duration_minutes: '0' }, connues, 'x')!).toBe(false)
   })
 
+  it('description facultative : nettoyée si présente, absente du résultat sinon', () => {
+    expect(nouvelleOption({ ...b, description: '  Aspiration  complète ' }, connues, 'x')?.description).toBe('Aspiration complète')
+    expect('description' in nouvelleOption({ ...b, description: '   ' }, connues, 'x')!).toBe(false)
+    expect('description' in nouvelleOption(b, connues, 'x')!).toBe(false)
+  })
+
   it('un supplément gratuit (0 €) est valide', () => {
     expect(nouvelleOption({ ...b, price: '0' }, connues, 'x')?.price).toBe(0)
   })

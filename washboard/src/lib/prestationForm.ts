@@ -17,6 +17,7 @@
 //   typesDepuisModele  ↔ `applyPreset()`    (CategoriesManager)
 // Une correction de règle dans l'un doit être reportée dans l'autre.
 
+import { descriptionOptionNettoyee } from '@/lib/optionsRubriques'
 import type { Availability, CategoryType, Service, ServiceAddon, ServiceCategory } from '@/types'
 import { formatDureeFr, hasPriceOverrides, minVehiclePrice } from '@/lib/pricing'
 import { formatEuros } from '@/lib/plan'
@@ -224,7 +225,7 @@ export function categorieOptionNormalisee(saisie: string, connues: string[]): st
   return connues.find(c => cle(c) === cle(propre)) ?? propre
 }
 
-export type BrouillonOption = { label: string; category: string; price: string; duration_minutes: string }
+export type BrouillonOption = { label: string; category: string; price: string; duration_minutes: string; description?: string }
 
 /** L'option à ajouter, ou `null` si le brouillon est incomplet (libellé et prix
  *  obligatoires ; le prix peut valoir 0). */
@@ -233,12 +234,14 @@ export function nouvelleOption(brouillon: BrouillonOption, connues: string[], id
   const prix = Number(brouillon.price)
   if (!label || brouillon.price.trim() === '' || !Number.isFinite(prix) || prix < 0) return null
   const duree = Number(brouillon.duration_minutes)
+  const description = descriptionOptionNettoyee(brouillon.description)
   return {
     id,
     label,
     category: categorieOptionNormalisee(brouillon.category, connues),
     price: prix,
     ...(brouillon.duration_minutes.trim() !== '' && Number.isFinite(duree) && duree > 0 ? { duration_minutes: duree } : {}),
+    ...(description ? { description } : {}),
   }
 }
 

@@ -1,13 +1,17 @@
 /** Envoi de SMS transactionnels via l'API Brevo. */
 
 import { estExpediteurApprouve } from './expediteurs'
+import { chiffresInternationaux } from './phone'
 
 /** Normalise un numéro français en format E.164 (+33XXXXXXXXX).
  *  Retourne null si le numéro ne peut pas être normalisé. */
 export function normalizePhone(raw: string): string | null {
   const digits = raw.replace(/\D/g, '')
-  // Déjà en format international
-  if (digits.startsWith('33') && digits.length === 11) return `+${digits}`
+  // Déjà en format international. Un numéro d'outre-mer écrit en +33 (+33 694…) est ramené à son
+  // vrai indicatif (+594 694…) : en +33, le SMS partirait vers un numéro qui n'existe pas.
+  if (digits.startsWith('33') && digits.length === 11) return `+${chiffresInternationaux('0' + digits.slice(2))}`
+  // Outre-mer déjà écrit avec son indicatif : +590, +594, +596, +262 puis 9 chiffres.
+  if (/^(?:00)?(?:590|594|596|262)\d{9}$/.test(digits)) return `+${digits.replace(/^00/, '')}`
   // Belgique (+32…, forme canonique des numéros belges en base) : 8 ou 9 chiffres après 32.
   if (/^32[1-9]\d{7,8}$/.test(digits)) return `+${digits}`
   if (/^0032[1-9]\d{7,8}$/.test(digits)) return `+${digits.slice(2)}`
@@ -18,8 +22,8 @@ export function normalizePhone(raw: string): string | null {
   if (/^352[2-9]\d{5,8}$/.test(digits)) return `+${digits}`
   if (/^00352[2-9]\d{5,8}$/.test(digits)) return `+${digits.slice(2)}`
   if (/^1(?:263|354|367|418|438|450|468|514|579|581|819|873)[2-9]\d{6}$/.test(digits)) return `+${digits}`
-  // Format local français (06, 07)
-  if (digits.length === 10 && digits.startsWith('0')) return `+33${digits.slice(1)}`
+  // Format local français (06, 07), outre-mer compris : 0694… → +594694…, 0612… → +33612….
+  if (digits.length === 10 && digits.startsWith('0')) return `+${chiffresInternationaux(digits)}`
   return null
 }
 

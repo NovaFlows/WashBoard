@@ -8,6 +8,7 @@ import {
 } from '@/lib/rappelsRdv'
 import { logger } from '@/lib/logger'
 import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
+import { libellePrestations } from '@/lib/detailRendezVous'
 
 // Rappels de rendez-vous par email, quelques heures avant (règles : lib/rappelsRdv.ts).
 // Allumés par défaut pour tous les laveurs ; chacun peut les couper et choisir ses délais
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 
   let requete = admin
     .from('bookings')
-    .select('id, washer_id, client_name, client_email, scheduled_at, created_at, address, lieu, rappels_rdv_envoyes, services(name)')
+    .select('id, washer_id, client_name, client_email, scheduled_at, created_at, address, lieu, rappels_rdv_envoyes, vehicles_detail, selected_addons, services(name)')
     .eq('status', 'confirmed')
     .not('client_email', 'is', null)
     .gt('scheduled_at', new Date(instant).toISOString())
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest) {
     // Plusieurs rappels échus d'un coup (cron arrêté un moment) : un seul email, au plus proche du
     // rendez-vous, et tous sont notés comme partis — pas de rafale de messages en retard.
     const heures = Math.min(...dus)
-    const svc = (Array.isArray(b.services) ? b.services[0] : b.services) as { name?: string } | null
+    const svc = (Array.isArray(b.services) ? b.services[0] : b.services) as { name: string } | null
     if (!fuseaux.has(b.washer_id)) fuseaux.set(b.washer_id, await lireFuseauLaveur(admin, b.washer_id))
 
     try {
@@ -126,7 +127,7 @@ export async function GET(request: NextRequest) {
         washerName: laveur.name,
         washerPhone: laveur.phone,
         scheduledAt: b.scheduled_at,
-        serviceName: svc?.name ?? 'Lavage',
+        serviceName: libellePrestations({ services: svc, vehicles_detail: b.vehicles_detail, selected_addons: b.selected_addons }),
         address: b.address,
         lieu: b.lieu ?? null,
         bookingId: b.id,

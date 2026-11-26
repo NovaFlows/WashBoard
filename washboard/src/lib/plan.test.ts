@@ -1038,3 +1038,11 @@ describe('ajouterMois — période du JJ/MM au JJ/MM+1', () => {
     expect(ajouterMois(new Date('2026-12-15T00:00:00.000Z'), 1).toISOString()).toBe('2027-01-15T00:00:00.000Z')
   })
 })
+
+describe('finEssaiInscription', () => {
+  it('donne 14 jours d’essai à un compte créé maintenant', async () => {
+    const { finEssaiInscription, JOURS_ESSAI } = await import('./plan')
+    expect(JOURS_ESSAI).toBe(14)
+    expect(finEssaiInscription(new Date('2026-11-16T10:00:00.000Z'))).toBe('2026-11-30T10:00:00.000Z')
+  })
+})

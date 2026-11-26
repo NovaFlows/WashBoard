@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { Palette, SprayCan, Calendar, type LucideIcon } from 'lucide-react'
-import type { Washer, Service, ServiceCategory, Availability, Unavailability } from '@/types'
+import type { Service, ServiceCategory, Availability, Unavailability } from '@/types'
+import type { WasherNavigateur } from '@/lib/washerNavigateur'
 import IdentiteForm from './IdentiteForm'
 import PrestationsManager from './PrestationsManager'
 import DisponibilitesManager from './DisponibilitesManager'
@@ -17,7 +18,7 @@ const TABS: { key: Tab; label: string; icon: LucideIcon }[] = [
 ]
 
 type Props = {
-  washer: Washer
+  washer: WasherNavigateur
   services: Service[]
   categories: ServiceCategory[]
   availabilities: Availability[]

@@ -10,6 +10,7 @@ import { logger } from './logger'
 import { migrationEnAttente } from './migrationEnAttente'
 
 // Facebook, IA, bouche-à-oreille et démarchage ajoutés le 2026-10-20 (Alexandre), avec une
+// « Un autre laveur » ajouté le 2026-11-18 (parrainage), avec une
 // précision libre pour « Autre » : Clean'LI avait répondu « Autre » sans qu'on sache d'où.
 export const SOURCES_ACQUISITION = [
   { valeur: 'instagram', libelle: 'Instagram' },
@@ -17,6 +18,9 @@ export const SOURCES_ACQUISITION = [
   { valeur: 'facebook', libelle: 'Facebook' },
   { valeur: 'google', libelle: 'Google' },
   { valeur: 'ia', libelle: 'IA (ChatGPT…)' },
+  // Un laveur qui s'inscrit avec un code de parrainage est déjà reconnu par la table `parrainages` ;
+  // cette réponse sert à ceux qui ont été conseillés par un collègue sans passer par un code.
+  { valeur: 'parrainage', libelle: 'Un autre laveur' },
   { valeur: 'recommandation', libelle: 'Recommandation' },
   { valeur: 'bouche_a_oreille', libelle: 'Bouche-à-oreille' },
   { valeur: 'demarchage', libelle: 'Démarchage' },

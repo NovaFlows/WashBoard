@@ -1,8 +1,11 @@
 import { defineConfig } from 'vitest/config'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import path from 'node:path'
 
 export default defineConfig({
   plugins: [tsconfigPaths()],
+  // `next/root-params` n'existe qu'une fois compilé par Next : substitut sans langue d'adresse.
+  resolve: { alias: { 'next/root-params': path.resolve(process.cwd(), 'src/lib/i18n/rootParamsHorsNext.ts') } },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],

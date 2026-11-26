@@ -14,6 +14,8 @@ import { prevenirTampon } from '@/lib/fideliteServeur'
 import { avisJoignable } from '@/lib/messagesAutomatiques'
 import { dureeTotale } from '@/lib/pricing'
 import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
+import { libellePrestations } from '@/lib/detailRendezVous'
+import { PROLONGATIONS_ACOMPTE, echeanceProlongee } from '@/lib/acompte'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -34,10 +36,13 @@ export async function PATCH(
   if (!washer) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
   const body = await request.json()
-  const { status, notes, closed_late, scheduled_at, montant_encaisse, acompte_recu } = body as { status?: string; notes?: string; closed_late?: boolean; scheduled_at?: string; montant_encaisse?: unknown; acompte_recu?: unknown }
+  const { status, notes, closed_late, scheduled_at, montant_encaisse, acompte_recu, prolonger_acompte_heures } = body as { status?: string; notes?: string; closed_late?: boolean; scheduled_at?: string; montant_encaisse?: unknown; acompte_recu?: unknown; prolonger_acompte_heures?: unknown }
 
   if (acompte_recu !== undefined && typeof acompte_recu !== 'boolean')
     return NextResponse.json({ error: 'Valeur invalide' }, { status: 400 })
+
+  if (prolonger_acompte_heures !== undefined && !(typeof prolonger_acompte_heures === 'number' && (PROLONGATIONS_ACOMPTE as readonly number[]).includes(prolonger_acompte_heures)))
+    return NextResponse.json({ error: 'Délai invalide' }, { status: 400 })
 
   if (status && !VALID_STATUSES.includes(status))
     return NextResponse.json({ error: 'Statut invalide' }, { status: 400 })
@@ -131,6 +136,41 @@ export async function PATCH(
     updates.acompte_statut = acompte_recu ? 'recu' : 'en_attente'
     updates.acompte_recu_le = acompte_recu ? new Date().toISOString() : null
   }
+  // Rallonge accordée à un client qui n'a pas encore payé. Si le cron l'a déjà annulée faute
+  // d'acompte (échéance dépassée), la réservation est rétablie « en attente » — c'est le seul
+  // retour en arrière permis sur une annulation (voir le garde-fou plus haut), et il ne vaut
+  // que pour ce cas : acompte jamais reçu, échéance passée, rendez-vous à venir, créneau libre.
+  if (typeof prolonger_acompte_heures === 'number') {
+    const maintenant = new Date()
+    if (booking.acompte_statut !== 'en_attente') return NextResponse.json({ error: 'Cette réservation n’attend pas d’acompte.' }, { status: 400 })
+    if (booking.status === 'cancelled') {
+      const echue = booking.acompte_echeance && new Date(booking.acompte_echeance).getTime() < maintenant.getTime()
+      if (!echue) return NextResponse.json({ error: 'Une réservation annulée ne peut plus changer de statut.' }, { status: 409 })
+      if (new Date(booking.scheduled_at).getTime() <= maintenant.getTime()) return NextResponse.json({ error: 'Ce rendez-vous est déjà passé.' }, { status: 409 })
+      const fin = booking.ends_at ?? new Date(new Date(booking.scheduled_at).getTime() + dureeMinutes * 60_000).toISOString()
+      const { count, error: errCreneau } = await admin
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('washer_id', washer.id)
+        .neq('status', 'cancelled')
+        .neq('id', id)
+        .lt('scheduled_at', fin)
+        .gt('ends_at', booking.scheduled_at)
+      if (errCreneau) {
+        logger.error('bookings.id.prolonger_acompte.creneau_failed', { bookingId: id }, errCreneau)
+        return NextResponse.json({ error: 'Impossible de vérifier le créneau. Réessayez dans un instant.' }, { status: 503 })
+      }
+      if ((count ?? 0) >= Math.max(1, washer.team_size ?? 1)) {
+        return NextResponse.json({ error: 'Ce créneau a été repris par un autre rendez-vous : impossible de rétablir cette réservation.' }, { status: 409 })
+      }
+      updates.status = 'pending'
+    } else if (booking.status !== 'pending') {
+      return NextResponse.json({ error: 'Le rendez-vous est déjà confirmé : il n’y a plus de délai à prolonger.' }, { status: 400 })
+    }
+    updates.acompte_echeance = echeanceProlongee(booking.acompte_echeance, prolonger_acompte_heures, maintenant)
+    // Un nouveau rappel part avant la nouvelle échéance.
+    updates.acompte_rappel_le = null
+  }
 
   const { data: updated, error } = await admin
     .from('bookings')
@@ -162,11 +202,13 @@ export async function PATCH(
   // ── Opérations asynchrones (Google Calendar + email) ────────────────────
   if (status && status !== booking.status) {
     const svc = booking.services as { name: string; price: number; duration_minutes: number } | null
-    const endIso = new Date(
+    // La fin enregistrée compte les prestations et options ajoutées ; à défaut, l'ancien calcul.
+    const endIso = booking.ends_at ?? new Date(
       new Date(booking.scheduled_at).getTime() + (svc?.duration_minutes ?? 60) * vehicleCount * 60_000
     ).toISOString()
+    const prestations = libellePrestations(booking)
 
-    const eventTitle = `🚗 ${svc?.name ?? 'Lavage'} — ${booking.client_name}`
+    const eventTitle = `🚗 ${prestations} — ${booking.client_name}`
 
     if (status === 'confirmed') {
       // 1. Créer l'événement Google Calendar
@@ -201,7 +243,7 @@ export async function PATCH(
         clientEmail:   booking.client_email,
         washerName:    washer.name,
         washerPhone:   washer.phone ?? null,
-        serviceName:   svc?.name ?? 'Lavage',
+        serviceName:   prestations,
         vehicleType:    booking.vehicle_type ?? undefined,
         vehicleCount:   booking.vehicle_count ?? undefined,
         vehiclesDetail: (booking.vehicles_detail as import('@/types').VehicleItem[] | null) ?? undefined,

@@ -1,0 +1,29 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { DashboardShell } from '@/components/dashboard/DashboardShell'
+import AcompteV2 from '@/components/dashboard/AcompteV2'
+import { washerDuUtilisateur } from '@/lib/washerCourant'
+
+// « Acompte » (2026-10-17) : l'acompte demandé à la réservation, payé par le lien du laveur
+// (voir lib/acompte.ts). Rangé dans Prestations et prix ; sous `/dashboard/parametres/`
+// pour que « Plus » reste allumé dans la barre du bas. Les réglages sont chargés par
+// l'écran (`GET /api/washer/acompte`).
+const COLONNES =
+  'id, name, slug, trial_ends_at, subscription_status, plan, grandfathered, pro_offert_jusqu_au, stripe_subscription_id, cancels_at, created_at, subscription_ends_at'
+
+export default async function AcomptePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const washer = await washerDuUtilisateur(supabase, user.id, 'acompte', COLONNES)
+
+  return (
+    <DashboardShell washerName={washer.name} trialEndsAt={washer.trial_ends_at} subscriptionStatus={washer.subscription_status} plan={washer.plan} grandfathered={washer.grandfathered} createdAt={washer.created_at} slug={washer.slug} subscriptionEndsAt={washer.subscription_ends_at ?? null} abonnementStripe={!!washer.stripe_subscription_id} cancelsAt={washer.cancels_at ?? null}>
+      <AcompteV2
+        slug={washer.slug}
+        liste={{ nom: washer.name, slug: washer.slug, plan: washer.plan, grandfathered: washer.grandfathered }}
+      />
+    </DashboardShell>
+  )
+}

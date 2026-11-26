@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detailUtile, lignesDetailPrix, nomsPrestations } from './detailRendezVous'
+import { detailUtile, libellePrestations, lignesDetailPrix, nomsPrestations } from './detailRendezVous'
 
 const addon = (id: string, label: string, price: number) => ({ id, label, price, category: id.startsWith('prestation:') ? 'prestation' : 'x' })
 const sable = addon('sable', 'Sable', 15)
@@ -19,6 +19,16 @@ describe('détail d’un rendez-vous', () => {
     expect(nomsPrestations({})).toEqual([])
   })
 
+  it('libellé sur une ligne pour les emails, le reçu et l’historique', () => {
+    expect(libellePrestations(b)).toBe('Lavage extérieur + Lavage complet')
+    expect(libellePrestations({ services: { name: 'Seule' } })).toBe('Seule')
+    expect(libellePrestations({})).toBe('Lavage')
+    expect(libellePrestations({}, 'Prestation')).toBe('Prestation')
+    // Ancien format, options communes : la prestation ajoutée est nommée aussi.
+    expect(libellePrestations({ services: { name: 'Lavage extérieur' }, vehicles_detail: [{ type: 'citadine', count: 1, unit_price: 40 }], selected_addons: [complet] }))
+      .toBe('Lavage extérieur + Lavage complet')
+  })
+
   it('détaille la prestation, la prestation ajoutée, l’option puis le déplacement', () => {
     expect(lignesDetailPrix(b).map(l => [l.libelle, l.montant, l.genre])).toEqual([
       ['Lavage extérieur', 40, 'principale'],
@@ -34,6 +44,14 @@ describe('détail d’un rendez-vous', () => {
       { type: 'citadine', count: 1, unit_price: 40, addons: [complet] },
     ], travel_fee: 0 }
     expect(lignesDetailPrix(deux).map(l => [l.libelle, l.montant])).toEqual([['Lavage extérieur × 2', 80], ['Lavage complet × 2', 130]])
+  })
+
+  it('même prestation à des prix différents selon le véhicule : la somme réelle, pas un seul prix', () => {
+    const mixte = { ...b, vehicles_detail: [
+      { type: 'citadine', count: 2, unit_price: 40, addons: [complet] },
+      { type: 'suv', count: 1, unit_price: 50, addons: [{ ...complet, price: 80 }] },
+    ], travel_fee: 0 }
+    expect(lignesDetailPrix(mixte).map(l => [l.libelle, l.montant])).toEqual([['Lavage extérieur × 3', 130], ['Lavage complet × 3', 65 * 2 + 80]])
   })
 
   it('ancien format (options communes, sans véhicules détaillés) : options et déplacement seulement', () => {

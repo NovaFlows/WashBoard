@@ -1,0 +1,25 @@
+import type { Dictionnaire } from '../../traduire'
+
+export const tq0: Dictionnaire = {
+  'TVA non applicable — régime de la petite entreprise (§ 19 UStG, Kleinunternehmerregelung).': 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).',
+  'TVA non applicable — opération exonérée (art. 20 de la loi 37/1992 sur la TVA).': 'Keine Mehrwertsteuer — steuerfreier Umsatz (Art. 20 des spanischen Mehrwertsteuergesetzes 37/1992).',
+  'En cas de retard de paiement : intérêts de retard de 9 points au-dessus du taux de base et forfait de 40 € pour frais de recouvrement (§ 288 BGB).': 'Bei Zahlungsverzug: Verzugszinsen in Höhe von 9 Prozentpunkten über dem Basiszinssatz sowie eine Pauschale von 40 € (§ 288 BGB).',
+  'En cas de retard de paiement : intérêts de retard et indemnité de 40 € pour frais de recouvrement (loi 3/2004 de lutte contre le retard de paiement).': 'Bei Zahlungsverzug: Verzugszinsen und eine Pauschale von 40 € für Einziehungskosten (spanisches Gesetz 3/2004 gegen Zahlungsverzug).',
+  'Numéro fiscal invalide : Steuernummer (10 à 13 chiffres, par exemple 12/345/67890) ou USt-IdNr. (DE suivi de 9 chiffres).': 'Ungültige Steuernummer: Steuernummer (10 bis 13 Ziffern, zum Beispiel 12/345/67890) oder USt-IdNr. (DE gefolgt von 9 Ziffern).',
+  'Société (GmbH, UG, GbR…)': 'Gesellschaft (GmbH, UG, GbR …)',
+  'Vos factures portent votre forme juridique, votre capital et votre inscription au registre du commerce (HRB).': 'Deine Rechnungen tragen deine Rechtsform, dein Kapital und deine Handelsregistereintragung (HRB).',
+  '« HRB » (registre du commerce), le tribunal d’instance (Amtsgericht), puis votre numéro.': '„HRB“ (Handelsregister), das Amtsgericht, dann deine Nummer.',
+  'Numéro de TVA invalide : DE suivi de 9 chiffres, par exemple DE123456789.': 'Ungültige USt-IdNr.: DE gefolgt von 9 Ziffern, zum Beispiel DE123456789.',
+  'NIF invalide : DNI (8 chiffres et une lettre), NIE (X, Y ou Z, 7 chiffres et une lettre) ou CIF (une lettre, 7 chiffres et une clé).': 'Ungültige NIF: DNI (8 Ziffern und ein Buchstabe), NIE (X, Y oder Z, 7 Ziffern und ein Buchstabe) oder CIF (ein Buchstabe, 7 Ziffern und ein Prüfzeichen).',
+  'Autónomo (entreprise individuelle)': 'Autónomo (Einzelunternehmer)',
+  'Vous exercez en nom propre, avec votre NIF.': 'Du arbeitest unter eigenem Namen, mit deiner NIF.',
+  'Société (SL, SA, SLU…)': 'Gesellschaft (SL, SA, SLU …)',
+  'Vos factures portent votre forme juridique, votre capital et votre inscription au registre du commerce.': 'Deine Rechnungen tragen deine Rechtsform, dein Kapital und deine Handelsregistereintragung.',
+  '« Registro Mercantil », la province, puis le tome, le folio et la feuille.': '„Registro Mercantil“, die Provinz, dann Band, Folio und Blatt.',
+  'Numéro de TVA invalide : ES suivi du NIF (9 caractères), par exemple ES12345678Z.': 'Ungültige USt-IdNr.: ES gefolgt von der NIF (9 Zeichen), zum Beispiel ES12345678Z.',
+  'Allemagne': 'Deutschland',
+  'Espagne': 'Spanien',
+  'Steuernummer': 'Steuernummer',
+  'USt-IdNr.': 'USt-IdNr.',
+  'NIF': 'NIF',
+}
