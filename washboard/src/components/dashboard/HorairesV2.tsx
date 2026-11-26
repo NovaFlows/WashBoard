@@ -13,8 +13,8 @@ import FeuilleJourV2 from '@/components/dashboard/FeuilleJourV2'
 import HorairesEtatVideV2, { type ModeleHoraires } from '@/components/dashboard/HorairesEtatVideV2'
 import { CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
 import { ConfirmationSuppression, Constat, Interrupteur, nom } from '@/components/dashboard/PrestationsUiV2'
-import { formatHeure, toDateStr } from '@/lib/dateUtils'
-import { FUSEAUX_PROPOSES } from '@/lib/fuseaux'
+import { FUSEAU, formatHeure, toDateStr } from '@/lib/dateUtils'
+import { libelleFuseau } from '@/lib/fuseaux'
 import { useFuseau } from '@/components/FuseauContext'
 import { enregistrerProfil } from '@/lib/profilApi'
 import {
@@ -98,26 +98,8 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
     else setJourMemeErreur(r.message)
   }
 
-  const fuseauInitial = useFuseau()
-  const [fuseau, setFuseau] = useState(fuseauInitial)
-  const [fuseauEnCours, setFuseauEnCours] = useState(false)
-  const [fuseauErreur, setFuseauErreur] = useState<string | null>(null)
-
-  // Tout le tableau de bord lit le fuseau à son chargement (FuseauContext) : une fois
-  // l'écriture faite, on recharge pour que l'agenda et l'accueil le suivent aussitôt.
-  async function changerFuseau(valeur: string) {
-    if (fuseauEnCours || valeur === fuseau) return
-    setFuseauEnCours(true)
-    setFuseauErreur(null)
-    const r = await enregistrerProfil({ fuseau: valeur })
-    if (r.ok) {
-      setFuseau(valeur)
-      window.location.reload()
-      return
-    }
-    setFuseauEnCours(false)
-    setFuseauErreur(r.message)
-  }
+  // Déduit de l'adresse et du téléphone (lib/fuseaux.ts), jamais choisi ici.
+  const fuseau = useFuseau()
 
   const vide = plages.length === 0
   const [aujourdhui] = useState(() => toDateStr(new Date()))
@@ -281,36 +263,27 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
             {jourMemeErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{jourMemeErreur}</Constat></div>}
           </section>
 
-          {/* Fuseau horaire (lib/fuseaux.ts) : vos horaires, « aujourd'hui » et les
-              rappels se lisent dans ce fuseau. Paris pour presque tout le monde. */}
-          <section aria-label={t('Fuseau horaire')} className="mt-[26px]">
-            <CarteListe>
-              <div className="py-3">
-                <label htmlFor="fuseau-horaire" className={`block text-[15.5px] ${nom}`}>{t('Fuseau horaire')}</label>
-                <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
-                  {t('Vos horaires, vos rappels et vos créneaux suivent l’heure de ce lieu.')}
-                </p>
-                <select
-                  id="fuseau-horaire"
-                  value={fuseau}
-                  disabled={fuseauEnCours}
-                  onChange={e => changerFuseau(e.target.value)}
-                  className={`mt-2.5 h-11 w-full rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] disabled:opacity-60`}
-                >
-                  {FUSEAUX_PROPOSES.map(f => <option key={f.id} value={f.id}>{t(f.libelle)}</option>)}
-                </select>
-                <p suppressHydrationWarning className={`mt-2 text-[13px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
-                  {t('Il est {heure} dans ce fuseau.', { heure: formatHeure(new Date(), fuseau) })}
-                </p>
-              </div>
-            </CarteListe>
-            <div className="mt-2">
-              <Constat ton="ambre" role="status">
-                {t('Changer de fuseau ne déplace pas vos rendez-vous déjà pris : ils gardent leur heure exacte. Vérifiez votre agenda après le changement.')}
-              </Constat>
-            </div>
-            {fuseauErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{fuseauErreur}</Constat></div>}
-          </section>
+          {/* Fuseau horaire, déduit tout seul de l'adresse puis du téléphone
+              (lib/fuseaux.ts). Montré seulement hors de l'heure de Paris : pour
+              presque tous les laveurs, rien ne change à l'écran. */}
+          {fuseau !== FUSEAU && (
+            <section aria-label={t('Fuseau horaire')} className="mt-[26px]">
+              <CarteListe>
+                <div className="py-3">
+                  <p className={`text-[15.5px] ${nom}`}>{t('Fuseau horaire')}</p>
+                  <p suppressHydrationWarning className={`mt-0.5 text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] tabular-nums`}>
+                    {t('{lieu} : il est {heure}.', { lieu: t(libelleFuseau(fuseau)), heure: formatHeure(new Date(), fuseau) })}
+                  </p>
+                  <p className={`mt-1 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                    {t('Vos horaires, vos rappels et vos créneaux suivent l’heure de ce lieu.')}
+                  </p>
+                  <p className={`mt-1 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                    {t('Trouvé grâce à l’adresse de départ et au numéro de votre profil.')}
+                  </p>
+                </div>
+              </CarteListe>
+            </section>
+          )}
 
           {/* Les congés restent gérables même sans aucune plage : un laveur qui
               n'a pas encore réglé sa semaine peut déjà bloquer une période. */}

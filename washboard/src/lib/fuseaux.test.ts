@@ -8,28 +8,74 @@ import {
 } from './dateUtils'
 import { heureParis, estAujourdhuiParis, creneauDansOuverture } from './bookingWindow'
 import { debutCreneauIso, slotEstPasse, countOverlaps, isSlotFeasible } from './slots'
-import { fuseauDuLaveur, estFuseauPropose, FUSEAUX_PROPOSES } from './fuseaux'
+import { fuseauDuLaveur, fuseauDeLAdresse, fuseauDuTelephone, estFuseauPropose, FUSEAUX_PROPOSES } from './fuseaux'
 
 const CAYENNE = 'America/Cayenne'
 
-describe('fuseau du laveur : valeur lue en base', () => {
-  it('retombe sur Paris pour tout ce qui n’est pas un fuseau proposé', () => {
+describe('fuseau du laveur : déduit de l’adresse puis du téléphone', () => {
+  it('Paris pour tous les laveurs actuels de métropole, Belgique, Suisse', () => {
     expect(fuseauDuLaveur(null)).toBe(FUSEAU)
-    expect(fuseauDuLaveur(undefined)).toBe(FUSEAU)
     expect(fuseauDuLaveur({})).toBe(FUSEAU)
-    expect(fuseauDuLaveur({ fuseau: null })).toBe(FUSEAU)
-    expect(fuseauDuLaveur({ fuseau: 'america/cayenne' })).toBe(FUSEAU)
-    expect(fuseauDuLaveur({ fuseau: 'UTC' })).toBe(FUSEAU)
-    expect(fuseauDuLaveur('Asia/Tokyo')).toBe(FUSEAU)
+    expect(fuseauDuLaveur({ base_address: '12 Rue de Rivoli, 75001 Paris, France', phone: '0612345678' })).toBe(FUSEAU)
+    expect(fuseauDuLaveur({ base_address: '3 Cours Mirabeau, 13100 Aix-en-Provence', phone: null })).toBe(FUSEAU)
+    expect(fuseauDuLaveur({ base_address: '5 Cours Napoléon, 20000 Ajaccio, France', phone: '0612345678' })).toBe(FUSEAU)
+    expect(fuseauDuLaveur({ base_address: 'Rue Neuve 1, 1000 Bruxelles, Belgique', phone: '+32470123456' })).toBe(FUSEAU)
+    expect(fuseauDuLaveur({ base_address: null, phone: '+41791234567' })).toBe(FUSEAU)
+    expect(fuseauDuLaveur({ base_address: null, phone: '0712345678' })).toBe(FUSEAU)
   })
 
-  it('garde un fuseau proposé', () => {
-    expect(fuseauDuLaveur({ fuseau: CAYENNE })).toBe(CAYENNE)
-    expect(fuseauDuLaveur(CAYENNE)).toBe(CAYENNE)
+  it('un nom de rue ne déclenche rien', () => {
+    expect(fuseauDeLAdresse('8 Rue de la Martinique, 75018 Paris, France')).toBe(FUSEAU)
+    expect(fuseauDeLAdresse('Place du Canada, 75008 Paris')).toBe(FUSEAU)
+    expect(fuseauDeLAdresse('12 rue du Québec')).toBeNull()
+    expect(fuseauDeLAdresse('Avenue de la Réunion')).toBeNull()
+  })
+
+  it('Cayenne par le code postal ou le nom', () => {
+    expect(fuseauDeLAdresse('12 Rue Lallouette, 97300 Cayenne, Guyane française')).toBe(CAYENNE)
+    expect(fuseauDeLAdresse('Cayenne 97300, French Guiana')).toBe(CAYENNE)
+    expect(fuseauDeLAdresse('Cayenne, Guyane française')).toBe(CAYENNE)
+    expect(fuseauDeLAdresse('Cayenne')).toBe(CAYENNE)
+    expect(fuseauDeLAdresse('Kourou, Guyane')).toBe(CAYENNE)
+    expect(fuseauDeLAdresse('97310 Kourou')).toBe(CAYENNE)
+  })
+
+  it('les autres outre-mer par le code postal', () => {
+    expect(fuseauDeLAdresse('97200 Fort-de-France')).toBe('America/Martinique')
+    expect(fuseauDeLAdresse('97110 Pointe-à-Pitre')).toBe('America/Guadeloupe')
+    expect(fuseauDeLAdresse('97400 Saint-Denis, La Réunion')).toBe('Indian/Reunion')
+    expect(fuseauDeLAdresse('Saint-Denis, La Réunion')).toBe('Indian/Reunion')
+    expect(fuseauDeLAdresse('97600 Mamoudzou')).toBe('Indian/Mayotte')
+    expect(fuseauDeLAdresse('98800 Nouméa')).toBe('Pacific/Noumea')
+    expect(fuseauDeLAdresse('98714 Papeete, Tahiti')).toBe('Pacific/Tahiti')
+    // Saint-Denis sans précision = la Seine-Saint-Denis, pas La Réunion.
+    expect(fuseauDeLAdresse('1 Rue de la République, 93200 Saint-Denis')).toBe(FUSEAU)
+  })
+
+  it('le téléphone, quand l’adresse ne dit rien', () => {
+    expect(fuseauDuTelephone('0694123456')).toBe(CAYENNE)
+    expect(fuseauDuTelephone('0594 12 34 56')).toBe(CAYENNE)
+    expect(fuseauDuTelephone('+594 694 12 34 56')).toBe(CAYENNE)
+    expect(fuseauDuTelephone('0696123456')).toBe('America/Martinique')
+    expect(fuseauDuTelephone('0690123456')).toBe('America/Guadeloupe')
+    expect(fuseauDuTelephone('0692123456')).toBe('Indian/Reunion')
+    expect(fuseauDuTelephone('0639123456')).toBe('Indian/Mayotte')
+    expect(fuseauDuTelephone('+15142345678')).toBe('America/Toronto')
+    expect(fuseauDuTelephone('0612345678')).toBeNull()
+    expect(fuseauDuLaveur({ base_address: null, phone: '0694123456' })).toBe(CAYENNE)
+    expect(fuseauDuLaveur({ base_address: '', phone: '0694123456' })).toBe(CAYENNE)
+  })
+
+  it('l’adresse l’emporte sur le téléphone', () => {
+    // Un Guyanais installé à Lyon avec son ancien numéro : heure de Paris.
+    expect(fuseauDuLaveur({ base_address: '10 Place Bellecour, 69002 Lyon', phone: '0694123456' })).toBe(FUSEAU)
+    // Un numéro de métropole, une adresse à Cayenne : heure de Cayenne.
+    expect(fuseauDuLaveur({ base_address: '97300 Cayenne', phone: '0612345678' })).toBe(CAYENNE)
+  })
+
+  it('ne renvoie qu’un fuseau de la liste, reconnu par le moteur', () => {
     expect(estFuseauPropose('Europe/Paris')).toBe(true)
-  })
-
-  it('chaque fuseau proposé est reconnu par le moteur (Node comme navigateur)', () => {
+    expect(estFuseauPropose('Asia/Tokyo')).toBe(false)
     for (const f of FUSEAUX_PROPOSES) {
       expect(() => new Intl.DateTimeFormat('fr-FR', { timeZone: f.id })).not.toThrow()
     }

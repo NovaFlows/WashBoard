@@ -1,20 +1,21 @@
 // Lecture du fuseau d'un laveur côté serveur.
 //
-// Lu À PART de la fiche, comme l'acompte ou le centre auto : tant que la
-// colonne `washers.fuseau` n'existe pas en base, la requête échoue ici sans
-// faire tomber la lecture du laveur ni la page, et l'on retombe sur Paris —
-// exactement le comportement d'avant. Rien ne peut donc décaler un laveur
-// existant tant qu'il n'a pas, lui, choisi un autre fuseau.
+// Le fuseau n'est pas stocké : il se déduit de l'adresse de départ et du
+// téléphone (lib/fuseaux.ts). On ne lit donc que ces deux colonnes, qui
+// existent depuis toujours. Une lecture en échec retombe sur Paris —
+// exactement le comportement d'avant.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { fuseauDuLaveur } from './fuseaux'
+import { fuseauDuLaveur, type SourceFuseau } from './fuseaux'
+
+const COLONNES = 'base_address, phone'
 
 /** Le fuseau du laveur `washers.id = washerId` (Paris en cas de doute). */
 export async function lireFuseauLaveur(client: SupabaseClient, washerId: string): Promise<string> {
   try {
-    const { data, error } = await client.from('washers').select('fuseau').eq('id', washerId).maybeSingle()
+    const { data, error } = await client.from('washers').select(COLONNES).eq('id', washerId).maybeSingle()
     if (error) return fuseauDuLaveur(null)
-    return fuseauDuLaveur(data as { fuseau?: string | null } | null)
+    return fuseauDuLaveur(data as SourceFuseau | null)
   } catch {
     return fuseauDuLaveur(null)
   }
@@ -27,9 +28,9 @@ export async function lireFuseauxLaveurs(client: SupabaseClient, washerIds: stri
   const ids = [...new Set(washerIds)].filter(Boolean)
   if (ids.length === 0) return resultat
   try {
-    const { data, error } = await client.from('washers').select('id, fuseau').in('id', ids)
+    const { data, error } = await client.from('washers').select(`id, ${COLONNES}`).in('id', ids)
     if (error || !data) return resultat
-    for (const ligne of data as { id: string; fuseau?: string | null }[]) {
+    for (const ligne of data as ({ id: string } & SourceFuseau)[]) {
       resultat.set(ligne.id, fuseauDuLaveur(ligne))
     }
   } catch {

@@ -15,7 +15,6 @@ import { widgetsValides } from '@/lib/dashboardWidgets'
 import { slugValide, slugLibre } from '@/lib/slug'
 import { BookingPageModeSchema } from '@/lib/bookingPageMode'
 import { RAPPEL_HEURES_MAX, normaliserHeures } from '@/lib/rappelsRdv'
-import { estFuseauPropose } from '@/lib/fuseaux'
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createServerClient()
@@ -30,7 +29,7 @@ export async function PATCH(request: NextRequest) {
     meta_pixel_id,
     review_enabled, review_delay_hours, google_review_url, review_channel, sms_sender,
     followup_enabled, followup_delay_days, followup_message,
-    rappel_rdv_actif, rappel_rdv_heures, fuseau,
+    rappel_rdv_actif, rappel_rdv_heures,
     zone_config, dashboard_widgets,
     facture_nom_legal, facture_siret, facture_adresse, facture_regime_tva, facture_taux_tva, facture_numero_tva,
     facture_statut, facture_forme_juridique, facture_capital, facture_immatriculation,
@@ -254,12 +253,6 @@ export async function PATCH(request: NextRequest) {
   if (silhouettes_couleur !== undefined) updates.silhouettes_couleur = Boolean(silhouettes_couleur)
   if (plusieurs_prestations !== undefined) updates.plusieurs_prestations = Boolean(plusieurs_prestations)
   if (demander_type_vehicule !== undefined) updates.demander_type_vehicule = Boolean(demander_type_vehicule)
-  // Fuseau horaire (lib/fuseaux.ts) : liste fermée, jamais une valeur libre — une faute de
-  // frappe décalerait tous les créneaux et rappels du laveur.
-  if (fuseau !== undefined) {
-    if (!estFuseauPropose(fuseau)) return NextResponse.json({ error: 'Fuseau horaire invalide.' }, { status: 400 })
-    updates.fuseau = fuseau
-  }
   if (travel_fee_tiers !== undefined) {
     // Ne conserver que les paliers cohérents (seuil > 0, frais >= 0), réduits à leurs deux champs.
     type Palier = { max_minutes?: unknown; max_km?: unknown; fee?: unknown }

@@ -6,7 +6,7 @@ import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
 import { COOKIE_REPORT } from '@/lib/veilleReport'
 import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
 import { FuseauProvider } from '@/components/FuseauContext'
-import { fuseauDuLaveur } from '@/lib/fuseaux'
+import { fuseauDuLaveur, type SourceFuseau } from '@/lib/fuseaux'
 
 /** Enveloppe commune à tout le tableau de bord.
  *
@@ -36,16 +36,16 @@ import { fuseauDuLaveur } from '@/lib/fuseaux'
  *  le résultat du layout vers les pages, ce que Next ne permet pas sans
  *  contexte : une requête indexée de plus coûte moins cher que cette plomberie.
  */
-/** Fuseau du laveur connecté (lib/fuseaux.ts), pour tous les écrans du tableau de bord.
- *  Lu à part, comme les autres réglages optionnels : sans la colonne, ou sans
- *  session, Paris — l'affichage d'avant, à l'identique. */
+/** Fuseau du laveur connecté, déduit de son adresse et de son téléphone
+ *  (lib/fuseaux.ts), pour tous les écrans du tableau de bord. Sans session ou
+ *  en cas d'échec, Paris — l'affichage d'avant, à l'identique. */
 async function fuseauConnecte(): Promise<string> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return fuseauDuLaveur(null)
-    const { data, error } = await supabase.from('washers').select('fuseau').eq('user_id', user.id).maybeSingle()
-    return error ? fuseauDuLaveur(null) : fuseauDuLaveur(data as { fuseau?: string | null } | null)
+    const { data, error } = await supabase.from('washers').select('base_address, phone').eq('user_id', user.id).maybeSingle()
+    return error ? fuseauDuLaveur(null) : fuseauDuLaveur(data as SourceFuseau | null)
   } catch {
     return fuseauDuLaveur(null)
   }
