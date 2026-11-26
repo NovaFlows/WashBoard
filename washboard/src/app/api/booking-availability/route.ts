@@ -4,7 +4,8 @@ import { errorResponse } from '@/lib/apiError'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { quotaReservations } from '@/lib/plan'
 import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
-import { FUSEAU, minuitParisUTC } from '@/lib/dateUtils'
+import { minuitParisUTC } from '@/lib/dateUtils'
+import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
 import { lireBlocages } from '@/lib/blocagesServeur'
 
 // Ce que la page de réservation lisait autrefois côté serveur, à chaque visite.
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     return errorResponse('booking_availability.washer', errLaveur ?? new Error('introuvable'), { washerId })
   }
 
-  const [reservations, conges] = await Promise.all([
+  const [reservations, conges, fuseau] = await Promise.all([
     // Page par page : au-delà de 1 000 rendez-vous à venir, l'API couperait
     // sans erreur, et les créneaux des rendez-vous manquants s'afficheraient
     // libres — une double réservation. Voir `toutesLesLignes`.
@@ -65,6 +66,7 @@ export async function GET(request: NextRequest) {
       .order('id')
       .range(debut, fin)),
     lireBlocages(admin, washerId, { avecId: true }),
+    lireFuseauLaveur(admin, washerId),
   ])
 
   // Une lecture en échec ne doit JAMAIS ressortir en liste vide : le
@@ -95,11 +97,11 @@ export async function GET(request: NextRequest) {
     if (!estVerrouillee(r, seuils)) {
       return { scheduled_at: r.scheduled_at, vehicle_count: r.vehicle_count, selected_addons: r.selected_addons, services: r.services }
     }
-    const jour = new Date(r.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: FUSEAU })
-    const debutJour = minuitParisUTC(jour)
+    const jour = new Date(r.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: fuseau })
+    const debutJour = minuitParisUTC(jour, fuseau)
     const lendemain = new Date(`${jour}T12:00:00Z`)
     lendemain.setUTCDate(lendemain.getUTCDate() + 1)
-    const finJour = minuitParisUTC(lendemain.toISOString().slice(0, 10))
+    const finJour = minuitParisUTC(lendemain.toISOString().slice(0, 10), fuseau)
     return {
       scheduled_at: debutJour.toISOString(),
       vehicle_count: 1,

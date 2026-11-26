@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Check, Lock, MapPin, MoreHorizontal, Navigation, Phone, Store } from 'lucide-react'
 import { useGrandEcran } from '@/hooks/useGrandEcran'
 import { formatHeure } from '@/lib/dateUtils'
+import { useFuseau } from '@/components/FuseauContext'
 import { formatPrice, finalDisplayPrice } from '@/lib/pricing'
 import { effectivePrice } from '@/lib/crmStats'
 import { estimateTravelMinutes, haversineKm } from '@/lib/geo'
@@ -584,6 +585,7 @@ function jourLong(jourStr: string, loc: string): string {
  *  acquise. Jamais de lien : un simple coup d'œil, pas une action (même
  *  registre que « Cette semaine » juste en dessous). */
 function DemainV2({ rdv, demainStr }: { rdv: RdvAccueil[]; demainStr: string }) {
+  const fuseau = useFuseau()
   const t = useT()
   const loc = useLocale()
   return (
@@ -595,7 +597,7 @@ function DemainV2({ rdv, demainStr }: { rdv: RdvAccueil[]; demainStr: string }) 
           return (
             <div key={b.id} className="flex items-start gap-3 py-[11px]">
               <span className={`shrink-0 w-[42px] pt-0.5 text-[13.5px] ${corpsFort} text-[color:var(--v2-color-gris)] tabular-nums`}>
-                {formatHeure(new Date(b.scheduled_at))}
+                {formatHeure(new Date(b.scheduled_at), fuseau)}
               </span>
               <span
                 className={`min-w-0 flex-1 pt-0.5 text-[13.5px] ${nom} truncate`}
@@ -819,10 +821,11 @@ function CarteListe({ children }: { children: ReactNode }) {
 /** Le héros de l'écran : l'heure en très gros, le nom, l'adresse, et deux
  *  actions — itinéraire et appel. Tout le reste de l'écran est en ligne. */
 function CarteHeros({ rdv: b, dateDuJour, verre = false }: { rdv: RdvAccueil; dateDuJour: string; verre?: boolean }) {
+  const fuseau = useFuseau()
   const t = useT()
   const loc = useLocale()
   const statut = STATUT[statutAffiche(b)]
-  const estAujourdhui = new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) === dateDuJour
+  const estAujourdhui = new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: fuseau }) === dateDuJour
   const adresse = b.address?.trim()
   const telephone = b.client_phone?.trim()
   // Choix de l'application d'itinéraire (Plans, Waze, Google Maps), ouvert au
@@ -842,7 +845,7 @@ function CarteHeros({ rdv: b, dateDuJour, verre = false }: { rdv: RdvAccueil; da
           {!estAujourdhui && (
             <span className={`text-[12px] ${corpsFort} text-[color:var(--v2-color-gris)] capitalize`}>{jourCourt(b.scheduled_at, loc)}</span>
           )}
-          <span className={`text-[44px] leading-none ${hero} tabular-nums`}>{formatHeure(new Date(b.scheduled_at))}</span>
+          <span className={`text-[44px] leading-none ${hero} tabular-nums`}>{formatHeure(new Date(b.scheduled_at), fuseau)}</span>
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-[3px] pt-[3px]">
           <span className={`text-[17px] ${corpsFort} truncate`}>{b.client_name}</span>
@@ -919,6 +922,7 @@ function CarteHeros({ rdv: b, dateDuJour, verre = false }: { rdv: RdvAccueil; da
 /** Une ligne de rendez-vous : heure (ou jour), nom, prestation, prix, statut.
  *  Même destination que les widgets v1 — la fiche de l'agenda. */
 function LigneRdv({ rdv: b, avecDate = false }: { rdv: RdvAccueil; avecDate?: boolean }) {
+  const fuseau = useFuseau()
   const t = useT()
   const loc = useLocale()
   const statut = STATUT[statutAffiche(b)]
@@ -931,7 +935,7 @@ function LigneRdv({ rdv: b, avecDate = false }: { rdv: RdvAccueil; avecDate?: bo
           avecDate ? 'w-[58px] capitalize' : 'w-10'
         }`}
       >
-        {avecDate ? jourCourt(b.scheduled_at, loc) : formatHeure(new Date(b.scheduled_at))}
+        {avecDate ? jourCourt(b.scheduled_at, loc) : formatHeure(new Date(b.scheduled_at), fuseau)}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
         <span className={`text-[15px] ${nom} truncate`}>{b.client_name}</span>

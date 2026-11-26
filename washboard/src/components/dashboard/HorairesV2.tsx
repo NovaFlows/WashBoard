@@ -13,7 +13,9 @@ import FeuilleJourV2 from '@/components/dashboard/FeuilleJourV2'
 import HorairesEtatVideV2, { type ModeleHoraires } from '@/components/dashboard/HorairesEtatVideV2'
 import { CongesAVenir, FeuilleAjoutConge, FeuilleSuppressionConge } from '@/components/dashboard/CongesV2'
 import { ConfirmationSuppression, Constat, Interrupteur, nom } from '@/components/dashboard/PrestationsUiV2'
-import { toDateStr } from '@/lib/dateUtils'
+import { formatHeure, toDateStr } from '@/lib/dateUtils'
+import { FUSEAUX_PROPOSES } from '@/lib/fuseaux'
+import { useFuseau } from '@/components/FuseauContext'
 import { enregistrerProfil } from '@/lib/profilApi'
 import {
   FERME, JOURS_AFFICHES, NOMS_JOURS, congesAVenir, libelleJour, libellePlage, phraseEchecAjout, resumeHoraires,
@@ -94,6 +96,27 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
     setJourMemeEnCours(false)
     if (r.ok) setJourMeme(!jourMeme)
     else setJourMemeErreur(r.message)
+  }
+
+  const fuseauInitial = useFuseau()
+  const [fuseau, setFuseau] = useState(fuseauInitial)
+  const [fuseauEnCours, setFuseauEnCours] = useState(false)
+  const [fuseauErreur, setFuseauErreur] = useState<string | null>(null)
+
+  // Tout le tableau de bord lit le fuseau à son chargement (FuseauContext) : une fois
+  // l'écriture faite, on recharge pour que l'agenda et l'accueil le suivent aussitôt.
+  async function changerFuseau(valeur: string) {
+    if (fuseauEnCours || valeur === fuseau) return
+    setFuseauEnCours(true)
+    setFuseauErreur(null)
+    const r = await enregistrerProfil({ fuseau: valeur })
+    if (r.ok) {
+      setFuseau(valeur)
+      window.location.reload()
+      return
+    }
+    setFuseauEnCours(false)
+    setFuseauErreur(r.message)
   }
 
   const vide = plages.length === 0
@@ -256,6 +279,37 @@ export default function HorairesV2({ availabilities, unavailabilities, teamSize,
               </div>
             )}
             {jourMemeErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{jourMemeErreur}</Constat></div>}
+          </section>
+
+          {/* Fuseau horaire (lib/fuseaux.ts) : vos horaires, « aujourd'hui » et les
+              rappels se lisent dans ce fuseau. Paris pour presque tout le monde. */}
+          <section aria-label={t('Fuseau horaire')} className="mt-[26px]">
+            <CarteListe>
+              <div className="py-3">
+                <label htmlFor="fuseau-horaire" className={`block text-[15.5px] ${nom}`}>{t('Fuseau horaire')}</label>
+                <p className={`mt-0.5 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
+                  {t('Vos horaires, vos rappels et vos créneaux suivent l’heure de ce lieu.')}
+                </p>
+                <select
+                  id="fuseau-horaire"
+                  value={fuseau}
+                  disabled={fuseauEnCours}
+                  onChange={e => changerFuseau(e.target.value)}
+                  className={`mt-2.5 h-11 w-full rounded-[var(--v2-radius-bouton)] border border-[color:var(--v2-filet-fort)] bg-[color:var(--v2-color-surface)] px-3 text-[15px] ${corpsFort} text-[color:var(--v2-color-encre)] disabled:opacity-60`}
+                >
+                  {FUSEAUX_PROPOSES.map(f => <option key={f.id} value={f.id}>{t(f.libelle)}</option>)}
+                </select>
+                <p suppressHydrationWarning className={`mt-2 text-[13px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
+                  {t('Il est {heure} dans ce fuseau.', { heure: formatHeure(new Date(), fuseau) })}
+                </p>
+              </div>
+            </CarteListe>
+            <div className="mt-2">
+              <Constat ton="ambre" role="status">
+                {t('Changer de fuseau ne déplace pas vos rendez-vous déjà pris : ils gardent leur heure exacte. Vérifiez votre agenda après le changement.')}
+              </Constat>
+            </div>
+            {fuseauErreur && <div className="mt-2"><Constat ton="rouge" role="alert">{fuseauErreur}</Constat></div>}
           </section>
 
           {/* Les congés restent gérables même sans aucune plage : un laveur qui

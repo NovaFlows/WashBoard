@@ -10,6 +10,7 @@ import { infosFacturationManquantes } from '@/lib/facture'
 import { washerDuUtilisateur } from '@/lib/washerCourant'
 import { quotaReservations, planEffectif, offreQuiCouvre, PLAN_LABELS } from '@/lib/plan'
 import { centreAutoPublic } from '@/lib/centreAuto'
+import { fuseauDuLaveur } from '@/lib/fuseaux'
 import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { seuilsVerrouillage, masquerVerrouillees, compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 
@@ -91,7 +92,7 @@ export default async function CalendrierPage() {
     // Midi UTC du jour de Paris : le jour seul quitte le serveur, jamais l'heure.
     .map(b => ({
       id: b.id as string,
-      scheduled_at: `${new Date(b.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })}T12:00:00Z`,
+      scheduled_at: `${new Date(b.scheduled_at as string).toLocaleDateString('en-CA', { timeZone: fuseauDuLaveur(washer) })}T12:00:00Z`,
     }))
   const joursMasques = masquees.map(m => m.scheduled_at)
   const volumeDuMois = masquees.length === 0 ? null : await compterReservationsDeLaPeriode(admin, washer)

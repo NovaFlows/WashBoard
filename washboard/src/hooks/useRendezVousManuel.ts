@@ -4,7 +4,8 @@ import { type Dispatch, type SetStateAction, useState } from 'react'
 import { effectiveDuration, addonsDuration } from '@/lib/pricing'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 import { haversineKm, estimateTravelMinutes } from '@/lib/geo'
-import { toDateStr } from '@/lib/dateUtils'
+import { dateStrParis, formatHeure, instantSaisi, saisieDe, toDateStr } from '@/lib/dateUtils'
+import { useFuseau } from '@/components/FuseauContext'
 import { capaciteCreneau, effectiveTeamSize } from '@/lib/slots'
 import { centreParAdresse, lieuParDefaut, type CentreAutoPublic, type Lieu } from '@/lib/centreAuto'
 import type { Booking, Unavailability, ServiceFull, Category } from '@/components/dashboard/calendrierTypes'
@@ -99,6 +100,7 @@ export function useRendezVousManuel({
    *  Sert à l'agenda v2 pour se placer sur le jour du rendez-vous créé. */
   onCree?: (booking: Booking) => void
 }) {
+  const fuseau = useFuseau()
   // Types disponibles pour une prestation = types de sa catégorie qu'elle propose
   function serviceTypes(serviceId: string): { id: string; name: string }[] {
     const svc = services.find(s => s.id === serviceId)
@@ -113,17 +115,17 @@ export function useRendezVousManuel({
   }
 
   const emptyManual = (): ManualBooking => {
-    const now = new Date()
-    now.setMinutes(0, 0, 0)
-    now.setHours(now.getHours() + 1)
+    // L'heure pleine qui suit, dans le fuseau du laveur (pas celui de l'appareil).
+    const now = new Date(Math.floor(Date.now() / 3_600_000) * 3_600_000 + 3_600_000)
+    const proposee = saisieDe(now, fuseau)
     const firstService = services[0]?.id ?? ''
     return {
       service_id: firstService,
       vehicle_type: serviceTypes(firstService)[0]?.id ?? 'citadine',
       vehicle_count: 1,
       booked_price: services[0]?.price ?? 0,
-      date: toDateStr(now),
-      time: `${String(now.getHours()).padStart(2, '0')}:00`,
+      date: proposee.date,
+      time: proposee.heure,
       client_name: '', client_email: '', client_phone: '', address: '', lieu: lieuParDefaut(centreAuto), lat: null, lng: null,
       is_professional: false, company_name: '', siret: '', billing_address: '',
       notes: '', status: 'confirmed',
@@ -181,7 +183,7 @@ export function useRendezVousManuel({
     }
 
     // ── Vérification de disponibilité ──────────────────────────────────────
-    const selectedStart = new Date(`${manualModal.date}T${manualModal.time}:00`)
+    const selectedStart = instantSaisi(manualModal.date, manualModal.time, fuseau)
     const svcCheck      = services.find(s => s.id === manualModal.service_id)
     const durationMs    = (svcCheck?.duration_minutes ?? 60) * Math.max(1, manualModal.vehicle_count) * 60_000
     const selectedEnd   = new Date(selectedStart.getTime() + durationMs)
@@ -217,7 +219,7 @@ export function useRendezVousManuel({
     // ── Vérification de faisabilité (avertissement non bloquant) ───────────
     if (!overrideFeasibility && !forceOverride) {
       const WINDOW_MS = 75 * 60_000 // RDV dans la fenêtre ±75 min
-      const sameDayActive = bookings.filter(b => b.status !== 'cancelled' && b.scheduled_at.startsWith(manualModal.date))
+      const sameDayActive = bookings.filter(b => b.status !== 'cancelled' && dateStrParis(new Date(b.scheduled_at), fuseau) === manualModal.date)
       let warning: string | null = null
 
       for (const b of sameDayActive) {
@@ -233,11 +235,11 @@ export function useRendezVousManuel({
             const km      = haversineKm(b.lat, b.lng, lat, lng)
             const travelMin = estimateTravelMinutes(km)
             if (travelMin > gapMin) {
-              warning = `RDV précédent se termine à ${new Date(bEnd).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`
+              warning = `RDV précédent se termine à ${formatHeure(new Date(bEnd), fuseau)} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`
               break
             }
           } else if (gapMin < 15) {
-            warning = `RDV précédent se termine à ${new Date(bEnd).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} — seulement ${gapMin} min d'écart, vérifiez que le trajet est faisable.`
+            warning = `RDV précédent se termine à ${formatHeure(new Date(bEnd), fuseau)} — seulement ${gapMin} min d'écart, vérifiez que le trajet est faisable.`
             break
           }
         }
@@ -249,11 +251,11 @@ export function useRendezVousManuel({
             const km      = haversineKm(lat, lng, b.lat, b.lng)
             const travelMin = estimateTravelMinutes(km)
             if (travelMin > gapMin) {
-              warning = `RDV suivant débute à ${new Date(bStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`
+              warning = `RDV suivant débute à ${formatHeure(new Date(bStart), fuseau)} à "${b.address.split(',')[0]}" — trajet estimé ~${travelMin} min pour ~${Math.round(km)} km, mais seulement ${gapMin} min disponibles.`
               break
             }
           } else if (gapMin < 15) {
-            warning = `RDV suivant démarre à ${new Date(bStart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} — seulement ${gapMin} min d'écart, vérifiez que le trajet est faisable.`
+            warning = `RDV suivant démarre à ${formatHeure(new Date(bStart), fuseau)} — seulement ${gapMin} min d'écart, vérifiez que le trajet est faisable.`
             break
           }
         }

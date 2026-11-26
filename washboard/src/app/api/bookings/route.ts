@@ -4,7 +4,8 @@ import { createClient as createSessionClient } from '@/lib/supabase/server'
 import { sendBookingRequest, sendWasherNotification, sendWasherBookingLocked } from '@/lib/email'
 import { notifierLaveur } from '@/lib/push'
 import { estReservationDeTest } from '@/lib/e2e'
-import { formatHeure, FUSEAU } from '@/lib/dateUtils'
+import { formatHeure } from '@/lib/dateUtils'
+import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
 import { computeTravelFee } from '@/lib/travelFee'
 import { vehiclePrice, dureeTotale, optionsParVehicule, finalDisplayPrice, formatPrice } from '@/lib/pricing'
 import { remisePromotion } from '@/lib/promotion'
@@ -476,8 +477,10 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     )
   }
 
-  const dateStr  = new Date(bookingData.scheduled_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
-  const heureStr = new Date(bookingData.scheduled_at).toLocaleTimeString('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  // Jour et heure lus dans le fuseau du laveur (Paris sauf réglage contraire, lib/fuseaux.ts).
+  const fuseau = await lireFuseauLaveur(admin, bookingData.washer_id)
+  const dateStr  = new Date(bookingData.scheduled_at).toLocaleDateString('en-CA', { timeZone: fuseau })
+  const heureStr = new Date(bookingData.scheduled_at).toLocaleTimeString('en-GB', { timeZone: fuseau, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
   const capaciteJour = effectiveTeamSize(washer?.team_size ?? 1, unavs ?? [], dateStr)
   // Plage horaire bloquée par le laveur (8h-12h « Autre activité »…) : comptée sur toute la durée du rendez-vous.
   const capacite = capaciteCreneau(washer?.team_size ?? 1, unavs ?? [], dateStr, heureStr, dureeMinutes)
@@ -497,7 +500,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     // verrou, un appel direct à cette route glisserait un rendez-vous pour
     // aujourd'hui chez n'importe quel laveur, y compris ceux qui ne veulent
     // être prévenus qu'à l'avance.
-    if (estAujourdhuiParis(bookingData.scheduled_at) && !washer?.reservation_jour_meme) {
+    if (estAujourdhuiParis(bookingData.scheduled_at, undefined, fuseau) && !washer?.reservation_jour_meme) {
       logger.warn('bookings.rejected.jour_meme_non_autorise', {
         washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at,
       })
@@ -557,7 +560,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
       )
     }
 
-    if (!creneauDansOuverture(bookingData.scheduled_at, dureeMinutes, plages ?? [])) {
+    if (!creneauDansOuverture(bookingData.scheduled_at, dureeMinutes, plages ?? [], undefined, fuseau)) {
       logger.warn('bookings.rejected.hors_ouverture', {
         washerId: bookingData.washer_id, scheduledAt: bookingData.scheduled_at, dureeMinutes,
       })
@@ -868,6 +871,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         address: bookingData.address,
         lieu: auCentre ? 'centre' : 'domicile',
         scheduledAt: bookingData.scheduled_at,
+        fuseau,
         bookingId: id,
         vehicleType: vehicle_type ?? undefined,
         vehicleCount: vehicle_count ?? undefined,
@@ -892,6 +896,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
           to: washerEmail,
           washerName: washer.name,
           scheduledAt: bookingData.scheduled_at,
+          fuseau,
         }).catch(err => logger.error('bookings.email.washer_failed', { bookingId: id }, err))
       )
     } else if (washerEmail) {
@@ -911,6 +916,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
           address: bookingData.address,
           lieu: auCentre ? 'centre' : 'domicile',
           scheduledAt: bookingData.scheduled_at,
+          fuseau,
           bookedPrice: booked_price,
           bookingId: id,
         }).catch(err => logger.error('bookings.email.washer_failed', { bookingId: id }, err))
@@ -932,7 +938,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
         // l'application.
         title: '🔒 Nouvelle réservation',
         body: [
-          `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })}`,
+          `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: fuseau, weekday: 'long', day: 'numeric', month: 'long' })}`,
           'Changez d’offre pour voir le nom, l’heure et les coordonnées.',
         ].join('\n'),
         url: '/dashboard/abonnement',
@@ -953,7 +959,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
           // véhicules et frais de déplacement compris (`booked_price` est
           // calculé par le serveur), moins la remise d'un créneau groupé.
           `✨ ${nomPrestations} · ${formatPrice(finalDisplayPrice(booked_price, is_smart_slot ?? false, smart_discount ?? 0))}`,
-          `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand)}`,
+          `📅 ${quand.toLocaleDateString('fr-FR', { timeZone: fuseau, weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(quand, fuseau)}`,
         ].join('\n'),
         // Directement SUR la fiche, pas sur le mois en cours : le laveur qui
         // touche la notification veut voir ce rendez-vous-là, pas le chercher

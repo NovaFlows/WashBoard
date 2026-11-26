@@ -3,7 +3,8 @@ import { requireWasher } from '@/lib/requireWasher'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { errorResponse } from '@/lib/apiError'
 import { logger } from '@/lib/logger'
-import { FUSEAU, minuitParisUTC } from '@/lib/dateUtils'
+import { minuitParisUTC } from '@/lib/dateUtils'
+import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
 import { quotaReservations } from '@/lib/plan'
 import { masquerVerrouillees, seuilsVerrouillage } from '@/lib/reservationsVerrouillees'
 
@@ -35,7 +36,8 @@ export async function GET(req: NextRequest) {
   // Bornes du jour à l'heure de PARIS, pas celle du serveur (Vercel tourne en
   // UTC) : sans ça, les rendez-vous de fin de soirée ou de tout début de
   // matinée se retrouveraient rangés sur le mauvais jour selon la saison.
-  const debutUtc = minuitParisUTC(date)
+  const fuseau = await lireFuseauLaveur(supabase, washerId)
+  const debutUtc = minuitParisUTC(date, fuseau)
   // Le lendemain à minuit Paris, PAS +24h : un jour peut faire 23h ou 25h au
   // moment du changement d'heure (vérifié dans dateUtils.test.ts). On
   // incrémente la CHAÎNE de date, ancrée à midi UTC pour rester à distance de
@@ -44,7 +46,7 @@ export async function GET(req: NextRequest) {
   // au passage à l'heure d'été (Paris étant en avance sur UTC).
   const demain = new Date(`${date}T12:00:00Z`)
   demain.setUTCDate(demain.getUTCDate() + 1)
-  const finUtc = minuitParisUTC(demain.toISOString().slice(0, 10))
+  const finUtc = minuitParisUTC(demain.toISOString().slice(0, 10), fuseau)
 
   // En dehors d'aujourd'hui, un rendez-vous déjà clôturé redevient
   // pertinent : on regarde ce qui s'est passé ce jour-là, pas seulement ce
@@ -82,7 +84,7 @@ export async function GET(req: NextRequest) {
   const seuils = await seuilsVerrouillage(admin, washer, quotaReservations(washer))
   const lignes = masquerVerrouillees(data ?? [], seuils).map(b => b.verrouillee
     // Midi UTC du jour de Paris, comme sur l'accueil : le jour quitte le serveur, jamais l'heure.
-    ? { ...b, scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z` }
+    ? { ...b, scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: fuseau })}T12:00:00Z` }
     : b)
 
   return NextResponse.json({ data: lignes, date })

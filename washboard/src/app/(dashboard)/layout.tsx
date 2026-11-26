@@ -5,6 +5,8 @@ import { quotaPrestations, planEffectif } from '@/lib/plan'
 import { aMettreEnVeille, estVisibleParLesClients } from '@/lib/prestation'
 import { COOKIE_REPORT } from '@/lib/veilleReport'
 import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
+import { FuseauProvider } from '@/components/FuseauContext'
+import { fuseauDuLaveur } from '@/lib/fuseaux'
 
 /** Enveloppe commune à tout le tableau de bord.
  *
@@ -34,7 +36,27 @@ import { ChoixVeilleModal } from '@/components/dashboard/ChoixVeilleModal'
  *  le résultat du layout vers les pages, ce que Next ne permet pas sans
  *  contexte : une requête indexée de plus coûte moins cher que cette plomberie.
  */
+/** Fuseau du laveur connecté (lib/fuseaux.ts), pour tous les écrans du tableau de bord.
+ *  Lu à part, comme les autres réglages optionnels : sans la colonne, ou sans
+ *  session, Paris — l'affichage d'avant, à l'identique. */
+async function fuseauConnecte(): Promise<string> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return fuseauDuLaveur(null)
+    const { data, error } = await supabase.from('washers').select('fuseau').eq('user_id', user.id).maybeSingle()
+    return error ? fuseauDuLaveur(null) : fuseauDuLaveur(data as { fuseau?: string | null } | null)
+  } catch {
+    return fuseauDuLaveur(null)
+  }
+}
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const [fuseau, contenu] = await Promise.all([fuseauConnecte(), contenuDuTableauDeBord(children)])
+  return <FuseauProvider fuseau={fuseau}>{contenu}</FuseauProvider>
+}
+
+async function contenuDuTableauDeBord(children: React.ReactNode): Promise<React.ReactNode> {
   // « Plus tard » : on ne redirige plus de la visite. Lu en premier, pour ne
   // même pas payer les requêtes quand la question a déjà été repoussée.
   if ((await cookies()).get(COOKIE_REPORT)) return <>{children}</>

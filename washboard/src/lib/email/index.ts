@@ -75,6 +75,8 @@ ${a.liens.map(l => boutonEnLigne(`Payer avec ${escapeHtml(l.libelle)}`, escapeHt
 // ── Email 1 : accusé de réception (statut pending) ────────────────────────
 type SendRequestParams = {
   to: string
+  /** Fuseau du laveur (lib/fuseaux.ts) ; absent = Paris. */
+  fuseau?: string
   clientName: string
   washerName: string
   serviceName: string
@@ -102,8 +104,8 @@ export async function sendBookingRequest(params: SendRequestParams) {
   const base = origineImages()
 
   const date         = new Date(params.scheduledAt)
-  const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const time          = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: params.fuseau ?? FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const time          = date.toLocaleTimeString('fr-FR', { timeZone: params.fuseau ?? FUSEAU, hour: '2-digit', minute: '2-digit' })
   const ref           = params.bookingId.slice(0, 8).toUpperCase()
   const discount      = Number(params.smartDiscount ?? 0)
   const finalPrice    = params.isSmartSlot && discount > 0 ? Math.max(0, params.servicePrice - discount) : params.servicePrice
@@ -154,6 +156,8 @@ ${paragraphe(`Référence de votre demande : <strong style="font-family:${MONO};
 // ── Email 2 : reçu professionnel (statut confirmed) ───────────────────────
 type SendConfirmationParams = {
   to: string
+  /** Fuseau du laveur (lib/fuseaux.ts) ; absent = Paris. */
+  fuseau?: string
   clientName: string
   clientEmail: string
   washerName: string
@@ -181,11 +185,11 @@ export async function sendBookingConfirmation(params: SendConfirmationParams) {
   const resend = new Resend(process.env.RESEND_API_KEY)
 
   const date = new Date(params.scheduledAt)
-  const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU,
+  const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: params.fuseau ?? FUSEAU,
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
-  const time = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
-  const today = new Date().toLocaleDateString('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric' })
+  const time = date.toLocaleTimeString('fr-FR', { timeZone: params.fuseau ?? FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const today = new Date().toLocaleDateString('fr-FR', { timeZone: params.fuseau ?? FUSEAU, day: 'numeric', month: 'long', year: 'numeric' })
 
   const ref       = params.bookingId.slice(0, 8).toUpperCase()
   const discount  = Number(params.smartDiscount ?? 0)
@@ -421,6 +425,8 @@ ${bouton(`Ouvrir ${devis ? 'le devis' : 'la facture'} en ligne`, escapeHtml(url)
 // ── Email 3 : notification nouvelle réservation au laveur ─────────────────
 type SendWasherNotificationParams = {
   to: string
+  /** Fuseau du laveur (lib/fuseaux.ts) ; absent = Paris. */
+  fuseau?: string
   washerName: string
   clientName: string
   clientEmail: string
@@ -449,7 +455,8 @@ type SendWasherNotificationParams = {
  *  suffirait à rappeler le client par ses propres moyens (voir
  *  `masquerVerrouillees`). La fonction ne le reçoit donc pas — un paramètre
  *  absent ne peut pas finir dans l'objet ou le corps du message. */
-export async function sendWasherBookingLocked({ to, washerName, scheduledAt, appUrl }: {
+export async function sendWasherBookingLocked({ to, washerName, scheduledAt, appUrl, fuseau }: {
+  fuseau?: string
   to: string
   washerName: string
   scheduledAt: string
@@ -460,7 +467,7 @@ export async function sendWasherBookingLocked({ to, washerName, scheduledAt, app
   // Le jour, jamais l'heure : l'heure suffirait a honorer le rendez-vous sans
   // rien payer.
   const jour = new Date(scheduledAt).toLocaleDateString('fr-FR', {
-    timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long',
+    timeZone: fuseau ?? FUSEAU, weekday: 'long', day: 'numeric', month: 'long',
   })
   const jourTitre = jour.charAt(0).toUpperCase() + jour.slice(1)
 
@@ -489,8 +496,8 @@ export async function sendWasherNotification(params: SendWasherNotificationParam
   const resend = new Resend(process.env.RESEND_API_KEY)
 
   const date          = new Date(params.scheduledAt)
-  const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const time          = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const formattedDate = date.toLocaleDateString('fr-FR', { timeZone: params.fuseau ?? FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const time          = date.toLocaleTimeString('fr-FR', { timeZone: params.fuseau ?? FUSEAU, hour: '2-digit', minute: '2-digit' })
   const ref           = params.bookingId.slice(0, 8).toUpperCase()
   const priceStr      = Number.isInteger(params.bookedPrice) ? String(params.bookedPrice) : params.bookedPrice.toFixed(2)
   const base          = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.washboard.fr'
@@ -848,7 +855,8 @@ ${paragraphe('Vous pourrez revoir la visite à tout moment : Plus › Réglages 
 
 /** Réservation annulée faute d'acompte réglé dans le délai choisi par le laveur
  *  (`api/cron/acomptes`, voir lib/acompte.ts). */
-export async function sendAnnulationAcompte({ to, clientName, washerName, scheduledAt, lienReservation }: {
+export async function sendAnnulationAcompte({ to, clientName, washerName, scheduledAt, lienReservation, fuseau }: {
+  fuseau?: string
   to: string
   clientName: string
   washerName: string
@@ -858,8 +866,8 @@ export async function sendAnnulationAcompte({ to, clientName, washerName, schedu
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const date = new Date(scheduledAt)
-  const jour = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
-  const heure = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const jour = date.toLocaleDateString('fr-FR', { timeZone: fuseau ?? FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heure = date.toLocaleTimeString('fr-FR', { timeZone: fuseau ?? FUSEAU, hour: '2-digit', minute: '2-digit' })
   return resend.emails.send({
     from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
     to,
@@ -880,7 +888,8 @@ ${lienReservation ? bouton('Réserver un nouveau créneau', escapeHtml(lienReser
 }
 
 /** Remise accordée par le laveur sur une réservation prise en ligne (lib/remiseLaveur.ts). */
-export async function sendRemiseLaveur({ to, clientName, washerName, serviceName, scheduledAt, ancienPrix, nouveauPrix }: {
+export async function sendRemiseLaveur({ to, clientName, washerName, serviceName, scheduledAt, ancienPrix, nouveauPrix, fuseau }: {
+  fuseau?: string
   to: string
   clientName: string
   washerName: string
@@ -891,8 +900,8 @@ export async function sendRemiseLaveur({ to, clientName, washerName, serviceName
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const date = new Date(scheduledAt)
-  const jour = date.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
-  const heure = date.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const jour = date.toLocaleDateString('fr-FR', { timeZone: fuseau ?? FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heure = date.toLocaleTimeString('fr-FR', { timeZone: fuseau ?? FUSEAU, hour: '2-digit', minute: '2-digit' })
   return resend.emails.send({
     from: `${escapeHtml(washerName)} via WashBoard <noreply@washboard.fr>`,
     to,
@@ -915,7 +924,8 @@ ${paragraphe('Rien à faire de votre côté : le nouveau prix est déjà pris en
 /** Rappel avant l'échéance de l'acompte, une seule fois (`api/cron/acomptes`, règle dans
  *  `rappelAcompteDu`). Les moyens de paiement sont ceux de « Demande reçue », relus dans les
  *  réglages actuels du laveur. */
-export async function sendRappelAcompte({ to, clientName, washerName, washerPhone, scheduledAt, echeance, bookingId, acompte }: {
+export async function sendRappelAcompte({ to, clientName, washerName, washerPhone, scheduledAt, echeance, bookingId, acompte, fuseau }: {
+  fuseau?: string
   to: string
   clientName: string
   washerName: string
@@ -928,11 +938,11 @@ export async function sendRappelAcompte({ to, clientName, washerName, washerPhon
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const rdv = new Date(scheduledAt)
-  const jourRdv = rdv.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
-  const heureRdv = rdv.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const jourRdv = rdv.toLocaleDateString('fr-FR', { timeZone: fuseau ?? FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heureRdv = rdv.toLocaleTimeString('fr-FR', { timeZone: fuseau ?? FUSEAU, hour: '2-digit', minute: '2-digit' })
   const fin = new Date(echeance)
-  const jourFin = fin.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
-  const heureFin = fin.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const jourFin = fin.toLocaleDateString('fr-FR', { timeZone: fuseau ?? FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heureFin = fin.toLocaleTimeString('fr-FR', { timeZone: fuseau ?? FUSEAU, hour: '2-digit', minute: '2-digit' })
   const avant = `avant le ${jourFin} à ${heureFin}`
   const ref = bookingId.slice(0, 8).toUpperCase()
   // Clé d'idempotence : un envoi livré mais signalé en échec (réseau) est réessayé au passage
@@ -961,7 +971,8 @@ ${paragraphe(`Référence de votre demande : <strong style="font-family:${MONO};
  *  `lib/rappelsRdv.ts`). La date est écrite en toutes lettres : le même message sert pour « 24 h
  *  avant » et pour « 3 h avant ». La clé d'idempotence évite un doublon si Resend a livré un envoi
  *  que le réseau a signalé en échec. */
-export async function sendRappelRdv({ to, clientName, washerName, washerPhone, scheduledAt, serviceName, address, lieu, bookingId, heures }: {
+export async function sendRappelRdv({ to, clientName, washerName, washerPhone, scheduledAt, serviceName, address, lieu, bookingId, heures, fuseau }: {
+  fuseau?: string
   to: string
   clientName: string
   washerName: string
@@ -976,8 +987,8 @@ export async function sendRappelRdv({ to, clientName, washerName, washerPhone, s
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const rdv = new Date(scheduledAt)
-  const jour = rdv.toLocaleDateString('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
-  const heure = rdv.toLocaleTimeString('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' })
+  const jour = rdv.toLocaleDateString('fr-FR', { timeZone: fuseau ?? FUSEAU, weekday: 'long', day: 'numeric', month: 'long' })
+  const heure = rdv.toLocaleTimeString('fr-FR', { timeZone: fuseau ?? FUSEAU, hour: '2-digit', minute: '2-digit' })
   const ref = bookingId.slice(0, 8).toUpperCase()
   const tel = washerPhone?.trim() ? formatPhone(washerPhone) : ''
   const lignes: LigneDetail[] = [

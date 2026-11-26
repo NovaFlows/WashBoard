@@ -7,6 +7,7 @@ import {
   RAPPEL_HEURES_MAX, heuresEnvoyees, normaliserHeures, rappelsActifs, rappelsDus,
 } from '@/lib/rappelsRdv'
 import { logger } from '@/lib/logger'
+import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
 
 // Rappels de rendez-vous par email, quelques heures avant (règles : lib/rappelsRdv.ts).
 // Allumés par défaut pour tous les laveurs ; chacun peut les couper et choisir ses délais
@@ -74,6 +75,8 @@ export async function GET(request: NextRequest) {
   }
 
   const laveurs = new Map<string, Laveur | null>()
+  // Fuseau de chaque laveur (lib/fuseaux.ts), lu à part : sans la colonne, Paris.
+  const fuseaux = new Map<string, string>()
   let envoyes = 0
   let echecs = 0
 
@@ -114,6 +117,7 @@ export async function GET(request: NextRequest) {
     // rendez-vous, et tous sont notés comme partis — pas de rafale de messages en retard.
     const heures = Math.min(...dus)
     const svc = (Array.isArray(b.services) ? b.services[0] : b.services) as { name?: string } | null
+    if (!fuseaux.has(b.washer_id)) fuseaux.set(b.washer_id, await lireFuseauLaveur(admin, b.washer_id))
 
     try {
       const { error: errEnvoi } = await sendRappelRdv({
@@ -127,6 +131,7 @@ export async function GET(request: NextRequest) {
         lieu: b.lieu ?? null,
         bookingId: b.id,
         heures,
+        fuseau: fuseaux.get(b.washer_id),
       })
       if (errEnvoi) throw errEnvoi
       envoyes++

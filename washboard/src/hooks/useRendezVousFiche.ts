@@ -2,7 +2,8 @@
 
 import { type Dispatch, type SetStateAction, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { toDateStr } from '@/lib/dateUtils'
+import { instantSaisi, saisieDe } from '@/lib/dateUtils'
+import { useFuseau } from '@/components/FuseauContext'
 import { capaciteCreneau, effectiveTeamSize } from '@/lib/slots'
 import { effectiveDuration, addonsDuration } from '@/lib/pricing'
 import type { Booking, Unavailability } from '@/components/dashboard/calendrierTypes'
@@ -40,6 +41,7 @@ export function useRendezVousFiche({
   unavailabilities: Unavailability[]
   teamSize: number
 }) {
+  const fuseau = useFuseau()
   const router = useRouter()
 
   const [selected, setSelected] = useState<Booking | null>(null)
@@ -67,9 +69,10 @@ export function useRendezVousFiche({
   }
 
   function startReschedule(b: Booking) {
-    const d = new Date(b.scheduled_at)
-    setEditDate(toDateStr(d))
-    setEditTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)
+    // Jour et heure dans le fuseau du laveur, comme l'affichage de la fiche.
+    const saisie = saisieDe(new Date(b.scheduled_at), fuseau)
+    setEditDate(saisie.date)
+    setEditTime(saisie.heure)
     setRescheduleErr(null)
     setRescheduling(true)
   }
@@ -77,7 +80,7 @@ export function useRendezVousFiche({
   async function saveReschedule() {
     if (!selected) return
     setRescheduleErr(null)
-    const newStart = new Date(`${editDate}T${editTime}:00`)
+    const newStart = instantSaisi(editDate, editTime, fuseau)
     if (isNaN(newStart.getTime())) { setRescheduleErr('Date ou heure invalide'); return }
 
     const durationMin = effectiveDuration((selected.services?.duration_minutes ?? 60) + addonsDuration(selected.selected_addons), selected.vehicle_count)

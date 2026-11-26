@@ -6,7 +6,8 @@ import { addonsDuration } from '@/lib/pricing'
 import { refusSiQuotaMapsDepasse } from '@/lib/publicApiGuard'
 import { toutesLesLignes } from '@/lib/supabase/toutesLesLignes'
 import { derniereLocalisation } from '@/lib/slots'
-import { dateStrParis } from '@/lib/dateUtils'
+import { dateStrParis, minuitParisUTC } from '@/lib/dateUtils'
+import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
 
 type DmResponse = {
   status: string
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   const empty = { smartWindows: [], bookingConstraints: [], discountType: 'fixed', discountValue: 0 }
 
-  if (!washerId || !address || !date) return NextResponse.json(empty)
+  if (!washerId || !address || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json(empty)
 
   // Appelée depuis la page de réservation publique, sans session : lecture
   // côté serveur, la table `washers` n'étant plus lisible par la clé publique.
@@ -44,12 +45,17 @@ export async function GET(request: NextRequest) {
     discountValue: (washer?.smart_slot_discount_value ?? 0)        as number,
   }
 
-  // Réservations du même jour (plage UTC couvrant la journée locale France).
+  // Réservations du même jour (plage UTC couvrant la journée locale du laveur).
   // Lecture via le client admin : un visiteur anonyme n'a aucun droit RLS sur
   // `bookings` (seule la création y est publique), donc le client lié à sa
   // session ne verrait jamais ces lignes — ni créneaux optimisés, ni
   // contrainte de trajet ne se calculeraient, en silence.
   const admin = createAdminClient()
+  // Journée LOCALE du laveur (Paris, ou son fuseau) : bornée jusqu'ici à minuit
+  // du serveur (UTC sur Vercel), elle coupait les rendez-vous du soir.
+  const fuseau = await lireFuseauLaveur(admin, washerId)
+  const lendemain = new Date(`${date}T12:00:00Z`)
+  lendemain.setUTCDate(lendemain.getUTCDate() + 1)
   // Page par page, comme toute lecture de réservations : l'API coupe à 1 000
   // lignes sans erreur (voir `toutesLesLignes`).
   const { data: bookings, error: errBookings } = await toutesLesLignes((debut, fin) => admin
@@ -57,8 +63,8 @@ export async function GET(request: NextRequest) {
     .select('scheduled_at, address, vehicle_count, selected_addons, services(duration_minutes)')
     .eq('washer_id', washerId)
     .neq('status', 'cancelled')
-    .gte('scheduled_at', new Date(`${date}T00:00:00`).toISOString())
-    .lte('scheduled_at', new Date(`${date}T23:59:59`).toISOString())
+    .gte('scheduled_at', minuitParisUTC(date, fuseau).toISOString())
+    .lt('scheduled_at', minuitParisUTC(lendemain.toISOString().slice(0, 10), fuseau).toISOString())
     .order('scheduled_at')
     .order('id')
     .range(debut, fin))
@@ -78,7 +84,7 @@ export async function GET(request: NextRequest) {
   // s'il n'a encore rien fait. Calculé uniquement quand la date demandée est
   // aujourd'hui : un jour futur n'a jamais ce problème, et le vérifier pour
   // rien coûterait un appel Google de plus par visite.
-  const origineJourMeme = (washer?.reservation_jour_meme && date === dateStrParis())
+  const origineJourMeme = (washer?.reservation_jour_meme && date === dateStrParis(new Date(), fuseau))
     ? derniereLocalisation(
         bookingsAujourdhui.map(b => ({ scheduled_at: b.scheduled_at, durationMin: dureeBooking(b), address: b.address })),
         Date.now(),

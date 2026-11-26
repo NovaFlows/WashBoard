@@ -35,20 +35,28 @@ export type PlageJours = {
 
 // ── Découpage d'un instant en jour/heure de Paris ───────────────────────────
 
-const formatParis = new Intl.DateTimeFormat('en-CA', {
-  timeZone: FUSEAU,
-  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
-  hourCycle: 'h23',
-})
+const formats = new Map<string, Intl.DateTimeFormat>()
+function formatDe(fuseau: string): Intl.DateTimeFormat {
+  let f = formats.get(fuseau)
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: fuseau,
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
+      hourCycle: 'h23',
+    })
+    formats.set(fuseau, f)
+  }
+  return f
+}
 
 /** Jour (`AAAA-MM-JJ`) et heure (0–23) d'un instant, à l'heure de Paris.
  *  `null` pour une date illisible : l'appelant ignore la ligne plutôt que de
  *  la ranger au hasard. */
-export function partiesParis(instant: string | number | Date): { jour: string; heure: number } | null {
+export function partiesParis(instant: string | number | Date, fuseau: string = FUSEAU): { jour: string; heure: number } | null {
   const t = new Date(instant)
   if (!Number.isFinite(t.getTime())) return null
   let a = '', m = '', j = '', h = ''
-  for (const p of formatParis.formatToParts(t)) {
+  for (const p of formatDe(fuseau).formatToParts(t)) {
     if (p.type === 'year') a = p.value
     else if (p.type === 'month') m = p.value
     else if (p.type === 'day') j = p.value
@@ -57,7 +65,7 @@ export function partiesParis(instant: string | number | Date): { jour: string; h
   return { jour: `${a}-${m}-${j}`, heure: Number(h) % 24 }
 }
 
-export const jourParisDe = (instant: string | number | Date): string | null => partiesParis(instant)?.jour ?? null
+export const jourParisDe = (instant: string | number | Date, fuseau: string = FUSEAU): string | null => partiesParis(instant, fuseau)?.jour ?? null
 
 // ── Arithmétique de jours (UTC, sans fuseau) ────────────────────────────────
 
@@ -94,7 +102,7 @@ function formatJour(s: string, opts: Intl.DateTimeFormatOptions): string {
 }
 
 /** Aujourd'hui à Paris. */
-export const aujourdhuiParis = (maintenant: number | Date = Date.now()): string => jourParisDe(maintenant) ?? enChaine(Date.now())
+export const aujourdhuiParis = (maintenant: number | Date = Date.now(), fuseau: string = FUSEAU): string => jourParisDe(maintenant, fuseau) ?? enChaine(Date.now())
 
 // ── Plage d'une période ─────────────────────────────────────────────────────
 
@@ -170,9 +178,9 @@ export function contientAujourdhui(p: PeriodeChiffres, aujourdhui: string): bool
 /** Bornes en instants : `debut` inclus, `fin` exclu. Minuit de Paris, donc une
  *  journée de 23 h (passage à l'heure d'été) ou de 25 h (retour à l'heure
  *  d'hiver) est bornée juste. */
-export function bornesInstants(p: PeriodeChiffres): { debut: Date; fin: Date } {
+export function bornesInstants(p: PeriodeChiffres, fuseau: string = FUSEAU): { debut: Date; fin: Date } {
   const { debut, fin } = plageDe(p)
-  return { debut: minuitParisUTC(debut), fin: minuitParisUTC(ajouterJours(fin, 1)) }
+  return { debut: minuitParisUTC(debut, fuseau), fin: minuitParisUTC(ajouterJours(fin, 1), fuseau) }
 }
 
 export function estAvant(instant: string | number | Date, p: PeriodeChiffres): boolean {

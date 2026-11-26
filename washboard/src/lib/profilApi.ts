@@ -14,6 +14,7 @@ export type ChampsProfil = Partial<{
   base_address: string
   team_size: number
   reservation_jour_meme: boolean
+  fuseau: string
   silhouettes_vehicules: boolean
   silhouettes_couleur: boolean
   plusieurs_prestations: boolean

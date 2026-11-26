@@ -6,6 +6,7 @@ import { migrationEnAttente } from '@/lib/migrationEnAttente'
 import { ReglagesAcompteSchema, AVANCE_MAX_RAPPEL_MS, liensDePaiement, rappelAcompteDu, virementPour, weroPour, type ReglagesAcompte } from '@/lib/acompte'
 import { SITE_URL_FALLBACK } from '@/lib/plan'
 import { logger } from '@/lib/logger'
+import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
 
 // Annule les réservations dont l'acompte n'a pas été réglé à temps (lib/acompte.ts) : le
 // laveur a choisi un délai, le client l'a lu avant de réserver. Avant l'échéance, le client
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
         const { error: errEnvoi } = await sendAnnulationAcompte({
           to: b.client_email, clientName: b.client_name, washerName: (laveur?.name as string | undefined) ?? 'Votre laveur', scheduledAt: b.scheduled_at,
           lienReservation: slug ? `${SITE_URL_FALLBACK}/book/${encodeURIComponent(slug)}` : null,
+          fuseau: await lireFuseauLaveur(admin, b.washer_id),
         })
         if (errEnvoi) throw errEnvoi
       } catch (e) {
@@ -188,7 +190,7 @@ async function envoyerRappels(admin: Admin, instant: Date, cibleTest: { washerId
     try {
       const { error: errEnvoi } = await sendRappelAcompte({
         to: b.client_email, clientName: b.client_name, washerName: laveur.name, washerPhone: laveur.phone, scheduledAt: b.scheduled_at,
-        echeance: b.acompte_echeance, bookingId: b.id, acompte,
+        echeance: b.acompte_echeance, bookingId: b.id, acompte, fuseau: await lireFuseauLaveur(admin, b.washer_id),
       })
       if (errEnvoi) throw errEnvoi
       envoyes++

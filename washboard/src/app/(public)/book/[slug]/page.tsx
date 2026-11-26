@@ -20,6 +20,7 @@ import { infosFacturationManquantes } from '@/lib/facture'
 import { paysDuTelephone, whatsappDigits } from '@/lib/phone'
 import { compterReservationsDeLaPeriode } from '@/lib/reservationsVerrouillees'
 import { pixelIdValide, pixelIdDev } from '@/lib/consentement'
+import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
 import ConsentementCookies, { LienGererCookies } from '@/components/booking/ConsentementCookies'
 import { getLangue } from '@/lib/i18n/serveur'
 import { LOCALES_INTL } from '@/lib/i18n/langues'
@@ -162,7 +163,7 @@ export default async function BookingPage({ params }: Props) {
   // cette page, la majorité venait de l'appel externe vers le site du laveur
   // (voir plus bas).
   const maintenantIso = new Date().toISOString()
-  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }, { data: ficheFidelite }, { data: ficheCentre }, { data: fichePlusieurs }, { data: ficheCouleur }] = await Promise.all([
+  const [{ data: services }, { data: categories }, { data: availabilities }, { data: promoEnCours }, { data: ficheAcompte }, { data: ficheFidelite }, { data: ficheCentre }, { data: fichePlusieurs }, { data: ficheCouleur }, fuseau] = await Promise.all([
     admin
       .from('services')
       .select('*')
@@ -232,6 +233,8 @@ export default async function BookingPage({ params }: Props) {
       .select('silhouettes_couleur')
       .eq('id', washer.id)
       .maybeSingle(),
+    // Fuseau du laveur (lib/fuseaux.ts), lu à part : sans la colonne, Paris, comme avant.
+    lireFuseauLaveur(admin, washer.id),
   ])
   const plusieursPrestations = (fichePlusieurs as { plusieurs_prestations?: unknown } | null)?.plusieurs_prestations === true
   const silhouettesCouleur = (ficheCouleur as { silhouettes_couleur?: unknown } | null)?.silhouettes_couleur === true
@@ -278,7 +281,7 @@ export default async function BookingPage({ params }: Props) {
     return <LegacyBookingPage washer={washer} services={prestationsReservables} categories={categories ?? []}
       availabilities={availabilities ?? []} plafondAtteint={plafondAtteint} facturationPrete={facturationPrete} pixelId={pixelId}
       promotion={promotion} acompte={acompte} fideliteProposee={fideliteProposee} centreAuto={centreAuto}
-      plusieursPrestations={plusieursPrestations} silhouettesCouleur={silhouettesCouleur} />
+      plusieursPrestations={plusieursPrestations} silhouettesCouleur={silhouettesCouleur} fuseau={fuseau} />
   }
 
   const personnalisee = hasFeature(washer, 'page_personnalisee')
@@ -324,6 +327,7 @@ export default async function BookingPage({ params }: Props) {
             travel_fee_mode: washer.travel_fee_mode ?? 'base',
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
             reservation_jour_meme: washer.reservation_jour_meme ?? false,
+            fuseau,
             silhouettes_vehicules: washer.silhouettes_vehicules !== false,
             silhouettes_couleur: silhouettesCouleur,
             pays_telephone: paysDuTelephone(washer.phone),

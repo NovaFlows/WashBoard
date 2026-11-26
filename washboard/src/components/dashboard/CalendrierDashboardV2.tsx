@@ -11,6 +11,7 @@ import { toDateStr } from '@/lib/dateUtils'
 import { estJourneeEntiere, journeeBloquee, minutesDepuisMinuit } from '@/lib/slots'
 import { plageBloquee } from '@/lib/horaires'
 import { dayKey, formatHeure, isSameDay } from '@/lib/calendarLayout'
+import { useFuseau } from '@/components/FuseauContext'
 import { villeDepuisAdresse } from '@/lib/adresse'
 import { doitDemanderConfirmation, montantPrevu, statutAffiche, type StatutAffiche } from '@/lib/cloture'
 import { useTrajetsRdv } from '@/hooks/useTrajetsRdv'
@@ -285,6 +286,7 @@ function plageHeuresSemaine(joursActifs: Booking[][]): { debut: number; fin: num
 }
 
 export default function CalendrierDashboardV2({ bookings: initialBookings, unavailabilities: initialUnavailabilities, teamSize, services, categories, washerId, centreAuto = null, facturationPrete, googleAgendaConnecte, joursMasques = [], masquees = [], offreDeblocage = 'Pro' }: CalendrierProps) {
+  const fuseau = useFuseau()
   const loc = useLocale()
   const tr = useT()
   // Passe « bureau » (2026-10-06, Alexandre, 2026-10-03) : au-delà de `SEUIL_GRAND_ECRAN_PX`
@@ -1041,7 +1043,7 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
                 {gapMin !== null && gapMin >= SEUIL_LIBRE_MIN && suivant && (
                   <div className="flex items-center gap-3 py-1.5">
                     <span className={`w-10 shrink-0 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>
-                      {formatHeure(finRendezVous(b))}
+                      {formatHeure(finRendezVous(b), fuseau)}
                     </span>
                     <span className="flex flex-1 items-center justify-between gap-2 rounded-[var(--v2-radius-carte)] border border-dashed border-[color:var(--v2-filet-fort)] px-3.5 py-2.5">
                       <span className={`text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)]`}>{tr('{dureeLisible} de libre{v1}', { dureeLisible: dureeLisible(gapMin), v1: villeTrou ? ` à ${villeTrou}` : '' })}</span>
@@ -1270,14 +1272,15 @@ export default function CalendrierDashboardV2({ bookings: initialBookings, unava
 }
 
 function RendezVousCarte({ booking: b, onOuvrir, estompe }: { booking: Booking; onOuvrir: () => void; estompe: boolean }) {
+  const fuseau = useFuseau()
   const tr = useT()
   const statut = STATUT[statutAffiche(b)]
   const ville = b.lieu === 'centre' ? 'Centre auto' : villeDepuisAdresse(b.address)
   return (
     <div className="flex items-start gap-3">
       <div className="w-10 shrink-0 flex flex-col items-end pt-3 gap-0.5">
-        <span className={`text-[14px] ${corpsFort} tabular-nums`}>{formatHeure(new Date(b.scheduled_at))}</span>
-        <span className={`text-[11px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{formatHeure(finRendezVous(b))}</span>
+        <span className={`text-[14px] ${corpsFort} tabular-nums`}>{formatHeure(new Date(b.scheduled_at), fuseau)}</span>
+        <span className={`text-[11px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{formatHeure(finRendezVous(b), fuseau)}</span>
       </div>
       <span
         aria-hidden
@@ -1362,6 +1365,7 @@ function DetailRendezVous({
   emettreFactureManuelle: (id: string) => void
   majPrix: (id: string, champs: { booked_price: number; remise_laveur: number }) => void
 }) {
+  const fuseau = useFuseau()
   const loc = useLocale()
   const tr = useT()
   const [visible, setVisible] = useState(false)
@@ -1483,7 +1487,7 @@ function DetailRendezVous({
             ) : (
               <p className={`mt-1 flex items-center justify-between gap-2 text-[13.5px] ${corps} text-[color:var(--v2-color-gris)]`}>
                 <span>
-                  {new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at))}–{formatHeure(finRendezVous(b))}
+                  {new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at), fuseau)}–{formatHeure(finRendezVous(b), fuseau)}
                 </span>
                 {modifiable && (
                   <button
@@ -1594,7 +1598,7 @@ function DetailRendezVous({
           {clotureDemandee && (
             <ConfirmerClotureV2
               clientName={b.client_name}
-              quand={`${new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
+              quand={`${new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at), fuseau)}`}
               professionnel={!!b.is_professional}
               facturationPrete={facturationPrete}
               montantPrevu={montantPrevu(b)}
@@ -1767,6 +1771,7 @@ function LigneRdvBureauV2({
   selectionnee: boolean
   onOuvrir: () => void
 }) {
+  const fuseau = useFuseau()
   const tr = useT()
   const statut = STATUT[statutAffiche(b)]
   return (
@@ -1780,7 +1785,7 @@ function LigneRdvBureauV2({
       } ${estompe ? 'opacity-50' : ''}`}
     >
       <span className={`w-11 shrink-0 text-[13px] ${corpsFort} text-[color:var(--v2-color-gris)] tabular-nums`}>
-        {formatHeure(new Date(b.scheduled_at))}
+        {formatHeure(new Date(b.scheduled_at), fuseau)}
       </span>
       <span className="min-w-0 flex-1">
         <span className={`block text-[14.5px] ${nom} truncate`}>{b.client_name}</span>
@@ -1843,6 +1848,7 @@ function FicheRdvBureauV2({
   emettreFactureManuelle: (id: string) => void
   majPrix: (id: string, champs: { booked_price: number; remise_laveur: number }) => void
 }) {
+  const fuseau = useFuseau()
   const loc = useLocale()
   const tr = useT()
   const [choixItineraire, setChoixItineraire] = useState(false)
@@ -1900,7 +1906,7 @@ function FicheRdvBureauV2({
             ) : (
               <p className={`mt-1 flex items-center gap-2 text-[13px] ${corps} text-[color:var(--v2-color-gris)]`}>
                 <span>
-                  {new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at))}–{formatHeure(finRendezVous(b))} · {lignePrestation(b)} · {remise ? formatPrice(prix) : `${prix} €`}
+                  {new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} · {formatHeure(new Date(b.scheduled_at), fuseau)}–{formatHeure(finRendezVous(b), fuseau)} · {lignePrestation(b)} · {remise ? formatPrice(prix) : `${prix} €`}
                 </span>
                 {modifiable && (
                   <button
@@ -1915,7 +1921,7 @@ function FicheRdvBureauV2({
               </p>
             )}
           </div>
-          <span className={`shrink-0 text-[28px] ${titre} tabular-nums`}>{formatHeure(new Date(b.scheduled_at))}</span>
+          <span className={`shrink-0 text-[28px] ${titre} tabular-nums`}>{formatHeure(new Date(b.scheduled_at), fuseau)}</span>
         </div>
 
         {/* Statuts en pilules (planche Système : « point plein + le mot ») — lecture directe du
@@ -2035,7 +2041,7 @@ function FicheRdvBureauV2({
           <div className="mt-4">
             <ConfirmerClotureV2
               clientName={b.client_name}
-              quand={`${new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at))}`}
+              quand={`${new Date(b.scheduled_at).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })} à ${formatHeure(new Date(b.scheduled_at), fuseau)}`}
               professionnel={!!b.is_professional}
               facturationPrete={facturationPrete}
               montantPrevu={montantPrevu(b)}
@@ -2123,6 +2129,7 @@ function GrilleSemaineV2({
   onOuvrirJour: (d: Date) => void
   onOuvrirRdv: (b: Booking, d: Date) => void
 }) {
+  const fuseau = useFuseau()
   const loc = useLocale()
   const tr = useT()
   const joursActifs = useMemo(
@@ -2224,11 +2231,11 @@ function GrilleSemaineV2({
                         <button
                           type="button"
                           onClick={() => onOuvrirRdv(b, d)}
-                          aria-label={`${formatHeure(deb)} ${b.client_name}, ${lignePrestation(b)}`}
+                          aria-label={`${formatHeure(deb, fuseau)} ${b.client_name}, ${lignePrestation(b)}`}
                           className="flex h-full w-full flex-col overflow-hidden rounded-[6px] px-1.5 py-1 text-left transition-transform active:scale-[.98] motion-reduce:transition-none"
                           style={{ background: `color-mix(in srgb, ${statut.couleur} 16%, var(--v2-color-surface))`, borderLeft: `2.5px solid ${statut.couleur}` }}
                         >
-                          <span className={`block truncate text-[10.5px] ${corpsFort}`}>{formatHeure(deb)} {b.client_name}</span>
+                          <span className={`block truncate text-[10.5px] ${corpsFort}`}>{formatHeure(deb, fuseau)} {b.client_name}</span>
                         </button>
                         {trajet && (
                           <span

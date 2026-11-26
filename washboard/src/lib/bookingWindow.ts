@@ -12,7 +12,7 @@
 // rendez-vous depuis son tableau de bord : lui a le droit de forcer.
 
 import { SLOT_STEP } from './slots'
-import { dateStrParis } from './dateUtils'
+import { dateStrParis, FUSEAU } from './dateUtils'
 
 /** Nombre de jours proposés par le formulaire, à partir de demain.
  *
@@ -45,18 +45,18 @@ export function verdictDate(
 }
 
 /** Jour de la semaine (0 = dimanche) et minutes écoulées depuis minuit, lus à
- *  l'heure de Paris.
+ *  l'heure du laveur (Paris par défaut, son `washers.fuseau` sinon).
  *
  *  Les horaires d'ouverture sont stockés en heure locale française, sans fuseau.
  *  Le serveur, lui, tourne en UTC sur Vercel : comparer directement donnerait
  *  une à deux heures d'écart selon la saison, et l'écart change au changement
  *  d'heure — un créneau de 8h passerait l'hiver et échouerait l'été. */
-export function heureParis(scheduledAt: string): { jour: number; minutes: number } | null {
+export function heureParis(scheduledAt: string, fuseau: string = FUSEAU): { jour: number; minutes: number } | null {
   const d = new Date(scheduledAt)
   if (!Number.isFinite(d.getTime())) return null
 
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Paris',
+    timeZone: fuseau,
     weekday: 'short',
     hour: '2-digit',
     minute: '2-digit',
@@ -81,10 +81,10 @@ export function heureParis(scheduledAt: string): { jour: number; minutes: number
  *  n'existait pas jusqu'ici. Un appel direct à cette route pourrait sinon
  *  glisser un rendez-vous pour aujourd'hui chez n'importe quel laveur, alors
  *  que le formulaire ne le proposerait jamais. */
-export function estAujourdhuiParis(scheduledAt: string, nowMs: number = Date.now()): boolean {
+export function estAujourdhuiParis(scheduledAt: string, nowMs: number = Date.now(), fuseau: string = FUSEAU): boolean {
   const t = new Date(scheduledAt)
   if (!Number.isFinite(t.getTime())) return false
-  return dateStrParis(t) === dateStrParis(new Date(nowMs))
+  return dateStrParis(t, fuseau) === dateStrParis(new Date(nowMs), fuseau)
 }
 
 export type PlageOuverture = { day_of_week: number; start_time: string; end_time: string }
@@ -124,10 +124,11 @@ export function creneauDansOuverture(
   dureeMinutes: number,
   plages: PlageOuverture[],
   pas: number = SLOT_STEP,
+  fuseau: string = FUSEAU,
 ): boolean {
   if (!plages || plages.length === 0) return true
 
-  const local = heureParis(scheduledAt)
+  const local = heureParis(scheduledAt, fuseau)
   if (!local) return false
 
   return plages.some(p => {

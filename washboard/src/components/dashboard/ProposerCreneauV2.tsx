@@ -6,6 +6,7 @@ import { listeClients, rechercherClients, type ResumeClient } from '@/lib/listeC
 import { whatsappDigits } from '@/lib/phone'
 import { annoncerApresRetour } from '@/lib/confirmationEnvoi'
 import { formatHeure } from '@/lib/calendarLayout'
+import { useFuseau } from '@/components/FuseauContext'
 import { Feuille, CHAMP, corps, corpsFort, puce, PRESSION } from '@/components/dashboard/FeuilleV2'
 import { DISTANCES_KM, adressesClients, clientsProches, libelleKm, positionsClients, type Position } from '@/lib/proposerCreneau'
 import { cleAdresse } from '@/lib/positionsAdresses'
@@ -66,9 +67,9 @@ function prenom(nomComplet: string): string {
  *  d'Alexandre du 2026-09-24 (« Proposer » n'avait pas de comportement défini).
  *  Ne mentionne pas la ville : le rendez-vous qui précède le trou la donne déjà
  *  dans la ligne du créneau (quand l'adresse la fournit), ce serait redondant. */
-function messageCreneau(nomClient: string, debut: Date, fin: Date, loc = 'fr-FR'): string {
-  const jour = debut.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })
-  return `Bonjour ${prenom(nomClient)}, j'ai un créneau libre ${jour} de ${formatHeure(debut)} à ${formatHeure(fin)}. Ça vous intéresse ?`
+function messageCreneau(nomClient: string, debut: Date, fin: Date, loc = 'fr-FR', fuseau?: string): string {
+  const jour = debut.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', timeZone: fuseau })
+  return `Bonjour ${prenom(nomClient)}, j'ai un créneau libre ${jour} de ${formatHeure(debut, fuseau)} à ${formatHeure(fin, fuseau)}. Ça vous intéresse ?`
 }
 
 /** iOS et Android n'acceptent pas le même séparateur avant `body` dans un lien
@@ -136,6 +137,7 @@ export default function ProposerCreneauV2({
   origine: OrigineCreneau
   onClose: () => void
 }) {
+  const fuseau = useFuseau()
   const loc = useLocale()
   const t = useT()
   const [maintenant] = useState(() => Date.now())
@@ -215,8 +217,8 @@ export default function ProposerCreneauV2({
     [filtre, clientsRecherches],
   )
 
-  const jour = debut.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })
-  const sousTitre = `${jour} · ${formatHeure(debut)}–${formatHeure(fin)}${ville ? ` · ${ville}` : ''}`
+  const jour = debut.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', timeZone: fuseau })
+  const sousTitre = `${jour} · ${formatHeure(debut, fuseau)}–${formatHeure(fin, fuseau)}${ville ? ` · ${ville}` : ''}`
 
   return (
     <Feuille titre={t('Proposer ce créneau')} sousTitre={sousTitre} onClose={onClose}>
@@ -273,7 +275,7 @@ export default function ProposerCreneauV2({
       ) : (
         <ul className="mt-1">
           {lignes.map(({ c, km }) => {
-            const message = messageCreneau(c.name, debut, fin, loc)
+            const message = messageCreneau(c.name, debut, fin, loc, fuseau)
             return (
               <li key={c.email} className="border-t border-[color:var(--v2-filet)] py-3 first:border-t-0 first:pt-1">
                 <p className={`truncate text-[15px] ${corpsFort}`}>{c.name}</p>

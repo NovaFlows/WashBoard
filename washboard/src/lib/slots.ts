@@ -1,7 +1,7 @@
 // Logique de créneaux — fonctions pures, testables (voir slots.test.ts).
 // Utilisée par StepSlot (réservation) et alignée avec le calendrier dashboard.
 
-import { instantParis } from './dateUtils'
+import { FUSEAU, instantParis } from './dateUtils'
 
 export const SLOT_STEP = 30 // minutes entre deux créneaux proposés
 
@@ -29,20 +29,20 @@ export function generateSlots(start: string, end: string, durationMinutes: numbe
 /** Plage [start,end[ (ms epoch) d'un créneau. `date` porte le jour civil
  *  (année, mois, jour de l'appareil) ; l'heure est celle de Paris, comme les
  *  horaires du laveur et la vérification serveur (`creneauDansOuverture`). */
-function slotRange(slotTime: string, date: Date, durationMin: number): { start: number; end: number } {
+function slotRange(slotTime: string, date: Date, durationMin: number, fuseau: string = FUSEAU): { start: number; end: number } {
   const [h, m] = slotTime.split(':').map(Number)
-  const start = instantParis(date.getFullYear(), date.getMonth() + 1, date.getDate(), h, m)
+  const start = instantParis(date.getFullYear(), date.getMonth() + 1, date.getDate(), h, m, fuseau)
   return { start, end: start + durationMin * 60_000 }
 }
 
 /** `scheduled_at` à envoyer pour ce créneau, ce jour-là (ISO, UTC). */
-export function debutCreneauIso(slotTime: string, date: Date): string {
-  return new Date(slotRange(slotTime, date, 0).start).toISOString()
+export function debutCreneauIso(slotTime: string, date: Date, fuseau: string = FUSEAU): string {
+  return new Date(slotRange(slotTime, date, 0, fuseau).start).toISOString()
 }
 
 /** Nombre de réservations qui chevauchent un créneau (pour comparer à la capacité). */
-export function countOverlaps(slotTime: string, date: Date, durationMin: number, bookings: SlotBooking[]): number {
-  const { start, end } = slotRange(slotTime, date, durationMin)
+export function countOverlaps(slotTime: string, date: Date, durationMin: number, bookings: SlotBooking[], fuseau: string = FUSEAU): number {
+  const { start, end } = slotRange(slotTime, date, durationMin, fuseau)
   return bookings.filter(b => {
     const bStart = new Date(b.scheduled_at).getTime()
     const bEnd = bStart + b.durationMin * 60_000
@@ -51,8 +51,8 @@ export function countOverlaps(slotTime: string, date: Date, durationMin: number,
 }
 
 /** Vrai si le créneau tombe dans l'une des fenêtres « optimisées » (timezone-safe). */
-export function isSlotInWindows(slotTime: string, date: Date, windows: TimeWindow[]): boolean {
-  const { start } = slotRange(slotTime, date, 0)
+export function isSlotInWindows(slotTime: string, date: Date, windows: TimeWindow[], fuseau: string = FUSEAU): boolean {
+  const { start } = slotRange(slotTime, date, 0, fuseau)
   return windows.some(w => start >= new Date(w.start).getTime() && start <= new Date(w.end).getTime())
 }
 
@@ -187,8 +187,8 @@ export function countConflicts(newStartMs: number, newEndMs: number, bookings: B
  *  Sert à la réservation le jour même : sans ce filtre, un client qui ouvre
  *  la page à 14h verrait encore des horaires du matin, pour un rendez-vous
  *  qu'il ne peut plus prendre. */
-export function slotEstPasse(slotTime: string, date: Date, nowMs: number = Date.now()): boolean {
-  return slotRange(slotTime, date, 0).start <= nowMs
+export function slotEstPasse(slotTime: string, date: Date, nowMs: number = Date.now(), fuseau: string = FUSEAU): boolean {
+  return slotRange(slotTime, date, 0, fuseau).start <= nowMs
 }
 
 export type BookingAvecAdresse = SlotBooking & { address: string }
@@ -220,9 +220,9 @@ export function derniereLocalisation(
 }
 
 /** Vrai si le créneau est physiquement faisable vu les temps de trajet entre RDV. */
-export function isSlotFeasible(slotTime: string, date: Date, durationMin: number, constraints: FeasibilityConstraint[]): boolean {
+export function isSlotFeasible(slotTime: string, date: Date, durationMin: number, constraints: FeasibilityConstraint[], fuseau: string = FUSEAU): boolean {
   if (constraints.length === 0) return true
-  const { start: slotStart, end: slotEnd } = slotRange(slotTime, date, durationMin)
+  const { start: slotStart, end: slotEnd } = slotRange(slotTime, date, durationMin, fuseau)
   return constraints.every(c => {
     const bStart = new Date(c.start).getTime()
     const bEnd = new Date(c.end).getTime()

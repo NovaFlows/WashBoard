@@ -15,7 +15,7 @@ import { getMondayOf, toDateStr } from '@/lib/dateUtils'
 import { resumeClients } from '@/lib/dashboardClients'
 import { widgetsVisibles } from '@/lib/dashboardWidgets'
 import { countDistinctSessions } from '@/lib/funnelStats'
-import { FUSEAU } from '@/lib/dateUtils'
+import { fuseauDuLaveur } from '@/lib/fuseaux'
 import { ajouterJours, bornesInstants, jourParisDe } from '@/lib/chiffresPeriode'
 import { semaineAccueil } from '@/lib/semaineAccueil'
 import AccueilV2 from '@/components/dashboard/AccueilV2'
@@ -55,6 +55,8 @@ export default async function DashboardPage() {
   // Session orpheline (ligne washer supprimée mais session auth encore active) :
   // on déconnecte pour éviter la boucle "profil non trouvé".
   if (!washer) redirect('/api/auth/logout')
+  // Jours et heures dans le fuseau du laveur (lib/fuseaux.ts) ; Paris par défaut.
+  const fuseau = fuseauDuLaveur(washer)
 
   // `bookings` se lit par le client admin : le rôle `authenticated` n'y a plus
   // accès, sinon le laveur lisait en direct ce que `masquerVerrouillees` cache.
@@ -73,11 +75,11 @@ export default async function DashboardPage() {
   // calculs plus bas qui l'utilisaient déjà (journée du jour, à confirmer).
   // Avant cette passe, ce calcul était refait plus loin, après coup : il ne
   // dépend d'aucune donnée chargée, il n'y avait pas de raison d'attendre.
-  const aujourdhui = new Date().toLocaleDateString('en-CA', { timeZone: FUSEAU })
+  const aujourdhui = new Date().toLocaleDateString('en-CA', { timeZone: fuseau })
   // Bornes Paris de la semaine en cours (lundi 00 h 00 → lundi suivant
   // 00 h 00) — même fonction que l'écran Chiffres (`chiffresPeriode.ts`),
   // jamais un calcul de fuseau réinventé ici.
-  const bornesSemaine = bornesInstants({ type: 'semaine', ref: aujourdhui })
+  const bornesSemaine = bornesInstants({ type: 'semaine', ref: aujourdhui }, fuseau)
 
   // Tout part en même temps : une seule attente réseau au lieu d'une file.
   //
@@ -252,7 +254,7 @@ export default async function DashboardPage() {
   const aVenirVisible = masquerVerrouillees(aVenir ?? [], seuilsVerrou)
     .map(b => b.verrouillee
       // Midi UTC du jour de Paris : le jour quitte le serveur, jamais l'heure.
-      ? { ...b, scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU })}T12:00:00Z` }
+      ? { ...b, scheduled_at: `${new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: fuseau })}T12:00:00Z` }
       : b)
     // Re-trié après coup : laissée à sa place d'origine, la carte verrouillée trahirait son
     // heure par ses voisines (entre le rendez-vous de 10 h et celui de 11 h).
@@ -277,21 +279,21 @@ export default async function DashboardPage() {
   // commentaire) : ne montre ici que ce qui reste à faire — un rendez-vous
   // déjà clôturé n'a plus rien à demander.
   const rdvAujourdhui = aVenirOuvertes.filter(
-    b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
+    b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: fuseau }) === aujourdhui,
   )
   // Les trois prochains après aujourd'hui, dans l'ordre où `aVenir` est déjà trié.
   // Strictement APRÈS aujourd'hui, avant de prendre les trois premiers : sans borne, trois
   // anciens rendez-vous jamais clôturés occupaient les trois places, et un vrai rendez-vous
   // à venir n'apparaissait jamais (compte NovaFlows, 2026-10-09).
   const rdvProchains = aVenirOuvertes
-    .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) > aujourdhui)
+    .filter(b => new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: fuseau }) > aujourdhui)
     .slice(0, 3)
 
   // « À confirmer » : les demandes en attente APRÈS aujourd'hui — celles du
   // jour sont déjà dans la journée, juste au-dessus, et les répéter en ferait
   // du bruit.
   const aConfirmer = aVenirOuvertes.filter(    b => b.status === 'pending'
-      && new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) !== aujourdhui,
+      && new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: fuseau }) !== aujourdhui,
   )
   // Les demandes en attente qui dépassent le quota : elles s'affichent dans « À confirmer »
   // en carte floutée avec un cadenas. On ne transmet que l'id et LE JOUR (midi UTC du jour de
@@ -305,13 +307,13 @@ export default async function DashboardPage() {
   // cinq plus récents, un nombre affiché serait faux.
   const journeeCommencee = passes.some(
     b => b.status === 'done'
-      && new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: FUSEAU }) === aujourdhui,
+      && new Date(b.scheduled_at).toLocaleDateString('en-CA', { timeZone: fuseau }) === aujourdhui,
   )
 
   // « Cette semaine » (accueil bureau, colonne de droite) : un point par jour,
   // porté par la fonction pure `semaineAccueil` (testée) à partir de la
   // requête ajoutée plus haut — jamais recalculé ici à côté.
-  const semaine = semaineAccueil(rdvSemaine.data ?? [], aujourdhui, joursOuverts)
+  const semaine = semaineAccueil(rdvSemaine.data ?? [], aujourdhui, joursOuverts, fuseau)
   // « Demain » (même colonne, juste au-dessus) : un filtrage de ce qui est
   // déjà en main (`aVenirOuvertes` — complet, déjà démasqué des réservations
   // verrouillées), aucune requête de plus. Capé à rien : un jour calme ne

@@ -99,6 +99,8 @@ export type WasherPublic = {
    *  StepSlot retombe sur son défaut (à partir de demain) — jamais sur
    *  « oui » par erreur. */
   reservation_jour_meme?: boolean
+  /** Fuseau du laveur (lib/fuseaux.ts) ; absent = Paris. */
+  fuseau?: string
   /** Le véhicule choisi apparaît en 3D (réglage du laveur, affiché par défaut). */
   silhouettes_vehicules?: boolean
   /** Le véhicule choisi apparaît dans ses vraies couleurs (sinon grisé). */
@@ -429,6 +431,7 @@ export default function BookingForm({ washer, services, categories, availabiliti
                 hasTravelFee={(washer.travel_fee_tiers ?? []).length > 0 && !!washer.base_address}
                 travelFeeMode={washer.travel_fee_mode ?? 'base'}
                 reservationJourMeme={washer.reservation_jour_meme === true}
+                fuseau={washer.fuseau}
                 onNext={(data) => { updateForm(data); reouvrir(3) }}
                 accent={accent}
               />

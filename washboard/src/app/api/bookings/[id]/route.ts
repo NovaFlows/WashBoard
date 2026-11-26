@@ -13,6 +13,7 @@ import { colonnesMontantEncaisse, lireMontant, montantPrevu } from '@/lib/clotur
 import { prevenirTampon } from '@/lib/fideliteServeur'
 import { avisJoignable } from '@/lib/messagesAutomatiques'
 import { dureeTotale } from '@/lib/pricing'
+import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
 
 const VALID_STATUSES = ['pending', 'confirmed', 'done', 'cancelled']
 
@@ -211,6 +212,7 @@ export async function PATCH(
         address:       booking.address,
         lieu:          booking.lieu ?? null,
         scheduledAt:   booking.scheduled_at,
+        fuseau:        await lireFuseauLaveur(admin, washer.id),
         bookingId:     booking.id,
         jeton:         genererJetonReservation(booking.id),
       }).catch(e => logger.error('bookings.update.email_failed', { bookingId: id }, e))

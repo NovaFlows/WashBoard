@@ -67,13 +67,15 @@ export function semaineAccueil(
   rendezVous: readonly RdvPourSemaine[],
   dateDuJour: string,
   joursOuverts: ReadonlySet<number> | null,
+  /** Fuseau du laveur (lib/fuseaux.ts) ; Paris par défaut. */
+  fuseau?: string,
 ): JourSemaine[] {
   const { debut } = plageDe({ type: 'semaine', ref: dateDuJour })
 
   const parJour = new Map<string, { attente: boolean; confirme: boolean }>()
   for (const b of rendezVous) {
     if (b.status === 'cancelled') continue
-    const jour = jourParisDe(b.scheduled_at)
+    const jour = jourParisDe(b.scheduled_at, fuseau)
     if (!jour) continue
     const entree = parJour.get(jour) ?? { attente: false, confirme: false }
     if (b.status === 'pending') entree.attente = true

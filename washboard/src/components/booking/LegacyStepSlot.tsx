@@ -8,7 +8,7 @@ import { centreParAdresse, centresDe, lieuParDefaut, lieuxPossibles, centreRestr
 import { filtrerHeures } from '@/lib/heuresPrestation'
 import { generateSlots, countOverlaps, isSlotInWindows, isSlotFeasible, effectiveTeamSize as computeEffectiveTeamSize, capaciteCreneau, dureeIncompatible, slotEstPasse, debutCreneauIso } from '@/lib/slots'
 import { effectiveDuration, addonsDuration, smartPrice as computeSmartPrice, smartDiscountAmount, formatDureeFr } from '@/lib/pricing'
-import { toDateStr, aujourdhuiParis } from '@/lib/dateUtils'
+import { toDateStr, aujourdhuiParis, FUSEAU } from '@/lib/dateUtils'
 import { useT } from '@/components/i18n/I18nProvider'
 
 // Supabase peut renvoyer l'embed `services` en objet OU en tableau → on gère les deux
@@ -37,6 +37,8 @@ type Props = {
    *  de demain) ne doit pas changer sous les pieds d'un laveur qui n'a rien
    *  demandé. */
   reservationJourMeme?: boolean
+  /** Fuseau du laveur (lib/fuseaux.ts). Absent = Paris, comme avant. */
+  fuseau?: string
   /** Centre auto du laveur (lib/centreAuto.ts) ; absent = à domicile seulement. */
   centre?: CentreAutoPublic | null
   /** Lieu imposé par la prestation choisie (lib/centreAuto.ts) ; vide = les deux. */
@@ -78,7 +80,7 @@ const memeJour = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 
 export default function LegacyStepSlot({
   availabilities, existingBookings, unavailabilities, teamSize, serviceDuration, servicePrice, washerId,
-  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, centre: centreComplet = null, lieuPrestation = null, heuresPrestation = null, centresPrestation = null, onNext, onBack, accent = '#2563eb',
+  hasTravelFee = false, travelFeeMode = 'base', reservationJourMeme = false, fuseau = FUSEAU, centre: centreComplet = null, lieuPrestation = null, heuresPrestation = null, centresPrestation = null, onNext, onBack, accent = '#2563eb',
 }: Props) {
   const tr = useT()
   const [selectedDate,      setSelectedDate]      = useState<Date | null>(null)
@@ -113,12 +115,12 @@ export default function LegacyStepSlot({
   // Fenêtre réservable : d'aujourd'hui (si le laveur l'a activé) ou de
   // demain, à l'horizon que le serveur accepte.
   const [premierJour] = useState(() => {
-    const d = aujourdhuiParis()
+    const d = aujourdhuiParis(new Date(), fuseau)
     if (!reservationJourMeme) d.setDate(d.getDate() + 1)
     return d
   })
   const [dernierJour] = useState(() => {
-    const d = aujourdhuiParis()
+    const d = aujourdhuiParis(new Date(), fuseau)
     d.setDate(d.getDate() + BOOKING_HORIZON_DAYS)
     return d
   })
@@ -176,7 +178,7 @@ export default function LegacyStepSlot({
 
     let scheduledAtParam = ''
     if (selectedDate && selectedTime) {
-      scheduledAtParam = `&scheduled_at=${encodeURIComponent(debutCreneauIso(selectedTime, selectedDate))}`
+      scheduledAtParam = `&scheduled_at=${encodeURIComponent(debutCreneauIso(selectedTime, selectedDate, fuseau))}`
     }
 
     setFetchingTravelFee(true)
@@ -185,7 +187,7 @@ export default function LegacyStepSlot({
       .then((data: { fee: number }) => setTravelFeeEstimate(data.fee))
       .catch(() => setTravelFeeEstimate(null))
       .finally(() => setFetchingTravelFee(false))
-  }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode, auCentre])
+  }, [debouncedAddress, selectedDate, selectedTime, washerId, hasTravelFee, travelFeeMode, auCentre, fuseau])
 
   // Adresse du rendez-vous : celle du centre, ou celle tapée par le client.
   const adresseRdv = auCentre && centre ? adresseCentre : debouncedAddress
@@ -236,7 +238,7 @@ export default function LegacyStepSlot({
     const horaires = availabilities
       .filter(a => a.day_of_week === d.getDay())
       .flatMap(a => filtrerHeures(generateSlots(a.start_time, a.end_time, serviceDuration), heuresPrestation))
-    return horaires.length > 0 && horaires.every(s => slotEstPasse(s, d))
+    return horaires.length > 0 && horaires.every(s => slotEstPasse(s, d, undefined, fuseau))
   }
 
   /** Jour réservable suivant (1) ou précédent (-1), en sautant les jours
@@ -284,9 +286,9 @@ export default function LegacyStepSlot({
         .flatMap(a => filtrerHeures(generateSlots(a.start_time, a.end_time, serviceDuration), heuresPrestation))
         // Sans effet un jour futur (jamais « passé ») ; retire les horaires du
         // matin quand le jour même est réservable et qu'il est déjà l'après-midi.
-        .filter(slot => !slotEstPasse(slot, selectedDate))
-        .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings) < capaciteCreneau(teamSize, unavailabilities, toDateStr(selectedDate), slot, serviceDuration))
-        .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints))
+        .filter(slot => !slotEstPasse(slot, selectedDate, undefined, fuseau))
+        .filter(slot => countOverlaps(slot, selectedDate, serviceDuration, overlapBookings, fuseau) < capaciteCreneau(teamSize, unavailabilities, toDateStr(selectedDate), slot, serviceDuration))
+        .filter(slot => isSlotFeasible(slot, selectedDate, serviceDuration, bookingConstraints, fuseau))
     : []
 
   // Distingue « la prestation ne rentre nulle part ce jour-là » de « tout est
@@ -304,8 +306,8 @@ export default function LegacyStepSlot({
 
   // Le créneau avantageux récompense un trajet évité : jamais proposé au centre.
   const fenetresAvantageuses = auCentre ? [] : smartWindows
-  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, fenetresAvantageuses)) : []
-  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSlotInWindows(s, selectedDate, fenetresAvantageuses)) : slotsForDay
+  const smartSlotsInDay = selectedDate ? slotsForDay.filter(s => isSlotInWindows(s, selectedDate, fenetresAvantageuses, fuseau)) : []
+  const regularSlots    = selectedDate ? slotsForDay.filter(s => !isSlotInWindows(s, selectedDate, fenetresAvantageuses, fuseau)) : slotsForDay
 
   const smartPrice = computeSmartPrice(servicePrice, { type: smartDiscountType, value: smartDiscountValue })
   const smartPriceStr = Number.isInteger(smartPrice) ? String(smartPrice) : smartPrice.toFixed(2)
@@ -314,10 +316,10 @@ export default function LegacyStepSlot({
 
   function handleNext() {
     if (!selectedDate || !selectedTime || (!auCentre && !address)) return
-    const isSmart = isSlotInWindows(selectedTime, selectedDate, fenetresAvantageuses)
+    const isSmart = isSlotInWindows(selectedTime, selectedDate, fenetresAvantageuses, fuseau)
     const discount = isSmart ? smartDiscountAmount(servicePrice, { type: smartDiscountType, value: smartDiscountValue }) : 0
     onNext({
-      scheduled_at: debutCreneauIso(selectedTime, selectedDate),
+      scheduled_at: debutCreneauIso(selectedTime, selectedDate, fuseau),
       address: auCentre && centre ? adresseCentre : address,
       lieu: auCentre ? 'centre' : 'domicile',
       is_smart_slot: isSmart,

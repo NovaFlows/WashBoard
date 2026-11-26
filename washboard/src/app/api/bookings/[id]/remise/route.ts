@@ -7,6 +7,7 @@ import { estVerrouillee, seuilsVerrouillage } from '@/lib/reservationsVerrouille
 import { appliquerRemiseLaveur } from '@/lib/remiseLaveur'
 import { sendRemiseLaveur } from '@/lib/email'
 import { estReservationDeTest } from '@/lib/e2e'
+import { lireFuseauLaveur } from '@/lib/fuseauLaveur'
 
 // POST { prix } : le laveur baisse le prix d'un rendez-vous (lib/remiseLaveur.ts).
 // Réservation prise en ligne : le client est prévenu par email. Saisie par le laveur : rien.
@@ -74,6 +75,7 @@ export async function POST(
       washerName: washer.name,
       serviceName: svc?.name ?? 'Lavage',
       scheduledAt: booking.scheduled_at,
+      fuseau: await lireFuseauLaveur(admin, washer.id),
       ancienPrix: verdict.ancienPrix,
       nouveauPrix: verdict.nouveauPrix,
     }).catch(e => logger.error('bookings.remise.email_failed', { bookingId: id }, e))

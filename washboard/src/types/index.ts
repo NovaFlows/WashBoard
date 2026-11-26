@@ -23,6 +23,8 @@ export type Washer = {
   smart_slot_discount_type: 'fixed' | 'percent'
   smart_slot_discount_value: number
   reservation_jour_meme: boolean
+  /** Fuseau horaire du laveur (lib/fuseaux.ts) ; absent avant le SQL = Paris. */
+  fuseau?: string | null
   /** Le véhicule choisi apparaît en 3D sur la page de réservation (interrupteur de l'écran
    *  Prestations, allumé par défaut pour tous, 2026-10-19). Seul `false` l'éteint : `undefined`
    *  tant que la colonne n'existe pas en base, `null` — les deux valent « affiché ». */

@@ -13,6 +13,7 @@ import {
   isInCrmPeriod, isCrmPeriodInProgress, getCrmPeriodBounds, previousCrmPeriod, crmPeriodLabel, type CrmPeriodState,
 } from '@/lib/crmPeriod'
 import { formatHeure, FUSEAU } from '@/lib/dateUtils'
+import { useFuseau } from '@/components/FuseauContext'
 import { caCumule, delaisDeReservation } from '@/lib/graphiquesCrm'
 import { repartitionSources } from '@/lib/sourceDecouverte'
 import CaCumule from '@/components/dashboard/CaCumule'
@@ -190,6 +191,7 @@ async function captureSvgAsBase64(container: HTMLDivElement | null): Promise<{ b
 // ── Composant ───────────────────────────────────────────────────────────────
 
 export default function CrmDashboard({ bookings, period }: { bookings: Booking[]; period: CrmPeriodState }) {
+  const fuseau = useFuseau()
   const loc = useLocale()
   const t = useT()
   const graphCaRef = useRef<HTMLDivElement>(null)
@@ -359,7 +361,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
           service:    b.services?.name ?? '',
           price:      effectivePrice(b),
           duration:   b.services?.duration_minutes ?? '',
-          scheduled:  new Date(b.scheduled_at).toLocaleString(loc, { timeZone: FUSEAU }),
+          scheduled:  new Date(b.scheduled_at).toLocaleString(loc, { timeZone: fuseau }),
           address:    b.address ?? '',
           status:     STATUTS[getStatusKey(b) as CleStatut]?.label ?? b.status,
           created:    new Date(b.created_at).toLocaleDateString(loc, { timeZone: FUSEAU }),
@@ -690,7 +692,7 @@ export default function CrmDashboard({ bookings, period }: { bookings: Booking[]
                       )}
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
-                      {b.is_professional && b.company_name ? b.client_name + ' · ' : ''}{b.services?.name ?? '—'} · {dateCourte(date, loc)} à {formatHeure(date)}
+                      {b.is_professional && b.company_name ? b.client_name + ' · ' : ''}{b.services?.name ?? '—'} · {dateCourte(date, loc)} à {formatHeure(date, fuseau)}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">

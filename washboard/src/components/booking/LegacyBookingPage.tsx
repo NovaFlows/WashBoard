@@ -29,9 +29,11 @@ type Props = {
  /** Réglages du laveur lus à part (colonnes optionnelles) : plusieurs prestations par réservation, silhouette en couleur. */
  plusieursPrestations?: boolean
  silhouettesCouleur?: boolean
+ /** Fuseau du laveur (lib/fuseaux.ts), lu à part lui aussi ; absent = Paris. */
+ fuseau?: string
 }
 /** Présentation classique : les lectures et contrôles restent dans la route publique. */
-export default async function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null, fideliteProposee = false, centreAuto = null, plusieursPrestations = false, silhouettesCouleur = false}: Props) {
+export default async function LegacyBookingPage({washer, services, categories, availabilities, plafondAtteint, facturationPrete, pixelId, promotion = null, acompte = null, fideliteProposee = false, centreAuto = null, plusieursPrestations = false, silhouettesCouleur = false, fuseau}: Props) {
   const t = await getT()
   const personnalisee = hasFeature(washer, 'page_personnalisee')
   const logoUrl       = personnalisee ? washer.logo_url : null
@@ -159,6 +161,7 @@ export default async function LegacyBookingPage({washer, services, categories, a
             travel_fee_mode: washer.travel_fee_mode ?? 'base',
             travel_fee_tiers: washer.travel_fee_tiers ?? null,
             reservation_jour_meme: washer.reservation_jour_meme ?? false,
+            fuseau: fuseau,
             silhouettes_vehicules: washer.silhouettes_vehicules !== false,
             silhouettes_couleur: silhouettesCouleur,
             pays_telephone: paysDuTelephone(washer.phone),
