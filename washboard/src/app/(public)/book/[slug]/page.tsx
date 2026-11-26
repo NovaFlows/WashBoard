@@ -233,7 +233,7 @@ export default async function BookingPage({ params }: Props) {
       .select('silhouettes_couleur')
       .eq('id', washer.id)
       .maybeSingle(),
-    // Fuseau du laveur (lib/fuseaux.ts), lu à part : sans la colonne, Paris, comme avant.
+    // Fuseau du laveur, déduit de son adresse puis de son téléphone (lib/fuseaux.ts) ; Paris sinon, comme avant.
     lireFuseauLaveur(admin, washer.id),
   ])
   const plusieursPrestations = (fichePlusieurs as { plusieurs_prestations?: unknown } | null)?.plusieurs_prestations === true

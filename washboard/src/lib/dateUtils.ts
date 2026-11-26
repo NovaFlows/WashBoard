@@ -25,7 +25,7 @@ export function getMondayOf(d: Date): Date {
  *
  *  Le fuseau est donc toujours fixé, jamais laissé à la machine. Paris est le
  *  fuseau de presque tous les laveurs ; un laveur d'outre-mer (Cayenne,
- *  2026-11-26) a le sien dans `washers.fuseau` (voir `lib/fuseaux.ts`), passé
+ *  2026-11-26) a le sien, déduit de son adresse (voir `lib/fuseaux.ts`), passé
  *  en dernier argument à chaque fonction ci-dessous. Sans cet argument, le
  *  comportement est exactement celui d'avant : l'heure de Paris. */
 export const FUSEAU = 'Europe/Paris'

@@ -607,3 +607,21 @@ describe('PATCH /api/washer — identifiant d’entreprise selon le pays du tél
     expect((await patch({ facture_siret: '' })).res.status).toBe(200)
   })
 })
+
+describe('PATCH /api/washer — le fuseau ne se règle pas', () => {
+  // Il se déduit de l'adresse et du téléphone (lib/fuseaux.ts) : un champ
+  // `fuseau` envoyé par le navigateur est ignoré, jamais écrit en base.
+  it('ignore un fuseau envoyé, sans erreur', async () => {
+    const { res } = await patch({ name: 'Lavage Amazonie', fuseau: 'Asia/Tokyo' })
+    expect(res.status).toBe(200)
+    expect(updates).toHaveLength(1)
+    expect(updates[0]).not.toHaveProperty('fuseau')
+    expect(updates[0].name).toBe('Lavage Amazonie')
+  })
+
+  it('une adresse en Guyane s’enregistre telle quelle (c’est elle qui donne le fuseau)', async () => {
+    const { res } = await patch({ base_address: '  Place des Palmistes, 97300 Cayenne  ' })
+    expect(res.status).toBe(200)
+    expect(updates[0].base_address).toBe('Place des Palmistes, 97300 Cayenne')
+  })
+})

@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
   }
 
   const laveurs = new Map<string, Laveur | null>()
-  // Fuseau de chaque laveur (lib/fuseaux.ts), lu à part : sans la colonne, Paris.
+  // Fuseau de chaque laveur, déduit de son adresse puis de son téléphone (lib/fuseaux.ts).
   const fuseaux = new Map<string, string>()
   let envoyes = 0
   let echecs = 0

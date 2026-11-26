@@ -477,7 +477,7 @@ export const POST = withErrorHandling('bookings.create', async (req: Request) =>
     )
   }
 
-  // Jour et heure lus dans le fuseau du laveur (Paris sauf réglage contraire, lib/fuseaux.ts).
+  // Jour et heure lus dans le fuseau du laveur (Paris sauf adresse ou numéro d'outre-mer, lib/fuseaux.ts).
   const fuseau = await lireFuseauLaveur(admin, bookingData.washer_id)
   const dateStr  = new Date(bookingData.scheduled_at).toLocaleDateString('en-CA', { timeZone: fuseau })
   const heureStr = new Date(bookingData.scheduled_at).toLocaleTimeString('en-GB', { timeZone: fuseau, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })

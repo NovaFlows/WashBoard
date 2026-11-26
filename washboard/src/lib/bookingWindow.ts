@@ -45,7 +45,7 @@ export function verdictDate(
 }
 
 /** Jour de la semaine (0 = dimanche) et minutes écoulées depuis minuit, lus à
- *  l'heure du laveur (Paris par défaut, son `washers.fuseau` sinon).
+ *  l'heure du laveur (Paris par défaut, celui de son adresse d'outre-mer sinon).
  *
  *  Les horaires d'ouverture sont stockés en heure locale française, sans fuseau.
  *  Le serveur, lui, tourne en UTC sur Vercel : comparer directement donnerait
