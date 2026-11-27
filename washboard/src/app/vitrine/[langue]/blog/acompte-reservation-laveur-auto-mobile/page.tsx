@@ -181,7 +181,7 @@ export default async function Page() {
           title={t('Un acompte sans courir après les paiements')}
           secondary={lienPageMetierTraduit(t, article.theme)}
         >
-          {t('Avec WashBoard, vous activez l’acompte, fixez son montant (une somme ou un pourcentage), le délai pour payer et vos conditions de remboursement, que le client lit avant de réserver. Il paie par votre propre lien (PayPal, Stripe, SumUp, Lydia, Wero ou virement) : WashBoard n’encaisse rien, l’argent va directement chez vous. Vous confirmez la réception en un geste sur la fiche du rendez-vous. Avant l’échéance, le client reçoit un rappel par email, et une réservation encore en attente dont l’acompte n’est pas réglé à temps est annulée toute seule, le créneau libéré. L’acompte est inclus dès l’offre gratuite.')}
+          {t('Avec WashBoard, vous activez l’acompte, fixez son montant (une somme ou un pourcentage), le délai pour payer et vos conditions de remboursement, que le client lit avant de réserver. Il paie par votre propre lien (PayPal, Stripe, SumUp, Lydia, Wero ou virement) : WashBoard n’encaisse rien, l’argent va directement chez vous. Vous confirmez la réception en un geste sur la fiche du rendez-vous. Avant l’échéance, le client reçoit un rappel par email, et une réservation encore en attente dont l’acompte n’est pas réglé à temps est annulée toute seule, le créneau libéré. Un client en retard ? Vous lui laissez 12 h, 24 h, 48 h ou 72 h de plus depuis la fiche, avec un nouveau rappel avant la nouvelle échéance ; si la réservation a déjà été annulée, vous la rétablissez de la même façon, tant que le créneau est encore libre. L’acompte est inclus dès l’offre gratuite.')}
         </Cta>
 
         <AlsoRead

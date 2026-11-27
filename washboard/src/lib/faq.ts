@@ -100,7 +100,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Un client peut-il réserver plusieurs prestations en une seule fois ?',
-    a: 'Oui, si tu l\'allumes : c\'est un réglage de l\'écran Prestations, éteint par défaut. Une fois allumé, ton client cumule par exemple l\'extérieur et l\'intérieur dans la même réservation. Le prix et la durée s\'additionnent, et toutes les prestations sont nommées dans ton agenda, dans les emails, dans la notification et sur la facture. Une limite : une prestation réservée au domicile ne se cumule pas avec une prestation réservée à un centre auto.',
+    a: 'Oui, si tu l\'allumes : c\'est un réglage de l\'écran Prestations, éteint par défaut. Une fois allumé, ton client cumule par exemple l\'extérieur et l\'intérieur dans la même réservation. Le prix et la durée s\'additionnent, et toutes les prestations sont nommées dans ton agenda, dans les emails, dans la notification et sur la facture. Une limite : une prestation réservée au domicile ne se cumule pas avec une prestation réservée à un centre auto. Et une fois le rendez-vous pris, tu peux toujours ajouter ou retirer une prestation depuis sa fiche, même avec ce réglage éteint : le prix et la durée se mettent à jour, et ton client reçoit le détail par email.',
   },
   {
     q: 'Comment bloquer mes jours de congé ?',
@@ -146,7 +146,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Que se passe-t-il si un client ne paie pas son acompte ?',
-    a: 'Tu choisis un délai pour le payer (2 h, 12 h, 24 h ou 48 h). Avant l\'échéance, le client reçoit un rappel par email. Passé ce délai, une réservation encore en attente est annulée toute seule : le créneau est libéré et le client est prévenu par email, avec un lien pour réserver à nouveau. Si tu as déjà confirmé le rendez-vous, WashBoard ne l\'annule pas à ta place. Tu peux aussi ne fixer aucun délai.',
+    a: 'Tu choisis un délai pour le payer (2 h, 12 h, 24 h ou 48 h). Avant l\'échéance, le client reçoit un rappel par email. Passé ce délai, une réservation encore en attente est annulée toute seule : le créneau est libéré et le client est prévenu par email, avec un lien pour réserver à nouveau. Si tu as déjà confirmé le rendez-vous, WashBoard ne l\'annule pas à ta place. Tu peux aussi ne fixer aucun délai. Un client en retard ? Depuis la fiche du rendez-vous, tu lui laisses 12 h, 24 h, 48 h ou 72 h de plus, et un nouveau rappel part avant la nouvelle échéance. Si sa réservation a déjà été annulée faute de paiement, tu la rétablis de la même façon, tant que le rendez-vous est à venir et que le créneau est encore libre.',
   },
   {
     q: 'Puis-je faire une promotion sur mes prestations ?',

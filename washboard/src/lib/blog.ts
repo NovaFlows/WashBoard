@@ -104,7 +104,7 @@ export const ARTICLES: Article[] = [
     description:
       'Rendez-vous manqués, créneaux bloqués pour rien : quand demander un acompte, combien, comment le faire payer (PayPal, Stripe, SumUp, Lydia, Wero, virement) et ce qui fait fuir les clients. Avec le calcul de ce que coûte un lapin.',
     publishedAt: '2026-10-18',
-    updatedAt: '2026-11-15',
+    updatedAt: '2026-11-27',
     readingMinutes: 8,
   },
   {
