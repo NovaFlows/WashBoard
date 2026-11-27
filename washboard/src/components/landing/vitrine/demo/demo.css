@@ -352,6 +352,39 @@
 
 .wb-vitrine .tel-ecran.clair .etat { color: #fff; }
 
+/* Plein écran sur mobile (PleinEcran.tsx). Le téléphone reste en place mais inerte : un bouton le
+   recouvre, le doigt fait défiler la page au lieu de rester coincé dans la démo. */
+/* overflow-anchor : sans ça, Chrome recale la page quand le téléphone passe en position fixe. */
+.wb-vitrine .tel-pe { position: relative; overflow-anchor: none; }
+.wb-vitrine .tel-pe-ouvrir { display: none; }
+@media (max-width: 760px) {
+  /* Même encombrement ouvert ou fermé : la page ne bouge pas derrière le plein écran. */
+  .wb-vitrine .tel-pe { padding-bottom: 62px; }
+  .wb-vitrine .tel-pe.ouvert { box-sizing: content-box; width: 300px; height: 620px; }
+  .wb-vitrine .tel-pe:not(.ouvert) .tel-pe-ouvrir { display: flex; position: absolute; inset: 0; z-index: 80; align-items: flex-end; justify-content: center; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; border-radius: 54px 54px 0 0; -webkit-tap-highlight-color: transparent; }
+  .wb-vitrine .tel-pe-pastille { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 20px; border-radius: 999px; background: var(--encre); color: var(--fond); font-weight: 650; font-size: 15px; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .5); }
+  .wb-vitrine .tel-pe-pastille svg { width: 17px; height: 17px; }
+  .wb-vitrine .tel-pe-ouvrir:active .tel-pe-pastille { transform: scale(.97); }
+  .wb-vitrine .tel-pe-ouvrir:focus-visible { outline: none; }
+  .wb-vitrine .tel-pe-ouvrir:focus-visible .tel-pe-pastille { outline: 2px solid var(--accent); outline-offset: 3px; }
+}
+.wb-vitrine .tel-pe.ouvert .tel-pe-cadre { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; background: var(--fond); }
+.wb-vitrine .tel-pe-barre { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 18px; border-bottom: 1px solid var(--filet-2); background: var(--surface); font-size: 13px; color: var(--gris); }
+.wb-vitrine .tel-pe-quitter { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: var(--encre); color: var(--fond); font: inherit; font-weight: 650; font-size: 14.5px; cursor: pointer; }
+.wb-vitrine .tel-pe-quitter svg { width: 15px; height: 15px; }
+.wb-vitrine .tel-pe-quitter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wb-vitrine .tel-pe.ouvert .tel { flex: 1; min-height: 0; width: auto; height: auto; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.wb-vitrine .tel-pe.ouvert .tel::before, .wb-vitrine .tel-pe.ouvert .tel::after,
+.wb-vitrine .tel-pe.ouvert .tel-ecran::after, .wb-vitrine .tel-pe.ouvert .ilot, .wb-vitrine .tel-pe.ouvert .etat { display: none; }
+.wb-vitrine .tel-pe.ouvert .tel-ecran { border-radius: 0; box-shadow: none; }
+.wb-vitrine .tel-pe.ouvert .app-defile { padding-top: 18px; padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
+.wb-vitrine .tel-pe.ouvert .app-nav { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+.wb-vitrine .tel-pe.ouvert .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+.wb-vitrine .tel-pe.ouvert .feuille { padding-bottom: calc(26px + env(safe-area-inset-bottom, 0px)); }
+.wb-vitrine .tel-pe.ouvert .resa .app-defile { padding: 0 0 30px; }
+.wb-vitrine .tel-pe.ouvert .resa-tete { padding-top: 26px; }
+.wb-vitrine .tel-pe.ouvert .resa-pied { padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+
 @media (prefers-reduced-motion: reduce) {
   .wb-vitrine :is(.tel, .dk, .demo-grille) *, .wb-vitrine :is(.tel, .dk, .demo-grille) *::before, .wb-vitrine :is(.tel, .dk, .demo-grille) *::after { transition: none !important; animation: none !important; }
 }

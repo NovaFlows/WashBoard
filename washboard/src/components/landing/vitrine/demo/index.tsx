@@ -11,6 +11,7 @@ import { MISSIONS } from './donnees'
 import { useDemo } from './etat'
 import { I } from './icones'
 import { Ordinateur } from './Ordinateur'
+import { PleinEcranTel } from './PleinEcran'
 import type { EcranDemo } from './types'
 import '../base.css'
 import './demo.css'
@@ -20,13 +21,15 @@ export type { EcranDemo }
 export { DemoProvider } from './etat'
 export { ReservationClient } from './Reservation'
 
-/** Téléphone du laveur, cadre compris (classe `.tel`), manipulable. */
+/** Téléphone du laveur, cadre compris (classe `.tel`), manipulable, ouvrable en plein écran sur mobile. */
 export function AppTelephone({ ecranInitial = 'auj', masque }: { ecranInitial?: EcranDemo; masque?: boolean }) {
   const { epoque } = useDemo()
   return (
-    <div className="tel" hidden={masque}>
-      <AppLaveur key={epoque} mode="tel" ecranInitial={ecranInitial} />
-    </div>
+    <PleinEcranTel masque={masque}>
+      <div className="tel">
+        <AppLaveur key={epoque} mode="tel" ecranInitial={ecranInitial} />
+      </div>
+    </PleinEcranTel>
   )
 }
 
