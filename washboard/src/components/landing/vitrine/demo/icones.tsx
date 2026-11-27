@@ -22,6 +22,8 @@ export const I: Record<string, ReactElement> = {
   euro: <svg viewBox="0 0 24 24" aria-hidden {...trait} strokeWidth="1.8"><path d="M17 6.5A6.5 6.5 0 1 0 17 17.5M4 10h9M4 14h9" /></svg>,
   mobile: <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="2" width="12" height="20" rx="3" /></svg>,
   ordi: <svg viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="13" rx="2" /><path d="M8 21h8" /></svg>,
+  agrandir: <svg viewBox="0 0 24 24" aria-hidden {...trait} strokeWidth="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>,
+  fermer: <svg viewBox="0 0 24 24" aria-hidden {...trait} strokeWidth="2.2"><path d="M6 6l12 12M18 6 6 18" /></svg>,
 }
 
 /** Réseau et batterie de la barre d'état du téléphone. */

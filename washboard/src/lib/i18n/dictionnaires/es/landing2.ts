@@ -171,4 +171,8 @@ export const landing2: Dictionnaire = {
   'Multi-laveurs (Business)': 'Multilavador (Business)',
   '22 h': '22 h',
   '90 j': '90 d',
+  'Essayer en plein écran': 'Probar en pantalla completa',
+  'Quitter': 'Salir',
+  'Démo · données fictives': 'Demo · datos ficticios',
+  'Démo WashBoard en plein écran': 'Demo de WashBoard en pantalla completa',
 }

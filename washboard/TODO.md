@@ -2668,6 +2668,13 @@ rien à faire, mais que le projet reste globalement sain.
       prestations ajoutées se retirent depuis la fiche ; la principale reste. Il faudrait promouvoir
       une prestation ajoutée au rang de principale (`service_id`, prix de base, durée).
 
+- [ ] 2026-11-27 — EN COURS (branche `feat/demo-plein-ecran-mobile`, lancée à la demande de Ryan,
+      en attente de ses tests) — **Démo de la landing en plein écran sur téléphone.** Sur mobile, la démo manipulable (`SectionDemo` →
+      `DemoManipulable` / `AppTelephone`, `components/landing/vitrine/demo/`) affiche un téléphone
+      dans le téléphone : petit, et le défilement se mélange entre la page et la démo. Idée : sur
+      téléphone, ouvrir la démo en plein écran comme si c'était l'appli elle-même, avec un bouton
+      bien visible pour la quitter et revenir à la landing. Ordinateur inchangé.
+
 - **Un vrai CRM de suivi client** — Yanis (l'associé d'Alexandre) a proposé cinq écrans dans un
   canevas partagé le 2026-09-28 : Prospects (avant la première réservation), À relancer, Fiche
   client (timeline), Fiche entreprise (plusieurs sites/contacts, délai de paiement), et un menu

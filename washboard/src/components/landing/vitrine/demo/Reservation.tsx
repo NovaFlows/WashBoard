@@ -5,6 +5,7 @@ import CarteFidelite3D from '@/components/fidelite/CarteFidelite3D'
 import { CompteARebours } from './composants'
 import { useDemo } from './etat'
 import { I, RESEAU } from './icones'
+import { PleinEcranTel } from './PleinEcran'
 import '../base.css'
 import './demo.css'
 import { useT } from '@/components/i18n/I18nProvider'
@@ -111,31 +112,33 @@ export function ReservationClient() {
   const bloque = r.e === 1 && !r.h
 
   return (
-    <div className="tel">
-      <div className="tel-ecran">
-        <div className="ilot" />
-        <div className="etat" style={{ color: '#fff' }}><span className="num">13:42</span>{RESEAU}</div>
-        <div className="app resa">
-          <div className="app-defile" ref={defile}>
-            <div className="resa-tete" style={{ background: reg.couleur }}><span className="lg">{t('ÉM')}</span><p className="r-nom">{t('Éclat Mobile')}</p><p>{t('Lavage auto à domicile · Bordeaux')}</p></div>
-            <div className="resa-corps">
-              {promo ? <div className="bandeau-promo" style={{ marginBottom: 14 }}><span><b>−10 %</b> {t('ce week-end')}</span><CompteARebours /></div> : null}
-              <div className="etapes" aria-hidden>{[0, 1, 2, 3].map(i => <i key={i} className={i <= r.e ? 'on' : undefined} />)}</div>
-              {corps}
-              <div style={{ height: r.e === 3 ? 20 : 110 }} />
+    <PleinEcranTel>
+      <div className="tel">
+        <div className="tel-ecran">
+          <div className="ilot" />
+          <div className="etat" style={{ color: '#fff' }}><span className="num">13:42</span>{RESEAU}</div>
+          <div className="app resa">
+            <div className="app-defile" ref={defile}>
+              <div className="resa-tete" style={{ background: reg.couleur }}><span className="lg">{t('ÉM')}</span><p className="r-nom">{t('Éclat Mobile')}</p><p>{t('Lavage auto à domicile · Bordeaux')}</p></div>
+              <div className="resa-corps">
+                {promo ? <div className="bandeau-promo" style={{ marginBottom: 14 }}><span><b>−10 %</b> {t('ce week-end')}</span><CompteARebours /></div> : null}
+                <div className="etapes" aria-hidden>{[0, 1, 2, 3].map(i => <i key={i} className={i <= r.e ? 'on' : undefined} />)}</div>
+                {corps}
+                <div style={{ height: r.e === 3 ? 20 : 110 }} />
+              </div>
             </div>
+            {r.e < 3 ? (
+              <div className="resa-pied">
+                <div className="tot"><span>{t('Total')}<small style={{ display: 'block', color: 'var(--vert)', fontWeight: 550 }}>{remises}</small></span><b>{tot} €</b></div>
+                <button className="btn btn-encre" disabled={bloque} style={bloque ? { opacity: 0.4 } : undefined}
+                  onClick={() => { if (bloque) return; maj({ e: r.e + 1 }); if (defile.current) defile.current.scrollTop = 0 }}>
+                  {t(['Choisir le créneau', 'Continuer', 'Confirmer la réservation'][r.e])}
+                </button>
+              </div>
+            ) : null}
           </div>
-          {r.e < 3 ? (
-            <div className="resa-pied">
-              <div className="tot"><span>{t('Total')}<small style={{ display: 'block', color: 'var(--vert)', fontWeight: 550 }}>{remises}</small></span><b>{tot} €</b></div>
-              <button className="btn btn-encre" disabled={bloque} style={bloque ? { opacity: 0.4 } : undefined}
-                onClick={() => { if (bloque) return; maj({ e: r.e + 1 }); if (defile.current) defile.current.scrollTop = 0 }}>
-                {t(['Choisir le créneau', 'Continuer', 'Confirmer la réservation'][r.e])}
-              </button>
-            </div>
-          ) : null}
         </div>
       </div>
-    </div>
+    </PleinEcranTel>
   )
 }
