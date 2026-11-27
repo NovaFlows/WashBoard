@@ -31,6 +31,12 @@
   .wb-vitrine .scene-legende { position: static; max-width: none; text-align: center; }
   .wb-vitrine .scene-legende svg { display: none; }
 }
+/* Même seuil que le bouton plein écran de la démo (demo.css). */
+.wb-vitrine .scene-legende .legende-tel { display: none; }
+@media (max-width: 760px) {
+  .wb-vitrine .scene-legende .legende-large { display: none; }
+  .wb-vitrine .scene-legende .legende-tel { display: inline; }
+}
 
 /* ── Laveurs (bandeau de logos) ── */
 /* Logos détourés, sans tuile : ils se posent directement sur le fond de la page. */

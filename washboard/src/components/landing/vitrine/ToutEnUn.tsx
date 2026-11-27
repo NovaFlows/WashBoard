@@ -23,7 +23,7 @@ export const COLONNES: Colonne[] = [
       { titre: 'Acompte à la réservation', texte: 'Payé par ton lien PayPal, Stripe, SumUp, Lydia, par Wero ou par virement. Pas réglé à temps : le créneau se libère.', nouveau: true },
       { titre: 'Facturation conforme', texte: 'SIRET, TVA, numérotation continue. La facture part dès que tu marques terminé.', offre: 'facturation' },
       { titre: 'Frais de déplacement', texte: 'Calculés au trajet réel, depuis ton point de départ ou ton rendez-vous précédent.', offre: 'frais_deplacement' },
-      { titre: 'Comptabilité', texte: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.', offre: 'compta' },
+      { titre: 'Comptabilité', texte: 'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année. Et ce qu’il te reste à encaisser sur tes rendez-vous à venir.', offre: 'compta' },
     ],
   },
   {
@@ -48,6 +48,7 @@ export const ET_AUSSI = [
   'Clients pros et entreprises',
   `Multi-laveurs (${requiredPlanLabel('multi_laveurs')})`,
   'Plusieurs prestations par réservation',
+  'Prestation ajoutée à un rendez-vous déjà pris',
   'Remise sur un rendez-vous',
   'Centre auto ou à domicile',
 ]

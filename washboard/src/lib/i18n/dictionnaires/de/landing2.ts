@@ -151,7 +151,7 @@ export const landing2: Dictionnaire = {
   'SIRET, TVA, numérotation continue. La facture part dès que tu marques terminé.': 'SIRET, MwSt., fortlaufende Nummerierung. Die Rechnung geht raus, sobald du den Termin als erledigt markierst.',
   'Calculés au trajet réel, depuis ton point de départ ou ton rendez-vous précédent.': 'Berechnet nach der echten Strecke, ab deinem Startpunkt oder deinem vorherigen Termin.',
   'Comptabilité': 'Buchhaltung',
-  'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.': 'Umsatz, Ausgaben, wiederkehrende Ausgaben und Ergebnis, nach Tag, Woche, Monat oder Jahr.',
+  'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année. Et ce qu’il te reste à encaisser sur tes rendez-vous à venir.': 'Umsatz, Ausgaben, wiederkehrende Ausgaben und Ergebnis, nach Tag, Woche, Monat oder Jahr. Dazu, was du bei deinen kommenden Terminen noch einnimmst.',
   'Faire revenir tes clients': 'Kunden zurückholen',
   'Un bon client, ça se garde.': 'Einen guten Kunden behält man.',
   'Un tampon par prestation, la récompense de ton choix appliquée toute seule. En 3D, à tes couleurs.': 'Ein Stempel pro Leistung, die Belohnung deiner Wahl wird automatisch angewendet. In 3D, in deinen Farben.',

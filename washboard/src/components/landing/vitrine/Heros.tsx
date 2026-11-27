@@ -22,7 +22,12 @@ export default async function Heros() {
         <div className="scene" role="group" aria-label={t('Aperçu de WashBoard sur ordinateur et sur téléphone')}>
           <div className="ecran-dk"><AppOrdinateur ecranInitial="agenda" /></div>
           <div className="scene-tel"><AppTelephone /></div>
-          <p className="scene-legende"><span>{t('Touche les onglets : tout fonctionne, avec des données fictives.')}</span><IcFleche /></p>
+          {/* Deux textes : sur téléphone, la démo s'ouvre d'abord en plein écran (demo/PleinEcran.tsx). */}
+          <p className="scene-legende">
+            <span className="legende-large">{t('Touche les onglets : tout fonctionne, avec des données fictives.')}</span>
+            <span className="legende-tel">{t('Ouvre-le en plein écran et touche les onglets : tout fonctionne, avec des données fictives.')}</span>
+            <IcFleche />
+          </p>
         </div>
       </div>
     </section>

@@ -151,7 +151,7 @@ export const landing2: Dictionnaire = {
   'SIRET, TVA, numérotation continue. La facture part dès que tu marques terminé.': 'SIRET, VAT, continuous numbering. The invoice goes out as soon as you mark the job done.',
   'Calculés au trajet réel, depuis ton point de départ ou ton rendez-vous précédent.': 'Calculated from the real trip, from your starting point or your previous appointment.',
   'Comptabilité': 'Accounting',
-  'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.': 'Revenue, expenses, recurring expenses and result, by day, week, month or year.',
+  'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année. Et ce qu’il te reste à encaisser sur tes rendez-vous à venir.': 'Revenue, expenses, recurring expenses and result, by day, week, month or year. Plus what you still have to collect on your upcoming appointments.',
   'Faire revenir tes clients': 'Bring your clients back',
   'Un bon client, ça se garde.': 'A good client is worth keeping.',
   'Un tampon par prestation, la récompense de ton choix appliquée toute seule. En 3D, à tes couleurs.': 'One stamp per service, the reward of your choice applied automatically. In 3D, in your colours.',

@@ -32,6 +32,7 @@ export const landing: Dictionnaire = {
   'S’installe comme une appli': 'Installs like an app',
   'Aperçu de WashBoard sur ordinateur et sur téléphone': 'Preview of WashBoard on desktop and on phone',
   'Touche les onglets : tout fonctionne, avec des données fictives.': 'Tap the tabs: everything works, with sample data.',
+  'Ouvre-le en plein écran et touche les onglets : tout fonctionne, avec des données fictives.': 'Open it full screen and tap the tabs: everything works, with sample data.',
 
   // Douleurs
   'Ta journée, aujourd’hui': 'Your day, today',

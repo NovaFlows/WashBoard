@@ -29,6 +29,7 @@ export const landing: Dictionnaire = {
   'S’installe comme une appli': 'Installierbar wie eine App',
   'Aperçu de WashBoard sur ordinateur et sur téléphone': 'Vorschau von WashBoard am Computer und auf dem Handy',
   'Touche les onglets : tout fonctionne, avec des données fictives.': 'Tippe auf die Tabs: Alles funktioniert, mit Beispieldaten.',
+  'Ouvre-le en plein écran et touche les onglets : tout fonctionne, avec des données fictives.': 'Öffne es im Vollbild und tippe auf die Tabs: Alles funktioniert, mit Beispieldaten.',
 
   'Ta journée, aujourd’hui': 'Dein Tag, heute',
   'Tu laves des voitures.': 'Du wäschst Autos.',

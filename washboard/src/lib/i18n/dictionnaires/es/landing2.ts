@@ -151,7 +151,7 @@ export const landing2: Dictionnaire = {
   'SIRET, TVA, numérotation continue. La facture part dès que tu marques terminé.': 'SIRET, IVA, numeración continua. La factura sale en cuanto marcas el servicio como terminado.',
   'Calculés au trajet réel, depuis ton point de départ ou ton rendez-vous précédent.': 'Calculados según el trayecto real, desde tu punto de salida o tu cita anterior.',
   'Comptabilité': 'Contabilidad',
-  'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année.': 'Facturación, gastos, gastos recurrentes y resultado, por día, semana, mes o año.',
+  'Chiffre d’affaires, dépenses, dépenses récurrentes et résultat, par jour, semaine, mois ou année. Et ce qu’il te reste à encaisser sur tes rendez-vous à venir.': 'Facturación, gastos, gastos recurrentes y resultado, por día, semana, mes o año. Y lo que te queda por cobrar de tus próximas citas.',
   'Faire revenir tes clients': 'Haz volver a tus clientes',
   'Un bon client, ça se garde.': 'Un buen cliente se cuida.',
   'Un tampon par prestation, la récompense de ton choix appliquée toute seule. En 3D, à tes couleurs.': 'Un sello por servicio y la recompensa que elijas se aplica sola. En 3D y con tus colores.',
