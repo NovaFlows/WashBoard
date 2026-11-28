@@ -24,6 +24,9 @@ import { formatEuros } from '@/lib/plan'
 import { joursDureeIncompatible } from '@/lib/slots'
 import { VEHICLE_LABELS } from '@/lib/vehicle-labels'
 
+/** Longueur maximale de la description d'une prestation, affichée au client. */
+export const DESCRIPTION_PRESTATION_MAX = 750
+
 export type FormulairePrestation = {
   category_id: string
   name: string

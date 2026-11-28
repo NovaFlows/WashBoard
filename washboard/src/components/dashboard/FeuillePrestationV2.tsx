@@ -11,7 +11,7 @@ import { identifiantsCentresValides } from '@/lib/centreAuto'
 import { HEURES_PROPOSEES, MAX_HEURES_DEBUT, heuresDebutValides, libelleHeure, resumeHeures } from '@/lib/heuresPrestation'
 import { champsManquants, messageManques, DUREE_MAX_MINUTES, ERREUR_DUREE_MAX, ERREUR_SANS_TYPE } from '@/lib/prestation'
 import {
-  basculerType, categoriesOptionProposees, categorieOptionNormalisee, changerCategorie, changerPrixType, nomDuType, nouvelleOption, phrasesDuree,
+  DESCRIPTION_PRESTATION_MAX, basculerType, categoriesOptionProposees, categorieOptionNormalisee, changerCategorie, changerPrixType, nomDuType, nouvelleOption, phrasesDuree,
   resumeDescription, resumeOptions, resumePrixParType, retirerOrphelins, sansCategorieDe, typesOrphelins,
   type BrouillonOption, type FormulairePrestation,
 } from '@/lib/prestationForm'
@@ -542,16 +542,16 @@ export default function FeuillePrestationV2({
         </Repliable>
 
         <Repliable id="presta-description" titre={tr('Description')} resume={resumeDescription(form.description)} ouvert={ouvert.description} onBascule={() => basculer('description')}>
-          <label htmlFor="presta-desc" className={ETIQUETTE}>{tr('Visible par votre client, 250 caractères au plus.')}</label>
+          <label htmlFor="presta-desc" className={ETIQUETTE}>{tr('Visible par votre client, 750 caractères au plus.')}</label>
           <textarea
             id="presta-desc"
             rows={3}
             placeholder={tr('Ex : Lavage complet intérieur et extérieur, aspiration, nettoyage des vitres…')}
             value={form.description}
-            onChange={e => setForm(f => ({ ...f, description: e.target.value.slice(0, 250) }))}
+            onChange={e => setForm(f => ({ ...f, description: e.target.value.slice(0, DESCRIPTION_PRESTATION_MAX) }))}
             className={`${CHAMP} h-auto resize-none py-2.5 leading-[1.5]`}
           />
-          <p className={`mt-1 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{form.description.length}/250</p>
+          <p className={`mt-1 text-right text-[12px] ${corps} text-[color:var(--v2-color-gris)] tabular-nums`}>{form.description.length}/{DESCRIPTION_PRESTATION_MAX}</p>
         </Repliable>
 
         <Repliable id="presta-heures" titre={tr('Heures de début')} resume={resumeHeures(form.heures_debut)} ouvert={ouvert.heures} onBascule={() => basculer('heures')}>

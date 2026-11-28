@@ -10,6 +10,7 @@ import { champsManquants, estReservable, estEnVeille, aMettreEnVeille, messageMa
 import { joursDureeIncompatible } from '@/lib/slots'
 import { formatDureeFr } from '@/lib/pricing'
 import { DESCRIPTION_OPTION_MAX } from '@/lib/optionsRubriques'
+import { DESCRIPTION_PRESTATION_MAX } from '@/lib/prestationForm'
 
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 
@@ -169,16 +170,16 @@ function ServiceForm({ form, categories, sansCategorie, availabilities, onChange
         </div>
         <div className="col-span-2">
           <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-            Description <span className="text-slate-400 font-normal">(optionnel — visible par le client, 250 car. max)</span>
+            Description <span className="text-slate-400 font-normal">(optionnel — visible par le client, 750 car. max)</span>
           </label>
           <textarea
             value={form.description}
-            onChange={e => onChange({ ...form, description: e.target.value.slice(0, 250) })}
+            onChange={e => onChange({ ...form, description: e.target.value.slice(0, DESCRIPTION_PRESTATION_MAX) })}
             placeholder="Ex : Lavage complet intérieur et extérieur, aspiration, nettoyage des vitres..."
             rows={3}
             className={inputClass + ' resize-none'}
           />
-          <p className="text-right text-xs text-slate-400 mt-0.5">{form.description.length}/250</p>
+          <p className="text-right text-xs text-slate-400 mt-0.5">{form.description.length}/{DESCRIPTION_PRESTATION_MAX}</p>
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Prix (€)</label>

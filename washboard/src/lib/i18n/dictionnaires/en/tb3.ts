@@ -133,7 +133,7 @@ export const tb3: Dictionnaire = {
   'Durée supplémentaire de l’option en minutes': 'Option\'s extra duration in minutes',
   '+ min': '+ min',
   'Description': 'Description',
-  'Visible par votre client, 250 caractères au plus.': 'Visible to your client, 250 characters at most.',
+  'Visible par votre client, 750 caractères au plus.': 'Visible to your client, 750 characters at most.',
   'Ex : Lavage complet intérieur et extérieur, aspiration, nettoyage des vitres…': 'E.g. Full interior and exterior wash, vacuuming, window cleaning…',
   'Heures de début': 'Start times',
   'Pour regrouper vos journées, proposez cette prestation seulement à certaines heures. Vos horaires, congés et rendez-vous déjà pris restent respectés. Sans heure choisie, toutes les heures de vos horaires sont proposées.': 'To group your days, offer this service only at certain times. Your hours, leave and appointments already booked are still respected. With no time chosen, all the times in your hours are offered.',
